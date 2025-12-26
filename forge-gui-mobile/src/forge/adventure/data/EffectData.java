@@ -7,10 +7,8 @@ import forge.item.PaperToken;
 import forge.model.FModel;
 
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class EffectData implements Serializable {
     public String name = null;           //Effect name. Can be checked for.
@@ -86,8 +84,15 @@ public class EffectData implements Serializable {
 
     public String itemize(Array<IPaperCard> paperCards) {
         StringBuilder ret = new StringBuilder();
-        Map<IPaperCard, Integer> duplicateCountMap = Arrays.stream(paperCards.toArray()).collect(Collectors.toMap(Function.identity(), cards -> 1, Math::addExact));
-        duplicateCountMap.forEach((key, value) -> ret.append("\n").append(value).append("x ").append(key));
+        // iOS compatibility: Replace Arrays.stream().collect() with traditional for loop
+        Map<IPaperCard, Integer> duplicateCountMap = new HashMap<>();
+        for (Object obj : paperCards.toArray()) {
+            IPaperCard card = (IPaperCard) obj;
+            duplicateCountMap.put(card, duplicateCountMap.getOrDefault(card, 0) + 1);
+        }
+        for (Map.Entry<IPaperCard, Integer> entry : duplicateCountMap.entrySet()) {
+            ret.append("\n").append(entry.getValue()).append("x ").append(entry.getKey());
+        }
         return ret.toString();
     }
 

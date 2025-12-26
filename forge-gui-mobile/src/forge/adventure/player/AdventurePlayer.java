@@ -31,7 +31,7 @@ import forge.util.ItemPool;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * Class that represents the player (not the player sprite)

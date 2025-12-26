@@ -12,7 +12,6 @@ import forge.util.Aggregates;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static forge.adventure.util.AdventureQuestController.ObjectiveTypes.*;
 import static forge.adventure.util.AdventureQuestController.QuestStatus.*;
@@ -113,7 +112,17 @@ public class AdventureQuestStage implements Serializable {
             validPOIs.removeIf(q -> !q.getActive()); //inactive POIs do not appear on map until conditions are met to activate them
         }
         for (String tag : POITags) {
-            validPOIs.removeIf(q -> Arrays.stream(q.getData().questTags).noneMatch(tag::equals));
+            // iOS compatibility: Replace Arrays.stream().noneMatch() with traditional for loop
+            validPOIs.removeIf(poi -> {
+                boolean hasTag = false;
+                for (String questTag : poi.getData().questTags) {
+                    if (tag.equals(questTag)) {
+                        hasTag = true;
+                        break;
+                    }
+                }
+                return !hasTag;
+            });
         }
         if (!anyPOI) {
             if (validPOIs.isEmpty()) {
@@ -166,7 +175,11 @@ public class AdventureQuestStage implements Serializable {
             return worldMapOK;
         }
         if (targetPOI == null) {
-            List<String> enteredTags = Arrays.stream(locationToCheck.getData().questTags).collect(Collectors.toList());
+            // iOS compatibility: Replace Arrays.stream().collect() with traditional for loop
+            List<String> enteredTags = new ArrayList<>();
+            for (String tag : locationToCheck.getData().questTags) {
+                enteredTags.add(tag);
+            }
             for (String tag : POITags) {
                 if (!enteredTags.contains(tag)) {
                     return false;
@@ -259,7 +272,17 @@ public class AdventureQuestStage implements Serializable {
                 validPOIs.removeIf(q -> !q.getActive()); //inactive POIs do not appear on map until conditions are met to activate them
             }
             for (String tag : POITags) {
-                validPOIs.removeIf(q -> Arrays.stream(q.getData().questTags).noneMatch(tag::equals));
+                // iOS compatibility: Replace Arrays.stream().noneMatch() with traditional for loop
+                validPOIs.removeIf(poi -> {
+                    boolean hasTag = false;
+                    for (String questTag : poi.getData().questTags) {
+                        if (tag.equals(questTag)) {
+                            hasTag = true;
+                            break;
+                        }
+                    }
+                    return !hasTag;
+                });
             }
         }
         return validPOIs;

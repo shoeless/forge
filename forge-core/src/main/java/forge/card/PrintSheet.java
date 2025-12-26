@@ -11,7 +11,7 @@ import forge.util.storage.StorageReaderFileSections;
 import java.io.File;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * TODO: Write javadoc for this type.

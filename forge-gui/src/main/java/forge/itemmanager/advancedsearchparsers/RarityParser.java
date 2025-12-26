@@ -2,7 +2,7 @@ package forge.itemmanager.advancedsearchparsers;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.card.CardRarity;
 import forge.item.PaperCard;

@@ -15,8 +15,8 @@ import forge.model.FModel;
 import forge.util.Aggregates;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class AdventureEventController implements Serializable {
     public void finalizeEvent(AdventureEventData completedEvent) {
@@ -31,9 +31,13 @@ public class AdventureEventController implements Serializable {
         Constructed;
 
         public static EventFormat smartValueOf(String name) {
-            return Arrays.stream(EventFormat.values())
-                    .filter(e -> e.name().equalsIgnoreCase(name))
-                    .findFirst().orElse(null);
+            // iOS compatibility: Replace Arrays.stream().filter().findFirst() with traditional for loop
+            for (EventFormat format : EventFormat.values()) {
+                if (format.name().equalsIgnoreCase(name)) {
+                    return format;
+                }
+            }
+            return null;
         }
     }
 
@@ -73,7 +77,9 @@ public class AdventureEventController implements Serializable {
     }
 
     public AdventureEventData createEvent(String pointID) {
-        if (nextEventDate.containsKey(pointID) && nextEventDate.get(pointID) >= LocalDate.now().toEpochDay()) {
+        // iOS compatibility: Use System.currentTimeMillis() to calculate days since epoch
+        long currentDay = TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+        if (nextEventDate.containsKey(pointID) && nextEventDate.get(pointID) >= currentDay) {
             // No event currently available here
             return null;
         }
@@ -107,7 +113,8 @@ public class AdventureEventController implements Serializable {
 
     private static long getEventSeed(String pointID) {
         long eventSeed;
-        long timeSeed = LocalDate.now().toEpochDay();
+        // iOS compatibility: Use System.currentTimeMillis() to calculate days since epoch
+        long timeSeed = TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
         long placeSeed = Long.parseLong(pointID.replaceAll("[^0-9]", ""));
         long room = Long.MAX_VALUE - placeSeed;
         if (timeSeed > room) {
@@ -135,7 +142,9 @@ public class AdventureEventController implements Serializable {
         e.generateParticipants();
 
         AdventurePlayer.current().addEvent(e);
-        nextEventDate.put(pointID, LocalDate.now().toEpochDay() + new Random().nextInt(2)); //next local event availability date
+        // iOS compatibility: Use System.currentTimeMillis() to calculate days since epoch
+        long currentDay = TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+        nextEventDate.put(pointID, currentDay + new Random().nextInt(2)); //next local event availability date
     }
 
     public Deck generateBooster(String setCode) {

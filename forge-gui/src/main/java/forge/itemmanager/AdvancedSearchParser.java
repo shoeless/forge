@@ -12,7 +12,7 @@ import forge.itemmanager.advancedsearchparsers.RarityParser;
 import forge.util.ComparableOp;
 import forge.util.PredicateString.StringOp;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public abstract class AdvancedSearchParser {
 

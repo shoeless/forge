@@ -39,7 +39,7 @@ import forge.util.IterableUtil;
 import forge.util.TextUtil;
 
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**

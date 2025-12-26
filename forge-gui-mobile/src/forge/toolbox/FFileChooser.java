@@ -2,7 +2,7 @@ package forge.toolbox;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import org.apache.commons.lang3.StringUtils;
 

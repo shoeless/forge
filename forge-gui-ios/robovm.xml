@@ -2,7 +2,7 @@
   <executableName>${app.executable}</executableName>
   <mainClass>${app.mainclass}</mainClass>
   <os>ios</os>
-  <arch>thumbv7</arch>
+  <arch>arm64</arch>
   <resources>
     <resource>
       <directory>../forge-gui</directory>
@@ -33,12 +33,12 @@
     <pattern>com.esotericsoftware.minlog.Log</pattern>
     <pattern>com.badlogic.gdx.**</pattern>
   </forceLinkClasses>
-  <libs>
-    <lib>libs/libgdx.a</lib>
-    <lib>libs/libObjectAL.a</lib>
-    <lib>libs/libgdx-freetype.a</lib>
-  </libs>
+  <frameworkPaths>
+    <path>libs</path>
+  </frameworkPaths>
   <frameworks>
+    <framework>gdx</framework>
+    <framework>ObjectAL</framework>
     <framework>UIKit</framework>
     <framework>OpenGLES</framework>
     <framework>QuartzCore</framework>

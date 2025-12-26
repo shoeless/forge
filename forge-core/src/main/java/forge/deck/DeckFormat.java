@@ -34,7 +34,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * GameType is an enum to determine the type of current game. :)

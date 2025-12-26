@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import com.google.common.collect.*;
 import forge.util.IterableUtil;

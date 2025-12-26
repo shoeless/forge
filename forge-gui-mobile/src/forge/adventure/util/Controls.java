@@ -25,7 +25,7 @@ import forge.card.ColorSet;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 
-import java.util.function.Function;
+import forge.util.function.Function;
 
 /**
  * Class to create ui elements in the correct style

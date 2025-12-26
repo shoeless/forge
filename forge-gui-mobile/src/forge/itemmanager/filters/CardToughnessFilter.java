@@ -6,7 +6,7 @@ import forge.item.PaperCard;
 import forge.item.PaperCardPredicates;
 import forge.itemmanager.ItemManager;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public class CardToughnessFilter extends ValueRangeFilter<PaperCard> {

@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public final class FServerManager {
     private static FServerManager instance = null;

@@ -1,6 +1,6 @@
 package forge.itemmanager.advancedsearchparsers;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.StaticData;
 import forge.card.CardEdition;

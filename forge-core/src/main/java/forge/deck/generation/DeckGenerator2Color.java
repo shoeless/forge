@@ -28,7 +28,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * <p>

@@ -13,8 +13,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
 
 /**
  * DeckHints provides the ability for a Card to "want" another Card or type of

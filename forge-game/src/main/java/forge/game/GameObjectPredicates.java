@@ -20,7 +20,7 @@ package forge.game;
 import forge.game.card.Card;
 import forge.game.player.Player;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 /**

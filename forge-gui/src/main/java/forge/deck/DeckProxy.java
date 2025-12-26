@@ -25,8 +25,8 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
 
 // Adding a generic to this class creates compile problems in ItemManager (that I can not fix)
 public class DeckProxy implements InventoryItem {

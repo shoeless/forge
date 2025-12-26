@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.card.CardRulesPredicates;
 import forge.card.ColorSet;

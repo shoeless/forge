@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public final class InputSelectTargets extends InputSyncronizedBase {
     private final List<Card> choices;

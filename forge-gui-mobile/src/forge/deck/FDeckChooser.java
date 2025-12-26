@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import forge.game.GameFormat;
 import forge.util.MyRandom;

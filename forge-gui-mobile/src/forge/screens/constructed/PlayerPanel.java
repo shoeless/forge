@@ -3,7 +3,7 @@ package forge.screens.constructed;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import org.apache.commons.lang3.StringUtils;

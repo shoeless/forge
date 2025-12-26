@@ -19,7 +19,7 @@ package forge.util;
 
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * Special predicate class to perform string operations.

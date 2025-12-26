@@ -23,7 +23,7 @@ import forge.util.IterableUtil;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**

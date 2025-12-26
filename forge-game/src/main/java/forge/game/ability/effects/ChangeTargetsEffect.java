@@ -2,7 +2,7 @@ package forge.game.ability.effects;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang3.tuple.ImmutablePair;

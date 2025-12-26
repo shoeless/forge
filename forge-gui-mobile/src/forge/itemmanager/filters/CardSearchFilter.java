@@ -5,7 +5,7 @@ import forge.item.PaperCard;
 import forge.itemmanager.ItemManager;
 import forge.itemmanager.SFilterUtil;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public class CardSearchFilter extends TextSearchFilter<PaperCard> {

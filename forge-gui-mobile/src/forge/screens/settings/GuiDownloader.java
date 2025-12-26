@@ -18,7 +18,7 @@
 package forge.screens.settings;
 
 import java.net.Proxy;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import forge.Forge;
 import forge.gui.UiCommand;

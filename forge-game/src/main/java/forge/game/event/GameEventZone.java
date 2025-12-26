@@ -12,7 +12,42 @@ import forge.util.TextUtil;
  * Stores information about the affected zone, player, card, and spell ability.
  * Used for tracking zone changes such as casting, moving, or activating cards and abilities.
  */
-public record GameEventZone(ZoneType zoneType, Player player, EventValueChangeType mode, Card card, SpellAbility sa) implements GameEvent {
+public class GameEventZone implements GameEvent {
+    private final ZoneType zoneType;
+    private final Player player;
+    private final EventValueChangeType mode;
+    private final Card card;
+    private final SpellAbility sa;
+
+    public GameEventZone(ZoneType zoneType, Player player, EventValueChangeType mode, Card card, SpellAbility sa) {
+        this.zoneType = zoneType;
+        this.player = player;
+        this.mode = mode;
+        this.card = card;
+        this.sa = sa;
+    }
+
+    public ZoneType zoneType() {
+        return zoneType;
+    }
+
+    public Player player() {
+        return player;
+    }
+
+    public EventValueChangeType mode() {
+        return mode;
+    }
+
+    public Card card() {
+        return card;
+    }
+
+    public SpellAbility sa() {
+        return sa;
+    }
+
+
 
     public GameEventZone(ZoneType zoneType, Player player, EventValueChangeType added, Card c) {
         this(zoneType, player, added, c, null);
@@ -37,5 +72,26 @@ public record GameEventZone(ZoneType zoneType, Player player, EventValueChangeTy
             TextUtil.concatWithSpace(owners, zoneType.toString(), ":", mode.toString()) :
             TextUtil.concatWithSpace(owners, zoneType.toString(), ":", mode.toString(), "" + (sa == null ? card : sa));
     }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        result = 31 * result + (zoneType != null ? zoneType.hashCode() : 0);
+        result = 31 * result + (player != null ? player.hashCode() : 0);
+        result = 31 * result + (mode != null ? mode.hashCode() : 0);
+        result = 31 * result + (card != null ? card.hashCode() : 0);
+        result = 31 * result + (sa != null ? sa.hashCode() : 0);
+        return result;
+    }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        GameEventZone that = (GameEventZone) obj;
+        return java.util.Objects.equals(zoneType, that.zoneType) &&
+               java.util.Objects.equals(player, that.player) &&
+               java.util.Objects.equals(mode, that.mode) &&
+               java.util.Objects.equals(card, that.card) &&
+               java.util.Objects.equals(sa, that.sa);
+    }
 }

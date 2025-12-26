@@ -5,7 +5,7 @@ import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import com.badlogic.gdx.utils.Align;
 

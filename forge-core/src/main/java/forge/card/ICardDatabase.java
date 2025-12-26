@@ -6,7 +6,7 @@ import forge.item.PaperCard;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**

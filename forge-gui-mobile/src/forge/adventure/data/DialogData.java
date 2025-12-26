@@ -3,7 +3,7 @@ package forge.adventure.data;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 /**
  * Dialog Data JSON loader class.

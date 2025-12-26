@@ -1,7 +1,7 @@
 package forge.itemmanager;
 
 import java.util.Map.Entry;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 import forge.item.InventoryItem;
 

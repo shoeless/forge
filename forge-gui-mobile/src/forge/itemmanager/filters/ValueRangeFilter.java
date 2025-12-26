@@ -12,7 +12,7 @@ import forge.toolbox.FLabel;
 import forge.toolbox.FSpinner;
 import forge.util.ComparableOp;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public abstract class ValueRangeFilter<T extends InventoryItem> extends ItemFilter<T> {

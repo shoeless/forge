@@ -18,7 +18,7 @@
 package forge.ai;
 
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.card.CardStateName;
 import forge.game.GameEntity;

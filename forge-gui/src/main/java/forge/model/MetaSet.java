@@ -30,7 +30,7 @@ import forge.util.FileUtil;
 
 import java.io.File;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /** 
  * The class MetaSet. This class is used to define 'special'

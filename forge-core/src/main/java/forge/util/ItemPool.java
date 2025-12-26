@@ -24,7 +24,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.*;
+import forge.util.function.*;;
 import java.util.stream.Collector;
 
 /**
@@ -73,27 +73,27 @@ public class ItemPool<T extends InventoryItem> implements Iterable<Entry<T, Inte
     public static <T extends InventoryItem> Collector<T, ?, ItemPool<T>> collector(Class<T> cls) {
         return new Collector<T, ItemPool<T>, ItemPool<T>>() {
             @Override
-            public Supplier<ItemPool<T>> supplier() {
+            public java.util.function.Supplier<ItemPool<T>> supplier() {
                 return () -> new ItemPool<T>(cls);
             }
 
             @Override
-            public BiConsumer<ItemPool<T>, T> accumulator() {
+            public java.util.function.BiConsumer<ItemPool<T>, T> accumulator() {
                 return (pool, item) -> {
                     if (cls.isInstance(item)) pool.add(cls.cast(item), 1);
                 };
             }
 
             @Override
-            public BinaryOperator<ItemPool<T>> combiner() {
+            public java.util.function.BinaryOperator<ItemPool<T>> combiner() {
                 return (first, second) -> {
                     first.addAll(second);
                     return first;
                 };
             }
 
-            @Override public Function<ItemPool<T>, ItemPool<T>> finisher() {
-                return Function.identity();
+            @Override public java.util.function.Function<ItemPool<T>, ItemPool<T>> finisher() {
+                return java.util.function.Function.identity();
             }
             @Override public Set<Characteristics> characteristics() {
                 return EnumSet.of(Characteristics.IDENTITY_FINISH);
@@ -270,15 +270,15 @@ public class ItemPool<T extends InventoryItem> implements Iterable<Entry<T, Inte
     }
 
     public void removeIf(Predicate<T> filter) {
-        items.keySet().removeIf(filter);
+        items.keySet().removeIf(t -> filter.test(t));
     }
 
     public void retainIf(Predicate<T> filter) {
-        items.keySet().removeIf(filter.negate());
+        items.keySet().removeIf(t -> !filter.test(t));
     }
 
     public T find(Predicate<T> filter) {
-        return items.keySet().stream().filter(filter).findFirst().orElse(null);
+        return items.keySet().stream().filter(t -> filter.test(t)).findFirst().orElse(null);
     }
 
     public void clear() {

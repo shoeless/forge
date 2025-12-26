@@ -63,7 +63,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Function;
+import forge.util.function.Function;
 import java.util.stream.Collectors;
 
 /**

@@ -13,7 +13,7 @@ import forge.item.PaperToken;
 import forge.util.Aggregates;
 
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class TokenDb implements ITokenDatabase {
     // Expected naming convention of scripts

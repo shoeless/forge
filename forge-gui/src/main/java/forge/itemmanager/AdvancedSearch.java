@@ -10,8 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import forge.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -1258,7 +1257,12 @@ public class AdvancedSearch {
 
         @Override
         protected List<Integer> getValuesFromString(String valueText, FilterOption option, FilterOperator operator) {
-            return Arrays.stream(valueText.split(";")).map(String::trim).map(Integer::parseInt).collect(Collectors.toList());
+            // iOS compatibility: Replace Arrays.stream().map().collect() with traditional for loop
+            List<Integer> result = new ArrayList<>();
+            for (String s : valueText.split(";")) {
+                result.add(Integer.parseInt(s.trim()));
+            }
+            return result;
         }
 
         @Override
@@ -1330,7 +1334,21 @@ public class AdvancedSearch {
         @Override
         protected List<V> getValuesFromString(String valueText, FilterOption option, FilterOperator operator) {
             String[] values = valueText.split(";");
-            return choices.stream().filter((choice) -> Arrays.stream(values).anyMatch((name) -> eitherStringMatches(choice, name))).collect(Collectors.toList());
+            // iOS compatibility: Replace stream().filter() and Arrays.stream().anyMatch() with traditional for loops
+            List<V> result = new ArrayList<>();
+            for (V choice : choices) {
+                boolean matched = false;
+                for (String name : values) {
+                    if (eitherStringMatches(choice, name)) {
+                        matched = true;
+                        break;
+                    }
+                }
+                if (matched) {
+                    result.add(choice);
+                }
+            }
+            return result;
         }
 
         private boolean eitherStringMatches(V choice, String name) {

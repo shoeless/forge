@@ -67,7 +67,7 @@ import org.apache.commons.lang3.tuple.Triple;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import static java.lang.Math.max;
 
@@ -1028,9 +1028,47 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         currentState.getView().updateName(currentState);
     }
 
-    private record CardChangedName(String newName, boolean addNonLegendaryCreatureNames) {
+    private static class CardChangedName {
+        private final String newName;
+        private final boolean addNonLegendaryCreatureNames;
+
+        public CardChangedName(String newName, boolean addNonLegendaryCreatureNames) {
+            this.newName = newName;
+            this.addNonLegendaryCreatureNames = addNonLegendaryCreatureNames;
+        }
+
+        public String newName() {
+            return newName;
+        }
+
+        public boolean addNonLegendaryCreatureNames() {
+            return addNonLegendaryCreatureNames;
+        }
+
         public boolean isOverwrite() {
             return newName != null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = 17;
+            result = 31 * result + (newName != null ? newName.hashCode() : 0);
+            result = 31 * result + (addNonLegendaryCreatureNames ? 1 : 0);
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            CardChangedName that = (CardChangedName) obj;
+            return addNonLegendaryCreatureNames == that.addNonLegendaryCreatureNames &&
+                   java.util.Objects.equals(newName, that.newName);
+        }
+
+        @Override
+        public String toString() {
+            return "CardChangedName[newName=" + newName + ", addNonLegendaryCreatureNames=" + addNonLegendaryCreatureNames + "]";
         }
     }
 
@@ -2082,8 +2120,44 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         updateManaCostForView();
         return result;
     }
-    private record CardManaCost(ManaCost mana, boolean additional) {
+    private static class CardManaCost {
+        private final ManaCost mana;
+        private final boolean additional;
 
+        public CardManaCost(ManaCost mana, boolean additional) {
+            this.mana = mana;
+            this.additional = additional;
+        }
+
+        public ManaCost mana() {
+            return mana;
+        }
+
+        public boolean additional() {
+            return additional;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = 17;
+            result = 31 * result + (mana != null ? mana.hashCode() : 0);
+            result = 31 * result + (additional ? 1 : 0);
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            CardManaCost that = (CardManaCost) obj;
+            return additional == that.additional &&
+                   java.util.Objects.equals(mana, that.mana);
+        }
+
+        @Override
+        public String toString() {
+            return "CardManaCost[mana=" + mana + ", additional=" + additional + "]";
+        }
     }
 
 
@@ -4298,8 +4372,44 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         return ColorSet.fromMask(colors);
     }
 
-    private record CardColor(ColorSet color, boolean additional) {
+    private static class CardColor {
+        private final ColorSet color;
+        private final boolean additional;
 
+        public CardColor(ColorSet color, boolean additional) {
+            this.color = color;
+            this.additional = additional;
+        }
+
+        public ColorSet color() {
+            return color;
+        }
+
+        public boolean additional() {
+            return additional;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = 17;
+            result = 31 * result + (color != null ? color.hashCode() : 0);
+            result = 31 * result + (additional ? 1 : 0);
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            CardColor that = (CardColor) obj;
+            return additional == that.additional &&
+                   java.util.Objects.equals(color, that.color);
+        }
+
+        @Override
+        public String toString() {
+            return "CardColor[color=" + color + ", additional=" + additional + "]";
+        }
     }
 
     public final int getCurrentLoyalty() {

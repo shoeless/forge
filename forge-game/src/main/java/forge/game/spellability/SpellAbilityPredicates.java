@@ -6,7 +6,7 @@ import forge.game.ability.ApiType;
 import forge.game.card.Card;
 import forge.game.player.Player;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public final class SpellAbilityPredicates extends CardTraitPredicates {
     public static Predicate<SpellAbility> isApi(final ApiType type) {

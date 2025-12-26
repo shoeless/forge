@@ -25,8 +25,8 @@ import forge.toolbox.FList;
 import forge.toolbox.FScrollPane;
 import forge.toolbox.FTextField;
 
-import java.util.function.Consumer;
-import java.util.function.Predicate;
+import forge.util.function.Consumer;
+import forge.util.function.Predicate;
 
 
 public class AdvancedSearchFilter<T extends InventoryItem> extends ItemFilter<T> {

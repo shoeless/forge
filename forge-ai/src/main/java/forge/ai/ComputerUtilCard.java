@@ -2,8 +2,8 @@ package forge.ai;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
 import java.util.stream.Stream;
 
 import forge.StaticData;

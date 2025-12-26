@@ -1,7 +1,6 @@
 package forge.interfaces;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.jupnp.UpnpServiceConfiguration;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +27,7 @@ public interface IDeviceAdapter {
     void convertToJPEG(InputStream input, OutputStream output) throws IOException;
     Pair<Integer, Integer> getRealScreenSize(boolean real);
     ArrayList<String> getGamepads();
-    UpnpServiceConfiguration getUpnpPlatformService();
+    Object getUpnpPlatformService(); // Returns UpnpServiceConfiguration on supported platforms, null on iOS
     boolean needFileAccess();
     void requestFileAcces();
 

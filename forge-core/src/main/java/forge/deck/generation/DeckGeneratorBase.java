@@ -30,7 +30,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -237,7 +237,7 @@ public abstract class DeckGeneratorBase {
 
             for (int i = 0; i < 3 && actualSize > targetSize; i++) {
                 List<PaperCard> toRemove = tDeck.toFlatList().stream()
-                        .filter(PaperCardPredicates.NOT_BASIC_LAND)
+                        .filter(c -> PaperCardPredicates.NOT_BASIC_LAND.test(c))
                         .collect(StreamUtil.random(actualSize - targetSize));
                 tDeck.removeAllFlat(toRemove);
 

@@ -3,7 +3,7 @@ package forge.util.collect;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**

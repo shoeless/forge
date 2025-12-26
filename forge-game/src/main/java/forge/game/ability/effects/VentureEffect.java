@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ObjectUtils;
 
 import com.google.common.collect.Lists;
+
+import forge.util.function.Predicate;
 
 import forge.StaticData;
 import forge.card.CardRules;

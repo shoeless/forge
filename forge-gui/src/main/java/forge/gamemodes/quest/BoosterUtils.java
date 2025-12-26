@@ -20,7 +20,7 @@ package forge.gamemodes.quest;
 import static forge.gamemodes.quest.QuestUtilCards.isLegalInQuestFormat;
 
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import forge.card.*;

@@ -67,8 +67,8 @@ import io.sentry.Sentry;
 
 import java.util.*;
 import java.util.concurrent.FutureTask;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;

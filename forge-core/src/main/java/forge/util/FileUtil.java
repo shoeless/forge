@@ -252,8 +252,9 @@ public final class FileUtil {
     public static List<String> readAllLines(final File file, final boolean mayTrim) {
         final List<String> list = new ArrayList<>();
         try {
+            // Use FileInputStream instead of Files.newInputStream() to avoid file.toPath() (not available on iOS)
             final BufferedReader in = new BufferedReader(
-                    new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8));
+                    new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
             String line;
             while ((line = in.readLine()) != null) {
                 if (mayTrim) {

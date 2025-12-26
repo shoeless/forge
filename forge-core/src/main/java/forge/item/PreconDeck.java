@@ -89,7 +89,13 @@ public class PreconDeck implements InventoryItemFromSet {
 
     public static class Reader extends StorageReaderFolder<PreconDeck> {
         public Reader(final File deckDir0) {
-            super(deckDir0, PreconDeck::getName);
+            // Use IKeySelector instead of method reference (not available on iOS runtime)
+            super(deckDir0, new forge.util.storage.IKeySelector<PreconDeck>() {
+                @Override
+                public String apply(PreconDeck deck) {
+                    return deck.getName();
+                }
+            });
         }
 
         @Override

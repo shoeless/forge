@@ -6,11 +6,11 @@ import forge.util.IItemReader;
 import java.io.File;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.Function;
 
 public abstract class StorageReaderBase<T> implements IItemReader<T> {
-    protected final Function<? super T, String> keySelector;
-    public StorageReaderBase(final Function<? super T, String> keySelector0) {
+    // Use IKeySelector instead of Function (not available on iOS runtime)
+    protected final IKeySelector<? super T> keySelector;
+    public StorageReaderBase(final IKeySelector<? super T> keySelector0) {
         keySelector = keySelector0;
     }
 

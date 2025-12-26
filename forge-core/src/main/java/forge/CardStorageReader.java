@@ -23,8 +23,6 @@ import forge.util.BuildInfo;
 import forge.util.FileUtil;
 import forge.util.Localizer;
 import forge.util.ThreadUtil;
-import org.apache.commons.lang3.time.StopWatch;
-
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
@@ -229,10 +227,22 @@ public class CardStorageReader {
 
         final Set<CardRules> result;
         if (loadingTokens) {
-            result = new TreeSet<>(Comparator.comparing(CardRules::getNormalizedName, String.CASE_INSENSITIVE_ORDER));
+            // iOS compatibility: Use anonymous inner class Comparator instead of Comparator.comparing() which requires Function
+            result = new TreeSet<>(new Comparator<CardRules>() {
+                @Override
+                public int compare(CardRules c1, CardRules c2) {
+                    return String.CASE_INSENSITIVE_ORDER.compare(c1.getNormalizedName(), c2.getNormalizedName());
+                }
+            });
         }
         else {
-            result = new TreeSet<>(Comparator.comparing(CardRules::getName, String.CASE_INSENSITIVE_ORDER));
+            // iOS compatibility: Use anonymous inner class Comparator instead of Comparator.comparing() which requires Function
+            result = new TreeSet<>(new Comparator<CardRules>() {
+                @Override
+                public int compare(CardRules c1, CardRules c2) {
+                    return String.CASE_INSENSITIVE_ORDER.compare(c1.getName(), c2.getName());
+                }
+            });
         }
 
         if (loadCardsLazily) {
@@ -249,11 +259,11 @@ public class CardStorageReader {
             final List<Callable<List<CardRules>>> taskFiles = makeTaskListForFiles(allFiles, cdlFiles);
             progressObserver.setOperationName(localizer.getMessage("splash.loading.cards-folders"), true);
             progressObserver.report(0, taskFiles.size());
-            final StopWatch sw = new StopWatch();
-            sw.start();
+            // iOS compatibility: Use System.nanoTime() instead of Apache Commons StopWatch
+            final long startTime = System.nanoTime();
             executeLoadTask(result, taskFiles, cdlFiles);
-            sw.stop();
-            final long timeOnParse = sw.getTime(TimeUnit.SECONDS);
+            final long endTime = System.nanoTime();
+            final long timeOnParse = (endTime - startTime) / 1_000_000; // convert to milliseconds
             System.out.printf("Read cards: %s files in %d ms (%d parts) %s%n", allFiles.size(), timeOnParse, taskFiles.size(), useThreadPool ? "using thread pool" : "in same thread");
         }
 
@@ -263,11 +273,11 @@ public class CardStorageReader {
             taskZip = makeTaskListForZip(getZipEntries(), cdlZip);
             progressObserver.setOperationName(localizer.getMessage("splash.loading.cards-archive"), true);
             progressObserver.report(0, taskZip.size());
-            final StopWatch sw = new StopWatch();
-            sw.start();
+            // iOS compatibility: Use System.nanoTime() instead of Apache Commons StopWatch
+            final long startTimeZip = System.nanoTime();
             executeLoadTask(result, taskZip, cdlZip);
-            sw.stop();
-            final long timeOnParse = sw.getTime(TimeUnit.SECONDS);
+            final long endTimeZip = System.nanoTime();
+            final long timeOnParse = (endTimeZip - startTimeZip) / 1_000_000; // convert to milliseconds
             System.out.printf("Read cards: %s archived files in %d ms (%d parts) %s%n", this.zip.size(), timeOnParse, taskZip.size(), useThreadPool ? "using thread pool" : "in same thread");
         }
 
@@ -388,7 +398,8 @@ public class CardStorageReader {
      * @return a new Card instance
      */
     protected final CardRules loadCard(final CardRules.Reader reader, final File file) {
-        try (InputStream fileInputStream = java.nio.file.Files.newInputStream(file.toPath())) {
+        // Use FileInputStream instead of Files.newInputStream() to avoid file.toPath() (not available on iOS)
+        try (InputStream fileInputStream = new FileInputStream(file)) {
             reader.reset();
             final List<String> lines = readScript(fileInputStream);
             CardRules rules = reader.readCard(lines, Files.getNameWithoutExtension(file.getName()));

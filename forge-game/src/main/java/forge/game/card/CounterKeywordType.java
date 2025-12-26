@@ -5,7 +5,8 @@ import java.util.Map;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
-public record CounterKeywordType(String keyword) implements CounterType {
+public class CounterKeywordType implements CounterType {
+    private final String keyword;
 
     // Rule 122.1b
     static ImmutableList<String> keywordCounter = ImmutableList.of(
@@ -13,6 +14,13 @@ public record CounterKeywordType(String keyword) implements CounterType {
             "Indestructible", "Lifelink", "Menace", "Reach", "Shadow", "Trample", "Vigilance");
     private static Map<String, CounterKeywordType> sMap = Maps.newHashMap();
 
+    public CounterKeywordType(String keyword) {
+        this.keyword = keyword;
+    }
+
+    public String keyword() {
+        return keyword;
+    }
 
     public static CounterKeywordType get(String s) {
         if (!sMap.containsKey(s)) {
@@ -20,10 +28,23 @@ public record CounterKeywordType(String keyword) implements CounterType {
         }
         return sMap.get(s);
     }
-    
+
     @Override
     public String toString() {
         return keyword;
+    }
+
+    @Override
+    public int hashCode() {
+        return keyword != null ? keyword.hashCode() : 0;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        CounterKeywordType that = (CounterKeywordType) obj;
+        return java.util.Objects.equals(keyword, that.keyword);
     }
 
     public String getName() {
@@ -58,7 +79,7 @@ public record CounterKeywordType(String keyword) implements CounterType {
         }
         return keywordCounter.contains(keyword);
     }
-    
+
 
     public int getRed() {
         return 255;

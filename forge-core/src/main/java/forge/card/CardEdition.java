@@ -37,10 +37,10 @@ import java.io.FilenameFilter;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+// import java.util.stream.Collectors; // Not available on iOS runtime
 
 /**
  * <p>
@@ -181,7 +181,9 @@ public final class CardEdition implements Comparable<CardEdition> {
         if (collectorNumber == null || collectorNumber.isEmpty())
             inputCollNumber = "50000";  // very big number of 5 digits to have them in last positions
 
-        String matchedCollNr = sortableCollNumberLookup.getOrDefault(inputCollNumber, null);
+        // Use containsKey instead of getOrDefault (not available on iOS runtime)
+        String matchedCollNr = sortableCollNumberLookup.containsKey(inputCollNumber)
+            ? sortableCollNumberLookup.get(inputCollNumber) : null;
         if (matchedCollNr != null)
             return  matchedCollNr;
 
@@ -208,8 +210,42 @@ public final class CardEdition implements Comparable<CardEdition> {
         return sortableCollNr;
     }
 
-    public record EditionEntry(String name, String collectorNumber, CardRarity rarity, String artistName, Map<String, String> extraParams) implements Comparable<EditionEntry> {
+    public static class EditionEntry implements Comparable<EditionEntry> {
+        private final String name;
+        private final String collectorNumber;
+        private final CardRarity rarity;
+        private final String artistName;
+        private final Map<String, String> extraParams;
 
+        public EditionEntry(String name, String collectorNumber, CardRarity rarity, String artistName, Map<String, String> extraParams) {
+            this.name = name;
+            this.collectorNumber = collectorNumber;
+            this.rarity = rarity;
+            this.artistName = artistName;
+            this.extraParams = extraParams;
+        }
+
+        public String name() {
+            return name;
+        }
+
+        public String collectorNumber() {
+            return collectorNumber;
+        }
+
+        public CardRarity rarity() {
+            return rarity;
+        }
+
+        public String artistName() {
+            return artistName;
+        }
+
+        public Map<String, String> extraParams() {
+            return extraParams;
+        }
+
+        @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
             if (collectorNumber != null) {
@@ -227,9 +263,40 @@ public final class CardEdition implements Comparable<CardEdition> {
             }
             if (extraParams != null) {
                 sb.append(" $");
-                sb.append(extraParams.entrySet().stream().map(e -> String.format("\"%s\"=\"%s\"", e.getKey(), e.getValue())).collect(Collectors.joining(", ")));
+                // Use traditional loop instead of Stream + Collectors (not available on iOS runtime)
+                boolean first = true;
+                for (Map.Entry<String, String> e : extraParams.entrySet()) {
+                    if (!first) {
+                        sb.append(", ");
+                    }
+                    sb.append(String.format("\"%s\"=\"%s\"", e.getKey(), e.getValue()));
+                    first = false;
+                }
             }
             return sb.toString();
+        }
+
+        @Override
+        public int hashCode() {
+            int result = 17;
+            result = 31 * result + (name != null ? name.hashCode() : 0);
+            result = 31 * result + (collectorNumber != null ? collectorNumber.hashCode() : 0);
+            result = 31 * result + (rarity != null ? rarity.hashCode() : 0);
+            result = 31 * result + (artistName != null ? artistName.hashCode() : 0);
+            result = 31 * result + (extraParams != null ? extraParams.hashCode() : 0);
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            EditionEntry that = (EditionEntry) obj;
+            return java.util.Objects.equals(name, that.name) &&
+                   java.util.Objects.equals(collectorNumber, that.collectorNumber) &&
+                   java.util.Objects.equals(rarity, that.rarity) &&
+                   java.util.Objects.equals(artistName, that.artistName) &&
+                   java.util.Objects.equals(extraParams, that.extraParams);
         }
 
         @Override
@@ -629,12 +696,24 @@ public final class CardEdition implements Comparable<CardEdition> {
         private final boolean isCustomEditions;
 
         public Reader(File path) {
-            super(path, CardEdition::getCode);
+            // Use IKeySelector instead of method reference (not available on iOS runtime)
+            super(path, new forge.util.storage.IKeySelector<CardEdition>() {
+                @Override
+                public String apply(CardEdition edition) {
+                    return edition.getCode();
+                }
+            });
             this.isCustomEditions = false;
         }
 
         public Reader(File path, boolean isCustomEditions) {
-            super(path, CardEdition::getCode);
+            // Use IKeySelector instead of method reference (not available on iOS runtime)
+            super(path, new forge.util.storage.IKeySelector<CardEdition>() {
+                @Override
+                public String apply(CardEdition edition) {
+                    return edition.getCode();
+                }
+            });
             this.isCustomEditions = isCustomEditions;
         }
 
@@ -928,9 +1007,14 @@ public final class CardEdition implements Comparable<CardEdition> {
         }
 
         public Iterable<CardEdition> getPrereleaseEditions() {
-            return this.stream()
-                    .filter(edition -> edition.getPrerelease() != null)
-                    .collect(Collectors.toList());
+            // Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+            List<CardEdition> result = new ArrayList<>();
+            for (CardEdition edition : this) {
+                if (edition.getPrerelease() != null) {
+                    result.add(edition);
+                }
+            }
+            return result;
         }
 
         public CardEdition getEditionByCodeOrThrow(final String code) {
@@ -949,7 +1033,18 @@ public final class CardEdition implements Comparable<CardEdition> {
             return set == null ? "" : set.getCode2();
         }
 
-        public final Comparator<PaperCard> CARD_EDITION_COMPARATOR = Comparator.comparing(c -> Collection.this.get(c.getEdition()));
+        // iOS compatibility: Use traditional Comparator instead of Comparator.comparing() which requires Function
+        public final Comparator<PaperCard> CARD_EDITION_COMPARATOR = new Comparator<PaperCard>() {
+            @Override
+            public int compare(PaperCard c1, PaperCard c2) {
+                CardEdition e1 = Collection.this.get(c1.getEdition());
+                CardEdition e2 = Collection.this.get(c2.getEdition());
+                if (e1 == null && e2 == null) return 0;
+                if (e1 == null) return -1;
+                if (e2 == null) return 1;
+                return e1.compareTo(e2);
+            }
+        };
 
         public IItemReader<SealedTemplate> getBoosterGenerator() {
             return new StorageReaderBase<>(null) {

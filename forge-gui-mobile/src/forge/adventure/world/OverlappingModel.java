@@ -6,8 +6,8 @@ import com.badlogic.gdx.graphics.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
+import forge.util.function.BiFunction;
+import forge.util.function.Function;
 
 public class OverlappingModel extends Model {
   int N;

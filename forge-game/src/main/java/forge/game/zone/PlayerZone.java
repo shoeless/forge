@@ -25,7 +25,7 @@ import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.util.Lang;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * <p>

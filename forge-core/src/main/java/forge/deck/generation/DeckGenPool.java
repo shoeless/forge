@@ -6,7 +6,7 @@ import forge.util.IterableUtil;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class DeckGenPool implements IDeckGenPool {
     private final Map<String, PaperCard> cards = new HashMap<>();
@@ -39,7 +39,7 @@ public class DeckGenPool implements IDeckGenPool {
     public PaperCard getCard(String name, String edition) {
         Predicate<PaperCard> filter = PaperCardPredicates.printedInSet(edition).and(PaperCardPredicates.name(name));
         return cards.values().stream()
-                .filter(filter)
+                .filter(c -> filter.test(c))
                 .findFirst().orElseGet(() -> getCard(name));
     }
 

@@ -32,7 +32,7 @@ import forge.util.MyRandom;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class CountersPutAi extends CountersAi {
 

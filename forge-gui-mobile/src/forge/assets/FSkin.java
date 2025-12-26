@@ -1,5 +1,6 @@
 package forge.assets;
 
+import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.loaders.TextureLoader;
 import com.badlogic.gdx.files.FileHandle;
@@ -29,6 +30,22 @@ public class FSkin {
     private static FileHandle preferredDir;
     private static String preferredName;
     private static boolean loaded = false;
+
+    /**
+     * Helper method to get FileHandle that works on both iOS and Android.
+     * On iOS/Android, bundled resources must use internal() with relative paths.
+     * On Desktop, we can use absolute() with full paths.
+     */
+    private static FileHandle getFileHandle(String path) {
+        if (Gdx.app != null && (Gdx.app.getType() == ApplicationType.iOS || Gdx.app.getType() == ApplicationType.Android)) {
+            // On iOS/Android, strip the assets directory prefix and use internal()
+            String relativePath = path.replace(ForgeConstants.ASSETS_DIR, "");
+            return Gdx.files.internal(relativePath);
+        } else {
+            // On Desktop, use absolute paths
+            return Gdx.files.absolute(path);
+        }
+    }
 
     public static Texture getLogo() {
         if (Forge.isMobileAdventureMode)
@@ -95,7 +112,7 @@ public class FSkin {
         } else {
             if (!isThemeValid(themeDir, themeName, false)) {
                 System.err.println(themeName + " theme is missing some files to work properly.");
-                final FileHandle def = Gdx.files.absolute(ForgeConstants.DEFAULT_SKINS_DIR);
+                final FileHandle def = getFileHandle(ForgeConstants.DEFAULT_SKINS_DIR);
                 if (def.exists() && def.isDirectory() && isThemeValid(def, "", true)) {
                     FSkinFont.deleteCachedFiles();
                     //use default skin if valid
@@ -108,7 +125,9 @@ public class FSkin {
         }
     }
     private static void useFallbackDir() {
-        preferredDir = GuiBase.isAndroid() ? Gdx.files.internal("fallback_skin") : Gdx.files.classpath("fallback_skin");
+        // iOS and Android both need to use internal() for bundled resources
+        boolean isMobile = Gdx.app != null && (Gdx.app.getType() == ApplicationType.iOS || Gdx.app.getType() == ApplicationType.Android);
+        preferredDir = isMobile ? Gdx.files.internal("fallback_skin") : Gdx.files.classpath("fallback_skin");
     }
     public static void loadLight(String skinName, final SplashScreen splashScreen,FileHandle prefDir) {
         preferredDir = prefDir;
@@ -129,7 +148,7 @@ public class FSkin {
         Forge.hdbuttons = false;
         Forge.hdstart = false;
         // TODO: the "v2" string should be a property of the default skin.
-        FileHandle v2File = Gdx.files.absolute(ForgeConstants.FONTS_DIR + "v2");
+        FileHandle v2File = getFileHandle(ForgeConstants.FONTS_DIR + "v2");
         if (v2File == null || !v2File.exists()) {
             //delete cached fonts
             FSkinFont.deleteCachedFiles();
@@ -141,7 +160,7 @@ public class FSkin {
         }
 
         //ensure skins directory exists
-        final FileHandle dir = Gdx.files.absolute(ForgeConstants.CACHE_SKINS_DIR);
+        final FileHandle dir = getFileHandle(ForgeConstants.CACHE_SKINS_DIR);
         if(preferredDir == null)
         {
             if (!dir.exists() || !dir.isDirectory()) {
@@ -161,7 +180,7 @@ public class FSkin {
                 }
 
                 // Non-default (preferred) skin name and dir.
-                preferredDir = Gdx.files.absolute(preferredName.equalsIgnoreCase("default") ? ForgeConstants.BASE_SKINS_DIR + preferredName : ForgeConstants.CACHE_SKINS_DIR + preferredName);
+                preferredDir = getFileHandle(preferredName.equalsIgnoreCase("default") ? ForgeConstants.BASE_SKINS_DIR + preferredName : ForgeConstants.CACHE_SKINS_DIR + preferredName);
                 if (!preferredDir.exists() || !preferredDir.isDirectory()) {
                     preferredDir.mkdirs();
                 }
@@ -563,14 +582,14 @@ public class FSkin {
      * Gets a FileHandle for a file within the directory where the default skin files should be stored
      */
     public static FileHandle getDefaultSkinFile(String filename) {
-        return Gdx.files.absolute(ForgeConstants.DEFAULT_SKINS_DIR + filename);
+        return getFileHandle(ForgeConstants.DEFAULT_SKINS_DIR + filename);
     }
 
     /**
      * Gets a FileHandle for a file within the planechase cache directory
      */
     public static FileHandle getCachePlanechaseFile(String filename) {
-        return Gdx.files.absolute(ForgeConstants.CACHE_PLANECHASE_PICS_DIR + filename);
+        return getFileHandle(ForgeConstants.CACHE_PLANECHASE_PICS_DIR + filename);
     }
 
     public static FileHandle getSkinDir() {
@@ -585,7 +604,7 @@ public class FSkin {
     public static Array<String> getSkinDirectoryNames() {
         final Array<String> mySkins = new Array<>();
 
-        final FileHandle dir = Gdx.files.absolute(ForgeConstants.CACHE_SKINS_DIR);
+        final FileHandle dir = getFileHandle(ForgeConstants.CACHE_SKINS_DIR);
         for (FileHandle skinFile : dir.list()) {
             String skinName = skinFile.name();
             if (skinName.equalsIgnoreCase(".svn")) { continue; }

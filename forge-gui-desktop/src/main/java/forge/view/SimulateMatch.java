@@ -5,8 +5,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.lang3.time.StopWatch;
-
 import forge.LobbyPlayer;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
@@ -172,24 +170,22 @@ public class SimulateMatch {
     }
 
     public static void simulateSingleMatch(final Match mc, int iGame, boolean outputGamelog) {
-        final StopWatch sw = new StopWatch();
-        sw.start();
+        // iOS compatibility: Use System.nanoTime() instead of Apache Commons StopWatch
+        final long startTime = System.nanoTime();
+        boolean gameEnded = false;
 
         final Game g1 = mc.createGame();
         // will run match in the same thread
         try {
             TimeLimitedCodeBlock.runWithTimeout(() -> {
                 mc.startGame(g1);
-                sw.stop();
             }, mc.getRules().getSimTimeout(), TimeUnit.SECONDS);
+            gameEnded = true;
         } catch (TimeoutException e) {
             System.out.println("Stopping slow match as draw");
         } catch (Exception | StackOverflowError e) {
             e.printStackTrace();
         } finally {
-            if (sw.isStarted()) {
-                sw.stop();
-            }
             if (!g1.isGameOver()) {
                 g1.setGameOver(GameEndReason.Draw);
             }
@@ -206,11 +202,15 @@ public class SimulateMatch {
             System.out.println(l);
         }
 
+        // iOS compatibility: Calculate elapsed time in milliseconds
+        final long endTime = System.nanoTime();
+        final long elapsedMs = (endTime - startTime) / 1_000_000;
+
         // If both players life totals to 0 in a single turn, the game should end in a draw
         if (g1.getOutcome().isDraw()) {
-            System.out.printf("\nGame Result: Game %d ended in a Draw! Took %d ms.%n", 1 + iGame, sw.getTime());
+            System.out.printf("\nGame Result: Game %d ended in a Draw! Took %d ms.%n", 1 + iGame, elapsedMs);
         } else {
-            System.out.printf("\nGame Result: Game %d ended in %d ms. %s has won!\n%n", 1 + iGame, sw.getTime(), g1.getOutcome().getWinningLobbyPlayer().getName());
+            System.out.printf("\nGame Result: Game %d ended in %d ms. %s has won!\n%n", 1 + iGame, elapsedMs, g1.getOutcome().getWinningLobbyPlayer().getName());
         }
     }
 

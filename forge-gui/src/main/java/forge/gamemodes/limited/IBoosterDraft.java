@@ -25,7 +25,6 @@ import forge.deck.DeckSection;
 import forge.item.PaperCard;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -55,14 +54,23 @@ public interface IBoosterDraft {
     default List<LimitedPlayer> getAllPlayers() {
         List<LimitedPlayer> out = new ArrayList<>();
         out.add(getHumanPlayer());
-        out.addAll(Arrays.asList(getOpposingPlayers()));
+        // iOS compatibility: Use traditional for loop instead of Arrays.asList()
+        for (LimitedPlayer player : getOpposingPlayers()) {
+            out.add(player);
+        }
         return out;
     }
 
     default DeckGroup getDecksAsGroup() {
         DeckGroup out = new DeckGroup();
         out.setHumanDeck(getHumanPlayer().deck);
-        out.addAiDecks(Arrays.stream(getOpposingPlayers()).map(LimitedPlayer::getDeck).toArray(Deck[]::new));
+        // iOS compatibility: Replace Arrays.stream().map() with traditional for loop
+        LimitedPlayer[] opposingPlayers = getOpposingPlayers();
+        Deck[] aiDecks = new Deck[opposingPlayers.length];
+        for (int i = 0; i < opposingPlayers.length; i++) {
+            aiDecks[i] = opposingPlayers[i].getDeck();
+        }
+        out.addAiDecks(aiDecks);
         return out;
     }
 

@@ -48,7 +48,7 @@ import forge.util.TextUtil;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * <p>

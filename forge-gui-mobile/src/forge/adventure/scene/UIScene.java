@@ -21,7 +21,7 @@ import forge.Forge;
 import forge.adventure.stage.GameHUD;
 import forge.adventure.util.*;
 
-import java.time.LocalTime;
+import java.util.Calendar;
 
 /**
  * Base class for an GUI scene where the elements are loaded from a json file
@@ -661,7 +661,9 @@ public class UIScene extends Scene {
 
     void updateBG(boolean animate) {
         if (Config.instance().getSettingData().dayNightBG) {
-            int hour = LocalTime.now().getHour();
+            // iOS compatibility: Use Calendar instead of LocalTime
+            Calendar now = Calendar.getInstance();
+            int hour = now.get(Calendar.HOUR_OF_DAY);
             if (animate)
                 setTimeOfDay(hour + 3 > 23 ? hour + 3 - 23 : hour + 3);
             switch (hour) {

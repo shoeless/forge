@@ -3,7 +3,7 @@ package forge.itemmanager.filters;
 import forge.item.PaperCard;
 import forge.itemmanager.ItemManager;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public class CardFormatFilter extends FormatFilter<PaperCard> {

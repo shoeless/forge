@@ -18,7 +18,6 @@
 package forge.deck.io;
 
 import forge.deck.Deck;
-import forge.deck.DeckBase;
 import forge.util.FileSection;
 import forge.util.FileUtil;
 import forge.util.IItemReader;
@@ -47,7 +46,13 @@ public class DeckStorage extends StorageReaderFolder<Deck> implements IItemSeria
     }
 
     public DeckStorage(final File deckDir0, final String rootDir0, boolean moveWrongDecks) {
-        super(deckDir0, DeckBase::getName);
+        // Use IKeySelector instead of method reference (not available on iOS runtime)
+        super(deckDir0, new forge.util.storage.IKeySelector<Deck>() {
+            @Override
+            public String apply(Deck deck) {
+                return deck.getName();
+            }
+        });
         rootDir = rootDir0;
         moveWronglyNamedDecks = moveWrongDecks;
     }

@@ -40,9 +40,9 @@ import forge.screens.TransitionScreen;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 
-import java.time.LocalDate;
 import java.util.*;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -642,7 +642,9 @@ public class MapStage extends GameStage {
                         Array<String> possibleShops = new Array<>(rotation.split(","));
 
                         if (possibleShops.size > 0) {
-                            long rotatingRandomSeed = WorldSave.getCurrentSave().getWorld().getRandom().nextLong() + LocalDate.now().toEpochDay();
+                            // iOS compatibility: Use System.currentTimeMillis() to calculate days since epoch
+                            long currentDay = TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+                            long rotatingRandomSeed = WorldSave.getCurrentSave().getWorld().getRandom().nextLong() + currentDay;
                             Random rotatingShopRandom = new Random(rotatingRandomSeed);
                             rotatingShop = possibleShops.get(rotatingShopRandom.nextInt(possibleShops.size));
                             changes.setRotatingShopSeed(id, rotatingRandomSeed);

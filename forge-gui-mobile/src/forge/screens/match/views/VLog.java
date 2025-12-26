@@ -1,7 +1,7 @@
 package forge.screens.match.views;
 
 import java.util.List;
-import java.util.function.Supplier;
+import forge.util.function.Supplier;
 
 import com.badlogic.gdx.utils.Align;
 

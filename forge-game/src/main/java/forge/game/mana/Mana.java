@@ -6,12 +6,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,7 +31,34 @@ import forge.game.spellability.SpellAbility;
  * This represents a single mana 'globe' floating in a player's pool.
  * </p>
  */
-public record Mana(byte color, Card sourceCard, AbilityManaPart manaAbility, Player player) {
+public class Mana {
+    private final byte color;
+    private final Card sourceCard;
+    private final AbilityManaPart manaAbility;
+    private final Player player;
+
+    public Mana(final byte color, final Card sourceCard, final AbilityManaPart manaAbility, final Player player) {
+        this.color = color;
+        this.manaAbility = manaAbility;
+        this.sourceCard = sourceCard.isInPlay() ? CardCopyService.getLKICopy(sourceCard) : sourceCard.getGame().getChangeZoneLKIInfo(sourceCard);
+        this.player = player;
+    }
+
+    public byte color() {
+        return color;
+    }
+
+    public Card sourceCard() {
+        return sourceCard;
+    }
+
+    public AbilityManaPart manaAbility() {
+        return manaAbility;
+    }
+
+    public Player player() {
+        return player;
+    }
 
     @Override
     public int hashCode() {
@@ -81,13 +108,6 @@ public record Mana(byte color, Card sourceCard, AbilityManaPart manaAbility, Pla
         return mp == mp2 || (mp.getManaRestrictions().equals(mp2.getManaRestrictions()) && mp.getExtraManaRestriction().equals(mp2.getExtraManaRestriction()));
     }
 
-    public Mana(final byte color, final Card sourceCard, final AbilityManaPart manaAbility, final Player player) {
-        this.color = color;
-        this.manaAbility = manaAbility;
-        this.sourceCard = sourceCard.isInPlay() ? CardCopyService.getLKICopy(sourceCard) : sourceCard.getGame().getChangeZoneLKIInfo(sourceCard);
-        this.player = player;
-    }
-
     @Override
     public String toString() {
         return MagicColor.toShortString(color);
@@ -116,7 +136,7 @@ public record Mana(byte color, Card sourceCard, AbilityManaPart manaAbility, Pla
     public boolean addsKeywordsType() {
         return this.manaAbility != null && manaAbility.getAddsKeywordsType() != null;
     }
-    
+
     public boolean addsKeywordsUntil() {
         return this.manaAbility != null && manaAbility.getAddsKeywordsUntil() != null;
     }

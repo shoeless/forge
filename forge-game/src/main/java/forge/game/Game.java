@@ -53,7 +53,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * Represents the state of a <i>single game</i>, a new instance is created for each game.

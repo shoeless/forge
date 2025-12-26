@@ -9,7 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * Filtering conditions specific for CardRules class, defined here along with

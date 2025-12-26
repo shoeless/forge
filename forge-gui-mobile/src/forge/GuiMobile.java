@@ -32,9 +32,8 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
-import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.UpnpServiceConfiguration;
 
 public class GuiMobile implements IGuiBase {
@@ -46,12 +45,29 @@ public class GuiMobile implements IGuiBase {
         assetsDir = assetsDir0;
     }
 
+    /**
+     * Helper method to get FileHandle that works on both iOS and Android.
+     * On iOS/Android, bundled resources must use internal() with relative paths.
+     * On Desktop, we can use absolute() with full paths.
+     */
+    private com.badlogic.gdx.files.FileHandle getFileHandle(String path) {
+        if (Gdx.app != null && (Gdx.app.getType() == ApplicationType.iOS || Gdx.app.getType() == ApplicationType.Android)) {
+            // On iOS/Android, strip the assets directory prefix and use internal()
+            String relativePath = path.replace(ForgeConstants.ASSETS_DIR, "");
+            return Gdx.files.internal(relativePath);
+        } else {
+            // On Desktop, use absolute paths
+            return Gdx.files.absolute(path);
+        }
+    }
+
     @Override
     public UpnpServiceConfiguration getUpnpPlatformService() {
         if (GuiBase.isAndroid()) {
-            return Forge.getDeviceAdapter().getUpnpPlatformService();
+            return (UpnpServiceConfiguration) Forge.getDeviceAdapter().getUpnpPlatformService();
         }
-        return new DefaultUpnpServiceConfiguration();
+        // iOS doesn't use UPnP - return null to avoid loading jupnp classes
+        return null;
     }
 
     @Override
@@ -119,7 +135,7 @@ public class GuiMobile implements IGuiBase {
     @Override
     public ISkinImage getUnskinnedIcon(final String path) {
         if (isGuiThread()) {
-            return new FTextureImage(Forge.getAssets().getTexture(Gdx.files.absolute(path)));
+            return new FTextureImage(Forge.getAssets().getTexture(getFileHandle(path)));
         }
 
         //use a delay load image to avoid an error if called from background thread
@@ -147,7 +163,7 @@ public class GuiMobile implements IGuiBase {
 
                 if (FileUtil.doesFileExist(overlayFilename)) {
                     try {
-                        final Texture overlay = Forge.getAssets().getTexture(Gdx.files.absolute(overlayFilename));
+                        final Texture overlay = Forge.getAssets().getTexture(getFileHandle(overlayFilename));
                         g.drawImage(overlay, (background.getWidth() - overlay.getWidth()) / 2f, (background.getHeight() - overlay.getHeight()) / 2f, overlay.getWidth(), overlay.getHeight());
                     } catch (Exception ignored) {
                     }

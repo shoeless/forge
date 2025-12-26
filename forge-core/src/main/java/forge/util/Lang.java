@@ -7,11 +7,11 @@ import forge.card.CardType;
 import forge.util.lang.*;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
+import forge.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Static library containing language-related utility methods.
@@ -221,7 +221,12 @@ public abstract class Lang {
     }
 
     public String buildValidDesc(Collection<String> valid, boolean multiple) {
-        return joinHomogenous(valid.stream().map(s -> formatValidDesc(s)).collect(Collectors.toList()), null, multiple ? "and/or" : "or");
+        // iOS compatibility: Use traditional loop instead of Stream + map + Collectors (not available on iOS runtime)
+        List<String> formatted = new ArrayList<>();
+        for (String s : valid) {
+            formatted.add(formatValidDesc(s));
+        }
+        return joinHomogenous(formatted, null, multiple ? "and/or" : "or");
     }
 
     public String formatValidDesc(String valid) {

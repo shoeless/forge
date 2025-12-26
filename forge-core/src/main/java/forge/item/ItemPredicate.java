@@ -1,6 +1,6 @@
 package forge.item;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * Filtering conditions for miscellaneous InventoryItems.

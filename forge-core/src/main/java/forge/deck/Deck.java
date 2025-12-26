@@ -139,7 +139,13 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
             result.add(c.getKey());
         }
         if (result.size() > 1) { //sort by type so signature spell comes after oathbreaker
-            result.sort(Comparator.comparing(c -> c.getRules().canBeSignatureSpell()));
+            // iOS compatibility: Use anonymous inner class Comparator instead of Comparator.comparing() which requires Function
+            result.sort(new Comparator<PaperCard>() {
+                @Override
+                public int compare(PaperCard c1, PaperCard c2) {
+                    return Boolean.compare(c1.getRules().canBeSignatureSpell(), c2.getRules().canBeSignatureSpell());
+                }
+            });
         }
         return result;
     }
@@ -321,7 +327,12 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
             if (pool.countDistinct() == 0)
                 continue;  // pool empty, no card has been found!
 
-            List<String> validatedSection = validatedSections.computeIfAbsent(s.getKey(), (k) -> new ArrayList<>());
+            // Use containsKey instead of computeIfAbsent (not available on iOS runtime)
+            List<String> validatedSection = validatedSections.get(s.getKey());
+            if (validatedSection == null) {
+                validatedSection = new ArrayList<>();
+                validatedSections.put(s.getKey(), validatedSection);
+            }
             for (Entry<PaperCard, Integer> entry : pool) {
                 PaperCard card = entry.getKey();
                 String normalizedRequest = getPoolRequest(entry);
@@ -331,7 +342,12 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
                     // Card was in the wrong section. Move it to the right section.
                     DeckSection cardSection = DeckSection.matchingSection(card);
                     assert(cardSection.validate(card)); //Card doesn't fit in the matchingSection?
-                    List<String> sectionCardList = validatedSections.computeIfAbsent(cardSection.name(), (k) -> new ArrayList<>());
+                    // Use containsKey instead of computeIfAbsent (not available on iOS runtime)
+                    List<String> sectionCardList = validatedSections.get(cardSection.name());
+                    if (sectionCardList == null) {
+                        sectionCardList = new ArrayList<>();
+                        validatedSections.put(cardSection.name(), sectionCardList);
+                    }
                     sectionCardList.add(normalizedRequest);
                 }
             }
@@ -371,7 +387,7 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
                 continue;
 
             // == 0. First Off, check if there is anything at all to do for the current section
-            ArrayList<String> cardNamesWithNoEditionInSection = cardsWithNoEdition.getOrDefault(deckSection, null);
+            ArrayList<String> cardNamesWithNoEditionInSection = cardsWithNoEdition.containsKey(deckSection) ? cardsWithNoEdition.get(deckSection) : null;
             if (cardNamesWithNoEditionInSection == null || cardNamesWithNoEditionInSection.size() == 0)
                 continue; // nothing to do here
 

@@ -4,7 +4,7 @@ import forge.card.CardType;
 import forge.item.PaperCard;
 import forge.util.Localizer;
 
-import java.util.function.Function;
+import forge.util.function.Function;
 
 public enum DeckSection {
     Main("lblMainDeck", Validators.DECK_AND_SIDE_VALIDATOR),

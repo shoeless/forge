@@ -9,35 +9,85 @@ public class Utils {
 
     public static final float BASE_WIDTH = 320f;
     public static final float BASE_HEIGHT = 480f;
-    private static final float SCREEN_WIDTH = (float)Gdx.graphics.getWidth();
-    private static final float SCREEN_HEIGHT = (float)Gdx.graphics.getHeight();
-    private static final float HEIGHT_RATIO = SCREEN_HEIGHT / BASE_HEIGHT;
+
+    // Lazy-initialized fields to avoid calling Gdx.graphics before it's ready
+    private static float SCREEN_WIDTH;
+    private static float SCREEN_HEIGHT;
+    private static float HEIGHT_RATIO;
+    private static float ppcX;
+    private static float ppcY;
+    private static float MIN_FINGER_SIZE;
+    public static float AVG_FINGER_WIDTH;  // public for compatibility
+    public static float AVG_FINGER_HEIGHT; // public for compatibility
+    private static boolean initialized = false;
 
     private static final float AVG_FINGER_SIZE_CM = 1.1f;
+    private static final float MIN_FINGERS_WIDE = 5; //ensure screen considered to be at least 5 "fingers" wide
+    private static final float MIN_FINGERS_TALL = MIN_FINGERS_WIDE * BASE_HEIGHT / BASE_WIDTH; //ensure screen tall enough based on fingers wide and base ratio
 
     //Swap commented out line below to specify average finger size
-    private static final float ppcX = Gdx.graphics.getPpcX(), ppcY = Gdx.graphics.getPpcY();
     //private static final float ppcX = 169f / AVG_FINGER_SIZE_CM, ppcY = 237f / AVG_FINGER_SIZE_CM;
     //private static final float scaleX = 1.41f, scaleY = 1.25f;
     //private static final float ppcX = Gdx.graphics.getPpcX() * scaleX, ppcY = Gdx.graphics.getPpcY() * scaleY;
 
-    //round to nearest int to reduce floating point display issues
-    //reduce if either would take up too large a percentage of the screen to prevent layouts not working
-    private static final float MIN_FINGER_SIZE = scale(40); //scaled value of 40 is approximately how tall the Prompt buttons would need to be to fit their text
-    private static final float MIN_FINGERS_WIDE = 5; //ensure screen considered to be at least 5 "fingers" wide
-    private static final float MIN_FINGERS_TALL = MIN_FINGERS_WIDE * BASE_HEIGHT / BASE_WIDTH; //ensure screen tall enough based on fingers wide and base ratio
+    public static void ensureInitialized() {
+        if (!initialized) {
+            try {
+                System.err.println("FORGE: Utils.ensureInitialized() starting");
+                SCREEN_WIDTH = (float)Gdx.graphics.getWidth();
+                System.err.println("FORGE: SCREEN_WIDTH = " + SCREEN_WIDTH);
+                SCREEN_HEIGHT = (float)Gdx.graphics.getHeight();
+                System.err.println("FORGE: SCREEN_HEIGHT = " + SCREEN_HEIGHT);
+                HEIGHT_RATIO = SCREEN_HEIGHT / BASE_HEIGHT;
+                ppcX = Gdx.graphics.getPpcX();
+                System.err.println("FORGE: ppcX = " + ppcX);
+                ppcY = Gdx.graphics.getPpcY();
+                System.err.println("FORGE: ppcY = " + ppcY);
 
-    public static final float AVG_FINGER_WIDTH = Math.round(Math.min(Math.max(cmToPixelsX(AVG_FINGER_SIZE_CM), MIN_FINGER_SIZE), SCREEN_WIDTH / MIN_FINGERS_WIDE));
-    public static final float AVG_FINGER_HEIGHT = Math.round(Math.min(Math.max(cmToPixelsY(AVG_FINGER_SIZE_CM), MIN_FINGER_SIZE), SCREEN_HEIGHT / MIN_FINGERS_TALL));
+                //round to nearest int to reduce floating point display issues
+                //reduce if either would take up too large a percentage of the screen to prevent layouts not working
+                MIN_FINGER_SIZE = internalScale(40); //scaled value of 40 is approximately how tall the Prompt buttons would need to be to fit their text
+                System.err.println("FORGE: MIN_FINGER_SIZE = " + MIN_FINGER_SIZE);
+
+                AVG_FINGER_WIDTH = Math.round(Math.min(Math.max(internalCmToPixelsX(AVG_FINGER_SIZE_CM), MIN_FINGER_SIZE), SCREEN_WIDTH / MIN_FINGERS_WIDE));
+                AVG_FINGER_HEIGHT = Math.round(Math.min(Math.max(internalCmToPixelsY(AVG_FINGER_SIZE_CM), MIN_FINGER_SIZE), SCREEN_HEIGHT / MIN_FINGERS_TALL));
+                System.err.println("FORGE: AVG_FINGER_WIDTH = " + AVG_FINGER_WIDTH);
+                System.err.println("FORGE: AVG_FINGER_HEIGHT = " + AVG_FINGER_HEIGHT);
+
+                initialized = true;
+                System.err.println("FORGE: Utils.ensureInitialized() completed successfully");
+            } catch (Exception e) {
+                System.err.println("FORGE: Utils.ensureInitialized() FAILED: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
+        }
+    }
+
+    // Internal methods that don't call ensureInitialized to avoid infinite recursion
+    private static float internalScale(float value) {
+        return Math.round(value * HEIGHT_RATIO);
+    }
+
+    private static float internalCmToPixelsX(float cm) {
+        return ppcX * cm;
+    }
+
+    private static float internalCmToPixelsY(float cm) {
+        return ppcY * cm;
+    }
 
     public static float cmToPixelsX(float cm) {
+        ensureInitialized();
         return ppcX * cm;
     }
     public static float cmToPixelsY(float cm) {
+        ensureInitialized();
         return ppcY * cm;
     }
 
     public static float scale(float value) {
+        ensureInitialized();
         //use height ratio to prioritize making fonts look good
         //fonts can always auto-scale down if container not wide enough
         return Math.round(value * HEIGHT_RATIO);

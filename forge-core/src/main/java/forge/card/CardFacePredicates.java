@@ -2,7 +2,7 @@ package forge.card;
 
 import forge.card.mana.ManaCost;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public final class CardFacePredicates {

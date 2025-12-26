@@ -15,7 +15,7 @@ import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
 
 import java.util.List;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 public class CreatureEvaluator implements Function<Card, Integer> {
     @Override

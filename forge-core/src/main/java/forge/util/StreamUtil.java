@@ -1,10 +1,6 @@
 package forge.util;
 
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -31,9 +27,10 @@ public class StreamUtil {
 
     /**
      * @return a Stream with the provided array as its source.
+     * iOS compatibility: Wraps array in a list to avoid Arrays.stream()
      */
     public static <T> Stream<T> stream(T[] array) {
-        return Arrays.stream(array);
+        return Arrays.asList(array).stream();
     }
 
     /**
@@ -59,17 +56,17 @@ public class StreamUtil {
         }
 
         @Override
-        public Supplier<RandomReservoir<T>> supplier() {
+        public java.util.function.Supplier<RandomReservoir<T>> supplier() {
             return () -> new RandomReservoir<>(size);
         }
 
         @Override
-        public BiConsumer<RandomReservoir<T>, T> accumulator() {
+        public java.util.function.BiConsumer<RandomReservoir<T>, T> accumulator() {
             return RandomReservoir::accumulate;
         }
 
         @Override
-        public BinaryOperator<RandomReservoir<T>> combiner() {
+        public java.util.function.BinaryOperator<RandomReservoir<T>> combiner() {
             return (first, second) -> {
                 //There's probably a way to adapt the Random Reservoir method
                 //so that two partially processed lists can be combined into one.
@@ -91,7 +88,7 @@ public class StreamUtil {
         }
 
         @Override
-        public Function<RandomReservoir<T>, Optional<T>> finisher() {
+        public java.util.function.Function<RandomReservoir<T>, Optional<T>> finisher() {
             return (chosen) -> chosen.samples.isEmpty() ? Optional.empty() : Optional.of(chosen.samples.get(0));
         }
     }
@@ -102,7 +99,7 @@ public class StreamUtil {
         }
 
         @Override
-        public Function<RandomReservoir<T>, List<T>> finisher() {
+        public java.util.function.Function<RandomReservoir<T>, List<T>> finisher() {
             return (chosen) -> chosen.samples;
         }
     }

@@ -38,9 +38,9 @@ import forge.util.Localizer;
 import forge.util.Utils;
 
 import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import forge.util.function.Consumer;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
 
 public class AdventureDeckEditor extends FDeckEditor {
     protected static class AdventureEditorConfig extends DeckEditorConfig {

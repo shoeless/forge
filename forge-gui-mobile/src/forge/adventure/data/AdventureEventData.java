@@ -27,8 +27,7 @@ import forge.util.StreamUtil;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import forge.util.function.Predicate;
 
 public class AdventureEventData implements Serializable {
     @Serial
@@ -542,7 +541,10 @@ public class AdventureEventData implements Serializable {
         List<AdventureEventParticipant> activePlayers = new ArrayList<>();
         if (style == AdventureEventController.EventStyle.Bracket) {
             if (round == 1) {
-                activePlayers = Arrays.stream(participants).collect(Collectors.toList());
+                // iOS compatibility: Replace Arrays.stream().collect() with traditional for loop
+                for (AdventureEventParticipant participant : participants) {
+                    activePlayers.add(participant);
+                }
             } else {
                 if (matches.get(round - 1) == null) {
                     return null;
@@ -568,7 +570,10 @@ public class AdventureEventData implements Serializable {
             // In a roundrobin everyone plays everyone else once
             // We do have this logic already in ForgeTOurnament, we should see if we could reuse it
             matches.put(round, new ArrayList<>());
-            activePlayers = Arrays.stream(participants).collect(Collectors.toList());
+            // iOS compatibility: Replace Arrays.stream().collect() with traditional for loop
+            for (AdventureEventParticipant participant : participants) {
+                activePlayers.add(participant);
+            }
 
             if (round > 1) {
                 AdventureEventParticipant pivot = activePlayers.remove(0);
@@ -676,11 +681,14 @@ public class AdventureEventData implements Serializable {
                     Map<AdventureEventParticipant, Integer> tiebreakers = new HashMap<>();
                     for (AdventureEventParticipant p : topPlayers) {
                         int tb = 0;
-                        for (AdventureEventMatch m : matches.values().stream().flatMap(List::stream).collect(Collectors.toList())) {
-                            if (m.p1 == p && m.winner != null && m.winner != p) {
-                                tb += m.p2.wins;
-                            } else if (m.p2 == p && m.winner != null && m.winner != p) {
-                                tb += m.p1.wins;
+                        // iOS compatibility: Replace stream().flatMap().collect() with traditional for loops
+                        for (List<AdventureEventMatch> matchList : matches.values()) {
+                            for (AdventureEventMatch m : matchList) {
+                                if (m.p1 == p && m.winner != null && m.winner != p) {
+                                    tb += m.p2.wins;
+                                } else if (m.p2 == p && m.winner != null && m.winner != p) {
+                                    tb += m.p1.wins;
+                                }
                             }
                         }
                         tiebreakers.put(p, tb);

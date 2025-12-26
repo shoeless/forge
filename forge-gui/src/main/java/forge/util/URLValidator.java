@@ -43,8 +43,44 @@ public class URLValidator {
     }
 
 
-    //This is fine, Records were introduced in Java 16, its essentially a DTO class with implicit getters and constructors
-    public record HostPort(String host, Integer port) {
+    public static class HostPort {
+        private final String host;
+        private final Integer port;
+
+        public HostPort(String host, Integer port) {
+            this.host = host;
+            this.port = port;
+        }
+
+        public String host() {
+            return host;
+        }
+
+        public Integer port() {
+            return port;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = 17;
+            result = 31 * result + (host != null ? host.hashCode() : 0);
+            result = 31 * result + (port != null ? port.hashCode() : 0);
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            HostPort that = (HostPort) obj;
+            return java.util.Objects.equals(host, that.host) &&
+                   java.util.Objects.equals(port, that.port);
+        }
+
+        @Override
+        public String toString() {
+            return "HostPort[host=" + host + ", port=" + port + "]";
+        }
     }
 
 }

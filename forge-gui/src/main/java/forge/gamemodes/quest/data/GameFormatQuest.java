@@ -19,7 +19,7 @@ package forge.gamemodes.quest.data;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.card.CardEdition;
 import forge.game.GameFormat;

@@ -20,7 +20,7 @@ package forge.util.storage;
 import forge.util.IHasName;
 
 import java.util.Collection;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Stream;
 
 public interface IStorage<T> extends Iterable<T>, IHasName {

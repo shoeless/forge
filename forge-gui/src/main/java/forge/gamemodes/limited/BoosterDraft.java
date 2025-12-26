@@ -43,8 +43,8 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import forge.util.function.Predicate;
+import forge.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**

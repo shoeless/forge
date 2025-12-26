@@ -2,7 +2,7 @@ package forge.util;
 
 import forge.gui.FThreads;
 
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 public abstract class WaitCallback<T> implements Consumer<T>, Runnable {
     public class Lock {

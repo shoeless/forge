@@ -15,7 +15,12 @@ public class FTrace {
     }
 
     public static FTrace get(String name0) {
-        FTrace trace = traces.computeIfAbsent(name0, FTrace::new);
+        // Use containsKey instead of computeIfAbsent (not available on iOS runtime)
+        FTrace trace = traces.get(name0);
+        if (trace == null) {
+            trace = new FTrace(name0);
+            traces.put(name0, trace);
+        }
         return trace;
     }
 

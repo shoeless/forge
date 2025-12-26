@@ -537,6 +537,55 @@ public class ImageCache {
         return Pair.of(c, brightness > 155);
     }
 
-    private record ImageRecord(String colorValue, Boolean isCloserToWhite, int cardRadius, boolean isFullBorder) {
+    private static class ImageRecord {
+        private final String colorValue;
+        private final Boolean isCloserToWhite;
+        private final int cardRadius;
+        private final boolean isFullBorder;
+
+        public ImageRecord(String colorValue, Boolean isCloserToWhite, int cardRadius, boolean isFullBorder) {
+            this.colorValue = colorValue;
+            this.isCloserToWhite = isCloserToWhite;
+            this.cardRadius = cardRadius;
+            this.isFullBorder = isFullBorder;
+        }
+
+        public String colorValue() {
+            return colorValue;
+        }
+
+        public Boolean isCloserToWhite() {
+            return isCloserToWhite;
+        }
+
+        public int cardRadius() {
+            return cardRadius;
+        }
+
+        public boolean isFullBorder() {
+            return isFullBorder;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            ImageRecord other = (ImageRecord) obj;
+            return cardRadius == other.cardRadius &&
+                   isFullBorder == other.isFullBorder &&
+                   java.util.Objects.equals(colorValue, other.colorValue) &&
+                   java.util.Objects.equals(isCloserToWhite, other.isCloserToWhite);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(colorValue, isCloserToWhite, cardRadius, isFullBorder);
+        }
+
+        @Override
+        public String toString() {
+            return "ImageRecord[colorValue=" + colorValue + ", isCloserToWhite=" + isCloserToWhite +
+                   ", cardRadius=" + cardRadius + ", isFullBorder=" + isFullBorder + "]";
+        }
     }
 }

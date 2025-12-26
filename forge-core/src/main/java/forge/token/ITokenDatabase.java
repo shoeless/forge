@@ -6,7 +6,7 @@ import forge.item.PaperToken;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public interface ITokenDatabase extends Iterable<PaperToken> {
     PaperToken getToken(String tokenName);

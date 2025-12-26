@@ -6,11 +6,11 @@ import org.apache.commons.text.StringEscapeUtils;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class RSSReader {
     public static String getCommitLog(String commitsAtom, Date buildDateOriginal, Date maxDate) {
@@ -20,7 +20,9 @@ public class RSSReader {
             RssReader reader = new RssReader();
             URL url = new URL(commitsAtom);
             InputStream inputStream = url.openStream();
-            List<Item> items = reader.read(inputStream).collect(Collectors.toList());
+            // iOS compatibility: Use traditional loop instead of Stream + Collectors
+            List<Item> items = new ArrayList<>();
+            reader.read(inputStream).forEach(items::add);
             StringBuilder logs = new StringBuilder();
             int c = 0;
             for (Item i : items) {
@@ -29,10 +31,27 @@ public class RSSReader {
                 String title = TextUtil.stripNonValidXMLCharacters(i.getTitle().get());
                 if (title.contains("Merge"))
                     continue;
-                ZonedDateTime zonedDateTime = i.getPubDateZonedDateTime().isPresent() ? i.getPubDateZonedDateTime().get() : null;
-                if (zonedDateTime == null)
+                // iOS compatibility: Parse pubDate string instead of using ZonedDateTime
+                Date feedDate = null;
+                if (i.getPubDate().isPresent()) {
+                    String pubDateStr = i.getPubDate().get();
+                    try {
+                        // Try RFC 822 date format (common for RSS feeds)
+                        SimpleDateFormat rfc822 = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z");
+                        feedDate = rfc822.parse(pubDateStr);
+                    } catch (ParseException e1) {
+                        try {
+                            // Try ISO 8601 format as fallback
+                            SimpleDateFormat iso8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+                            feedDate = iso8601.parse(pubDateStr.replaceAll("([+-]\\d{2}):(\\d{2})$", "$1$2"));
+                        } catch (ParseException e2) {
+                            // Skip this item if we can't parse the date
+                            continue;
+                        }
+                    }
+                }
+                if (feedDate == null)
                     continue;
-                Date feedDate = Date.from(zonedDateTime.toInstant());
                 if (buildDateOriginal != null && feedDate.before(buildDateOriginal))
                     continue;
                 if (maxDate != null && feedDate.after(maxDate))
@@ -56,7 +75,9 @@ public class RSSReader {
             RssReader reader = new RssReader();
             URL url = new URL(releaseAtom);
             InputStream inputStream = url.openStream();
-            List<Item> items = reader.read(inputStream).collect(Collectors.toList());
+            // iOS compatibility: Use traditional loop instead of Stream + Collectors
+            List<Item> items = new ArrayList<>();
+            reader.read(inputStream).forEach(items::add);
             for (Item i : items) {
                 if (i.getLink().isPresent()) {
                     try {

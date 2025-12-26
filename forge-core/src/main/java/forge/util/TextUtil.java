@@ -11,7 +11,6 @@ import java.io.File;
 import java.text.DecimalFormat;
 import java.text.Normalizer;
 import java.text.SimpleDateFormat;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -405,7 +404,12 @@ public class TextUtil {
                 Calendar calendar = Calendar.getInstance();
                 SimpleDateFormat original = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 SimpleDateFormat formatted = getSimpleDate();
-                String offset = " GMT " + OffsetDateTime.now().getOffset();
+                // iOS compatibility: Use Calendar/TimeZone instead of OffsetDateTime
+                TimeZone tz = TimeZone.getDefault();
+                int offsetMillis = tz.getOffset(System.currentTimeMillis());
+                int offsetHours = offsetMillis / (1000 * 60 * 60);
+                int offsetMinutes = Math.abs(offsetMillis / (1000 * 60)) % 60;
+                String offset = String.format(" GMT %+03d:%02d", offsetHours, offsetMinutes);
                 List<String> toformat = FileUtil.readAllLines(changelog, false);
                 boolean skip = false;
                 int count = 0;

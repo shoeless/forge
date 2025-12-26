@@ -18,7 +18,7 @@ import forge.game.zone.ZoneType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class CopyPermanentAi extends SpellAbilityAi {
     @Override

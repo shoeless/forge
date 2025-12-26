@@ -2,7 +2,7 @@ package forge.gamemodes.limited;
 
 import java.util.EnumSet;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import org.apache.commons.lang3.tuple.Pair;
 

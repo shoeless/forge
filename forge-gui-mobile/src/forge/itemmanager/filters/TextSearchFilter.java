@@ -11,7 +11,7 @@ import forge.itemmanager.SFilterUtil;
 import forge.toolbox.FDisplayObject;
 import forge.toolbox.FTextField;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public class TextSearchFilter<T extends InventoryItem> extends ItemFilter<T> {

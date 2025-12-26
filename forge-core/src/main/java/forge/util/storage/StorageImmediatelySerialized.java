@@ -21,7 +21,7 @@ import forge.util.IItemSerializer;
 import forge.util.TextUtil;
 
 import java.io.File;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 /**
  * <p>

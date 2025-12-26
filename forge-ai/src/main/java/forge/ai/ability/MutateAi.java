@@ -11,7 +11,7 @@ import forge.game.player.PlayerActionConfirmMode;
 import forge.game.spellability.SpellAbility;
 
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class MutateAi extends SpellAbilityAi {
     @Override

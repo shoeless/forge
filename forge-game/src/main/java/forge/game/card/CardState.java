@@ -54,7 +54,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class CardState implements GameObject, IHasSVars, ITranslatable {

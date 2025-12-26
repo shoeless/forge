@@ -15,7 +15,7 @@ import forge.toolbox.FTextArea;
 import forge.util.TextBounds;
 import forge.util.Utils;
 
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 public class BugReportDialog extends FScreen { //use screen rather than dialog so screen with bug isn't rendered
     private static final float PADDING = Utils.scale(5);
@@ -31,10 +31,10 @@ public class BugReportDialog extends FScreen { //use screen rather than dialog s
 
     private final FTextArea lblHeader = add(new FTextArea(false, "Report Bug"));
     private final TemplateView tvDetails;
-    private final FButton btnReport = add(new FButton(BugReporter.REPORT));
-    private final FButton btnSave = add(new FButton(BugReporter.SAVE));
-    private final FButton btnDiscard = add(new FButton(BugReporter.DISCARD));
-    private final FButton btnExit = add(new FButton(BugReporter.EXIT));
+    private final FButton btnReport = add(new FButton(BugReporter.getREPORT()));
+    private final FButton btnSave = add(new FButton(BugReporter.getSAVE()));
+    private final FButton btnDiscard = add(new FButton(BugReporter.getDISCARD()));
+    private final FButton btnExit = add(new FButton(BugReporter.getEXIT()));
 
     private BugReportDialog(String title, String text0, boolean showExitAppBtn) {
         super(title);

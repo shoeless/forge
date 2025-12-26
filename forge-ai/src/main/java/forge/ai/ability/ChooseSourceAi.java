@@ -20,7 +20,7 @@ import forge.util.Aggregates;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class ChooseSourceAi extends SpellAbilityAi {
 

@@ -5,7 +5,7 @@ import static forge.Forge.getLocalizer;
 import forge.toolbox.FOptionPane;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import com.badlogic.gdx.math.Vector2;
 import forge.adventure.scene.GameScene;

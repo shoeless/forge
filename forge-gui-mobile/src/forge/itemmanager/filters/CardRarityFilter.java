@@ -4,7 +4,7 @@ import forge.card.CardRarity;
 import forge.item.PaperCard;
 import forge.itemmanager.ItemManager;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class CardRarityFilter extends ComboBoxFilter<PaperCard, CardRarity> {
     public CardRarityFilter(ItemManager<? super PaperCard> itemManager0) {

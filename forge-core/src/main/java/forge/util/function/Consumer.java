@@ -1,0 +1,26 @@
+package forge.util.function;
+
+/**
+ * iOS-compatible backport of java.util.function.Consumer for RoboVM.
+ */
+@FunctionalInterface
+public interface Consumer<T> {
+    /**
+     * Performs this operation on the given argument.
+     */
+    void accept(T t);
+
+    /**
+     * Returns a composed {@code Consumer} that performs, in sequence, this
+     * operation followed by the {@code after} operation.
+     */
+    default Consumer<T> andThen(Consumer<? super T> after) {
+        if (after == null) {
+            throw new NullPointerException();
+        }
+        return t -> {
+            accept(t);
+            after.accept(t);
+        };
+    }
+}

@@ -1,8 +1,8 @@
 package forge.screens.planarconquest;
 
 import java.util.Map.Entry;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
+import forge.util.function.Consumer;
+import forge.util.function.Predicate;
 
 import com.badlogic.gdx.utils.Align;
 

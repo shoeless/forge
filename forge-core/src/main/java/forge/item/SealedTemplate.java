@@ -10,7 +10,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 public class SealedTemplate {
 
@@ -111,7 +110,13 @@ public class SealedTemplate {
 
     public final static class Reader extends StorageReaderFile<SealedTemplate> {
         public Reader(File file) {
-            super(file, (Function<? super SealedTemplate, String>) (Function<SealedTemplate, String>) SealedTemplate::getName);
+            // Use IKeySelector instead of method reference (not available on iOS runtime)
+            super(file, new forge.util.storage.IKeySelector<SealedTemplate>() {
+                @Override
+                public String apply(SealedTemplate template) {
+                    return template.getName();
+                }
+            });
         }
 
 

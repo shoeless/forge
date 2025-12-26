@@ -1,7 +1,7 @@
 package forge.model;
 
-import java.util.function.BiConsumer;
-import java.util.function.Function;
+import forge.util.function.BiConsumer;
+import forge.util.function.Function;
 
 import forge.localinstance.properties.ForgePreferences;
 

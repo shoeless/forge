@@ -7,7 +7,6 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.PatternSyntaxException;
-import java.util.stream.Collectors;
 
 //
 // DO NOT AUTOFORMAT / CHECKSTYLE THIS FILE
@@ -100,7 +99,12 @@ final class CardFace implements ICardFace, Cloneable {
             this.attractionLights = null;
             return;
         }
-        this.attractionLights = Arrays.stream(value.split(" ")).map(Integer::parseInt).collect(Collectors.toSet());
+        // iOS compatibility: Replace Arrays.stream() with traditional for loop
+        Set<Integer> lights = new HashSet<>();
+        for (String s : value.split(" ")) {
+            lights.add(Integer.parseInt(s));
+        }
+        this.attractionLights = lights;
     }
 
     void setPtText(String value) {
@@ -239,7 +243,14 @@ final class CardFace implements ICardFace, Cloneable {
         else variant.replacements.addAll(0, this.replacements);
 
         if(variant.variables == null) variant.variables = this.variables;
-        else this.variables.forEach((k, v) -> variant.variables.putIfAbsent(k, v));
+        // Use traditional for loop instead of forEach+putIfAbsent (not available on iOS runtime)
+        else {
+            for (Map.Entry<String, String> entry : this.variables.entrySet()) {
+                if (!variant.variables.containsKey(entry.getKey())) {
+                    variant.variables.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
 
         if(variant.nonAbilityText == null) variant.nonAbilityText = this.nonAbilityText;
         if(variant.draftActions == null) variant.draftActions = this.draftActions;

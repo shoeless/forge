@@ -1,8 +1,6 @@
 package forge.game.ability.effects;
 
 import java.util.*;
-import java.util.stream.Stream;
-import java.util.stream.Collectors;
 
 import forge.card.CardDb;
 import forge.card.CardStateName;
@@ -111,20 +109,32 @@ public class PlayEffect extends SpellAbilityEffect {
             }
         } else if (sa.hasParam("AnySupportedCard")) {
             final String valid = sa.getParam("AnySupportedCard");
-            Stream<PaperCard> cards;
+            // iOS compatibility: Replace Arrays.stream() and Stream operations with traditional for loops
+            List<PaperCard> cards = new ArrayList<>();
             CardDb cardDb = StaticData.instance().getCommonCards();
             if (valid.startsWith("Names:")) {
-                cards = Arrays.stream(valid.substring(6).split(","))
-                        .map(name -> name.replace(";", ","))
-                        .map(cardDb::getUniqueByName);
+                String[] names = valid.substring(6).split(",");
+                for (String name : names) {
+                    String fixedName = name.replace(";", ",");
+                    PaperCard card = cardDb.getUniqueByName(fixedName);
+                    if (card != null) {
+                        cards.add(card);
+                    }
+                }
             } else if (valid.equalsIgnoreCase("sorcery")) {
-                cards = cardDb.streamUniqueCards()
-                        .filter(PaperCardPredicates.fromRules(CardRulesPredicates.IS_SORCERY));
+                for (PaperCard card : cardDb.getUniqueCards()) {
+                    if (PaperCardPredicates.fromRules(CardRulesPredicates.IS_SORCERY).test(card)) {
+                        cards.add(card);
+                    }
+                }
             } else if (valid.equalsIgnoreCase("instant")) {
-                cards = cardDb.streamUniqueCards()
-                        .filter(PaperCardPredicates.fromRules(CardRulesPredicates.IS_INSTANT));
+                for (PaperCard card : cardDb.getUniqueCards()) {
+                    if (PaperCardPredicates.fromRules(CardRulesPredicates.IS_INSTANT).test(card)) {
+                        cards.add(card);
+                    }
+                }
             } else {
-                //Could just return a stream of all cards, but that should probably be a specific option rather than a fallback.
+                //Could just return all cards, but that should probably be a specific option rather than a fallback.
                 //Could also just leave it null but there's currently nothing else that can happen that case.
                 throw new UnsupportedOperationException("Unknown parameter for AnySupportedCard: " + valid);
             }
@@ -132,7 +142,9 @@ public class PlayEffect extends SpellAbilityEffect {
                 final CardCollection choice = new CardCollection();
                 final String num = sa.getParamOrDefault("RandomNum", "1");
                 int nCopied = AbilityUtils.calculateAmount(source, num, sa);
-                for (PaperCard cp : cards.collect(StreamUtil.random(nCopied))) {
+                // iOS compatibility: Use Aggregates.random instead of stream.collect(StreamUtil.random())
+                List<PaperCard> randomCards = Aggregates.random(cards, nCopied);
+                for (PaperCard cp : randomCards) {
                     final Card possibleCard = Card.fromPaperCard(cp, sa.getActivatingPlayer());
                     if (sa.getActivatingPlayer().isAI() && possibleCard.getRules() != null && possibleCard.getRules().getAiHints().getRemAIDecks())
                         continue;
@@ -186,7 +198,13 @@ public class PlayEffect extends SpellAbilityEffect {
 
         if (sa.hasParam("ValidSA")) {
             final String valid[] = sa.getParam("ValidSA").split(",");
-            final List<Card> invalid = tgtCards.stream().filter(c -> !IterableUtil.any(AbilityUtils.getBasicSpellsFromPlayEffect(c, controller), SpellAbilityPredicates.isValid(valid, controller, source, sa))).collect(Collectors.toList());
+            // iOS compatibility: Replace stream().filter().collect() with traditional for loop
+            final List<Card> invalid = new ArrayList<>();
+            for (Card c : tgtCards) {
+                if (!IterableUtil.any(AbilityUtils.getBasicSpellsFromPlayEffect(c, controller), SpellAbilityPredicates.isValid(valid, controller, source, sa))) {
+                    invalid.add(c);
+                }
+            }
             if (!invalid.isEmpty())
                 tgtCards.removeAll(invalid);
             if (tgtCards.isEmpty()) {
@@ -222,7 +240,13 @@ public class PlayEffect extends SpellAbilityEffect {
             if (hasTotalCMCLimit) {
                 // filter out cards with mana value greater than limit
                 final String [] valid = {"Spell.cmcLE" + totalCMCLimit};
-                final List<Card> invalid = tgtCards.stream().filter(c -> !IterableUtil.any(AbilityUtils.getBasicSpellsFromPlayEffect(c, controller), SpellAbilityPredicates.isValid(valid, controller, c, sa))).collect(Collectors.toList());
+                // iOS compatibility: Replace stream().filter().collect() with traditional for loop
+                final List<Card> invalid = new ArrayList<>();
+                for (Card c : tgtCards) {
+                    if (!IterableUtil.any(AbilityUtils.getBasicSpellsFromPlayEffect(c, controller), SpellAbilityPredicates.isValid(valid, controller, c, sa))) {
+                        invalid.add(c);
+                    }
+                }
                 if (!invalid.isEmpty())
                     tgtCards.removeAll(invalid);
                 if (tgtCards.isEmpty())

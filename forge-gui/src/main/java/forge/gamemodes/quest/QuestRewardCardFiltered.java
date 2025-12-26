@@ -3,7 +3,7 @@ package forge.gamemodes.quest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.item.PaperCard;
 import forge.model.FModel;

@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import org.jupnp.UpnpServiceConfiguration;
 

@@ -11,7 +11,7 @@ import forge.model.FModel;
 import forge.screens.FScreen;
 import forge.toolbox.FChoiceList;
 
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 public class ConquestPlaneswalkersScreen extends FScreen {
     private static final float PADDING = FDeckChooser.PADDING;

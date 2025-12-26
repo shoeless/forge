@@ -21,6 +21,7 @@ package forge.item;
 import forge.StaticData;
 import forge.item.generation.BoosterGenerator;
 import forge.util.StreamUtil;
+import forge.util.function.Predicate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -108,9 +109,10 @@ public abstract class SealedProduct implements InventoryItemFromSet {
     }
 
     protected List<PaperCard> getRandomBasicLands(final String setCode, final int count) {
+        Predicate<PaperCard> setPredicate = PaperCardPredicates.printedInSet(setCode);
         return StaticData.instance().getCommonCards().streamAllCards()
-                .filter(PaperCardPredicates.printedInSet(setCode))
-                .filter(PaperCardPredicates.IS_BASIC_LAND)
+                .filter(c -> setPredicate.test(c))
+                .filter(c -> PaperCardPredicates.IS_BASIC_LAND.test(c))
                 .collect(StreamUtil.random(count));
     }
 }

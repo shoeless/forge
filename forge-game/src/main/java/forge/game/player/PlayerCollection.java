@@ -2,8 +2,8 @@ package forge.game.player;
 
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
 
 import forge.game.card.CardCollection;
 import forge.game.zone.ZoneType;

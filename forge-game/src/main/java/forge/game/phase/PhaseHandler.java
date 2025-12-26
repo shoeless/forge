@@ -46,7 +46,6 @@ import forge.util.maps.HashMapOfLists;
 import forge.util.maps.MapOfLists;
 
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
 
@@ -62,8 +61,8 @@ import java.util.*;
 public class PhaseHandler implements java.io.Serializable {
     private static final long serialVersionUID = 5207222278370963197L;
 
-    // used for debugging phase timing
-    private final StopWatch sw = new StopWatch();
+    // iOS compatibility: Use nanoTime for debugging phase timing instead of StopWatch
+    private long debugStartTime = 0;
 
     // Start turn at 0, since we start even before first untap
     private PhaseType phase = null;
@@ -1043,7 +1042,8 @@ public class PhaseHandler implements java.io.Serializable {
     public void mainLoopStep() {
         if (givePriorityToPlayer) {
             if (DEBUG_PHASES) {
-                sw.start();
+                // iOS compatibility: Use System.nanoTime() instead of StopWatch
+                debugStartTime = System.nanoTime();
             }
 
             game.fireEvent(new GameEventPlayerPriority(playerTurn, phase, getPriorityPlayer()));
@@ -1110,10 +1110,11 @@ public class PhaseHandler implements java.io.Serializable {
             }
 
             if (DEBUG_PHASES) {
-                sw.stop();
-                System.out.print("... passed in " + sw.getTime()/1000f + " s\n");
+                // iOS compatibility: Calculate elapsed time using nanoTime
+                long debugEndTime = System.nanoTime();
+                long debugElapsedMs = (debugEndTime - debugStartTime) / 1_000_000;
+                System.out.print("... passed in " + debugElapsedMs/1000f + " s\n");
                 System.out.println("\t\tStack: " + game.getStack());
-                sw.reset();
             }
         }
         else if (DEBUG_PHASES) {

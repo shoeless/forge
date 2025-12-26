@@ -39,7 +39,7 @@ import java.math.RoundingMode;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 public enum ColumnDef {
     /**

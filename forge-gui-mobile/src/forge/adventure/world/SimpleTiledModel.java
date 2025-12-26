@@ -4,8 +4,8 @@ package forge.adventure.world;
 import com.badlogic.gdx.graphics.Color;
 
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Function;
+import forge.util.function.BiFunction;
+import forge.util.function.Function;
 import java.util.stream.IntStream;
 
 public class SimpleTiledModel extends Model {

@@ -22,7 +22,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * This class treats every line of a given file as a source for a named object.
@@ -33,11 +32,11 @@ import java.util.function.Function;
 public abstract class StorageReaderFile<T> extends StorageReaderBase<T> {
     protected final File file;
 
-    public StorageReaderFile(final String pathname, final Function<? super T, String> keySelector0) {
+    public StorageReaderFile(final String pathname, final IKeySelector<? super T> keySelector0) {
         this(new File(pathname), keySelector0);
     }
 
-    public StorageReaderFile(final File file0, final Function<? super T, String> keySelector0) {
+    public StorageReaderFile(final File file0, final IKeySelector<? super T> keySelector0) {
         super(keySelector0);
         file = file0;
     }

@@ -34,7 +34,7 @@ import forge.util.collect.FCollection;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * <p>

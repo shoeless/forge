@@ -20,8 +20,8 @@ package forge.deck;
 import forge.item.InventoryItem;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public abstract class DeckBase implements Serializable, Comparable<DeckBase>, InventoryItem {
     private static final long serialVersionUID = -7538150536939660052L;
@@ -155,7 +155,9 @@ public abstract class DeckBase implements Serializable, Comparable<DeckBase>, In
         //string operator hard to guarantee filename legal,only replace some not allowed as file names characters
         final String result = name.replaceAll("[\\/:*?\"<>|]","");
         if (result.isEmpty()) {
-            final String createTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm"));
+            // iOS compatibility: Use SimpleDateFormat instead of LocalDateTime
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm");
+            final String createTime = dateFormat.format(new Date());
             return createTime;
         }
         return result;

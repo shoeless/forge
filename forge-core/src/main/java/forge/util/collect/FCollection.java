@@ -2,7 +2,7 @@ package forge.util.collect;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -261,12 +261,17 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
     }
 
     @Override
-    public boolean removeIf(Predicate<? super T> filter) {
+    public boolean removeIf(java.util.function.Predicate<? super T> filter) {
         if (list.removeIf(filter)) {
             set.removeIf(filter);
             return true;
         }
         return false;
+    }
+
+    // Convenience method for forge.util.function.Predicate
+    public boolean removeIf(Predicate<? super T> filter) {
+        return removeIf((java.util.function.Predicate<? super T>) t -> filter.test(t));
     }
 
     /**
@@ -554,12 +559,12 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
 
     @Override
     public boolean anyMatch(Predicate<? super T> test) {
-        return set.stream().anyMatch(test);
+        return set.stream().anyMatch(t -> test.test(t));
     }
 
     @Override
     public boolean allMatch(Predicate<? super T> test) {
-        return set.stream().allMatch(test);
+        return set.stream().allMatch(t -> test.test(t));
     }
 
     /**

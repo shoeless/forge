@@ -33,7 +33,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -128,7 +128,7 @@ public class CardPool extends ItemPool<PaperCard> {
             paperCard = StaticData.instance().getCommonCards().createUnsupportedCard(cardName);
             selectedDbName = "Common";
         }
-        CardDb cardDb = dbs.getOrDefault(selectedDbName, StaticData.instance().getCommonCards());
+        CardDb cardDb = dbs.containsKey(selectedDbName) ? dbs.get(selectedDbName) : StaticData.instance().getCommonCards();
         // Determine Art Index
         setCode = paperCard.getEdition();
         cardName = paperCard.getName();
@@ -205,7 +205,7 @@ public class CardPool extends ItemPool<PaperCard> {
             CardEdition edition = StaticData.instance().getCardEdition(card.getEdition());
             if (edition == null)
                 continue;
-            int currentCount = editionStatistics.getOrDefault(edition, 0);
+            int currentCount = editionStatistics.containsKey(edition) ? editionStatistics.get(edition) : 0;
             currentCount += count;
             editionStatistics.put(edition, currentCount);
         }
@@ -250,7 +250,7 @@ public class CardPool extends ItemPool<PaperCard> {
             CardEdition edition = entry.getKey();
             int count = entry.getValue();
             CardEdition.Type key = edition.getType();
-            int currentCount = editionTypeStats.getOrDefault(key, 0);
+            int currentCount = editionTypeStats.containsKey(key) ? editionTypeStats.get(key) : 0;
             currentCount += count;
             editionTypeStats.put(key, currentCount);
         }

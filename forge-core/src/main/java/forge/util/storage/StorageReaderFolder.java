@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.*;
-import java.util.function.Function;
 
 /**
  * This class treats every file in the given folder as a source for a named
@@ -51,8 +50,9 @@ public abstract class StorageReaderFolder<T> extends StorageReaderBase<T> {
      * Instantiates a new storage reader folder.
      *
      * @param itemDir0 the item dir0
+     * @param keySelector0 the key selector function (uses IKeySelector instead of Function for iOS compatibility)
      */
-    public StorageReaderFolder(final File itemDir0, Function<? super T, String> keySelector0) {
+    public StorageReaderFolder(final File itemDir0, IKeySelector<? super T> keySelector0) {
         super(keySelector0);
 
         this.directory = itemDir0;
@@ -81,9 +81,13 @@ public abstract class StorageReaderFolder<T> extends StorageReaderBase<T> {
      */
     @Override
     public Map<String, T> readAll() {
+        System.err.println("STORAGE: readAll() starting for directory: " + directory.getPath());
+        System.err.flush();
         final Map<String, T> result = createMap();
 
         final File[] files = this.directory.listFiles(this.getFileFilter());
+        System.err.println("STORAGE: Found " + (files != null ? files.length : 0) + " files to read");
+        System.err.flush();
         for (final File file : files) {
             try {
                 final T newDeck = this.read(file);

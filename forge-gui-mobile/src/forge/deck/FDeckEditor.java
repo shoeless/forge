@@ -45,10 +45,10 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import forge.util.function.Consumer;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
+import forge.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class FDeckEditor extends TabPageScreen<FDeckEditor> {

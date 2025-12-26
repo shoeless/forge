@@ -26,8 +26,8 @@ import forge.util.Localizer;
 import io.sentry.Sentry;
 
 import java.io.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * The class ErrorViewer. Enables showing and saving error messages that
@@ -39,11 +39,12 @@ import java.time.format.DateTimeFormatter;
 public class BugReporter {
     private static final int STACK_OVERFLOW_MAX_MESSAGE_LEN = 16 * 1024;
 
-    public static final String REPORT = Localizer.getInstance().getMessage("lblReport");
-    public static final String SAVE = Localizer.getInstance().getMessage("lblSave");
-    public static final String DISCARD = Localizer.getInstance().getMessage("lblDiscardError");
-    public static final String EXIT = Localizer.getInstance().getMessage("lblExit");
-    public static final String SENTRY = Localizer.getInstance().getMessage("lblAutoSubmitBugReports");
+    // Lazy-initialized to avoid calling Localizer before it's ready
+    public static String getREPORT() { return Localizer.getInstance().getMessage("lblReport"); }
+    public static String getSAVE() { return Localizer.getInstance().getMessage("lblSave"); }
+    public static String getDISCARD() { return Localizer.getInstance().getMessage("lblDiscardError"); }
+    public static String getEXIT() { return Localizer.getInstance().getMessage("lblExit"); }
+    public static String getSENTRY() { return Localizer.getInstance().getMessage("lblAutoSubmitBugReports"); }
 
     private static Throwable exception;
     private static String message;
@@ -133,7 +134,9 @@ public class BugReporter {
         if (GuiBase.getInterface().isLibgdxPort()) {
             text = GuiBase.getHWInfo() + "\n\n" + error;
             // Save in downloads directory instead for easy access without filepicker
-            String filename = "forge-bug-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")) + ".txt";
+            // iOS compatibility: Use SimpleDateFormat instead of LocalDateTime
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HHmmss");
+            String filename = "forge-bug-" + dateFormat.format(new Date()) + ".txt";
             f = new File(GuiBase.getDownloadsDir() + filename);
         } else {
             text = error;

@@ -63,7 +63,7 @@ import forge.util.storage.StorageBase;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 /**
  * The default Model implementation for Forge.
@@ -157,28 +157,43 @@ public final class FModel {
         initialize(progressBar, adjustPrefs, false);
     }
     public static void initialize(final IProgressBar progressBar, Function<ForgePreferences, Void> adjustPrefs, boolean isSimTest) {
+        System.err.println("FMODEL: initialize() - starting");
+        System.err.flush();
+
         ImageKeys.initializeDirs(
             ForgeConstants.CACHE_CARD_PICS_DIR, ForgeConstants.CACHE_CARD_PICS_SUBDIR,
             ForgeConstants.CACHE_TOKEN_PICS_DIR, ForgeConstants.CACHE_ICON_PICS_DIR,
             ForgeConstants.CACHE_BOOSTER_PICS_DIR, ForgeConstants.CACHE_FATPACK_PICS_DIR,
             ForgeConstants.CACHE_BOOSTERBOX_PICS_DIR, ForgeConstants.CACHE_PRECON_PICS_DIR,
             ForgeConstants.CACHE_TOURNAMENTPACK_PICS_DIR);
+        System.err.println("FMODEL: initialize() - image dirs initialized");
+        System.err.flush();
 
         // Instantiate preferences: quest and regular
         // Preferences are initialized first so that the splash screen can be translated.
         try {
+            System.err.println("FMODEL: initialize() - loading preferences");
+            System.err.flush();
             preferences = GuiBase.getForgePrefs();
             if (adjustPrefs != null) {
                 adjustPrefs.apply(preferences);
             }
             GamePlayerUtil.getGuiPlayer().setName(preferences.getPref(FPref.PLAYER_NAME));
+            System.err.println("FMODEL: initialize() - preferences loaded");
+            System.err.flush();
         }
         catch (final Exception exn) {
             throw new RuntimeException(exn);
         }
 
+        System.err.println("FMODEL: initialize() - creating Lang instance");
+        System.err.flush();
         Lang.createInstance(getPreferences().getPref(FPref.UI_LANGUAGE));
+        System.err.println("FMODEL: initialize() - initializing Localizer");
+        System.err.flush();
         Localizer.getInstance().initialize(getPreferences().getPref(FPref.UI_LANGUAGE), ForgeConstants.LANG_DIR);
+        System.err.println("FMODEL: initialize() - Localizer initialized");
+        System.err.flush();
 
         final ProgressObserver progressBarBridge = (progressBar == null) ?
                 ProgressObserver.emptyObserver : new ProgressObserver() {
@@ -198,34 +213,67 @@ public final class FModel {
                 });
             }
         };
+        System.err.println("FMODEL: initialize() - progress bar bridge created");
+        System.err.flush();
 
         // if (new AutoUpdater(true).attemptToUpdate()) {}
         // Load types before loading cards
+        System.err.println("FMODEL: initialize() - calling loadDynamicGamedata()");
+        System.err.flush();
         loadDynamicGamedata();
+        System.err.println("FMODEL: initialize() - loadDynamicGamedata() completed");
+        System.err.flush();
 
         // Load card database
         // Lazy loading currently disabled
+        System.err.println("FMODEL: initialize() - creating CardStorageReader for cards");
+        System.err.flush();
         reader = new CardStorageReader(ForgeConstants.CARD_DATA_DIR, progressBarBridge,
                 false);
+        System.err.println("FMODEL: initialize() - CardStorageReader for cards created");
+        System.err.flush();
+
+        System.err.println("FMODEL: initialize() - creating CardStorageReader for tokens");
+        System.err.flush();
         tokenReader = new CardStorageReader(ForgeConstants.TOKEN_DATA_DIR, progressBarBridge,
                 false);
+        System.err.println("FMODEL: initialize() - CardStorageReader for tokens created");
+        System.err.flush();
 
         try {
+            System.err.println("FMODEL: initialize() - creating CardStorageReader for custom cards");
+            System.err.flush();
            customReader  = new CardStorageReader(ForgeConstants.USER_CUSTOM_CARDS_DIR, progressBarBridge, false);
+            System.err.println("FMODEL: initialize() - CardStorageReader for custom cards created");
+            System.err.flush();
         } catch (Exception e) {
+            System.err.println("FMODEL: initialize() - custom cards reader failed: " + e.getMessage());
+            System.err.flush();
             customReader = null;
         }
 
         try {
+            System.err.println("FMODEL: initialize() - creating CardStorageReader for custom tokens");
+            System.err.flush();
             customTokenReader  = new CardStorageReader(ForgeConstants.USER_CUSTOM_TOKENS_DIR, progressBarBridge, false);
+            System.err.println("FMODEL: initialize() - CardStorageReader for custom tokens created");
+            System.err.flush();
         } catch (Exception e) {
+            System.err.println("FMODEL: initialize() - custom tokens reader failed: " + e.getMessage());
+            System.err.flush();
             customTokenReader = null;
         }
 
         // Do this first so PaperCards see the real preference
+        System.err.println("FMODEL: initialize() - preloading card translation");
+        System.err.flush();
         CardTranslation.preloadTranslation(preferences.getPref(FPref.UI_LANGUAGE), ForgeConstants.LANG_DIR);
+        System.err.println("FMODEL: initialize() - card translation preloaded");
+        System.err.flush();
 
         // Create profile dirs if they don't already exist
+        System.err.println("FMODEL: initialize() - creating profile directories");
+        System.err.flush();
         for (final String dname : ForgeConstants.PROFILE_DIRS) {
             final File path = new File(dname);
             if (path.isDirectory()) {
@@ -236,46 +284,102 @@ public final class FModel {
                 throw new RuntimeException("cannot create profile directory: " + dname);
             }
         }
+        System.err.println("FMODEL: initialize() - profile directories created");
+        System.err.flush();
 
         ForgePreferences.DEV_MODE = preferences.getPrefBoolean(FPref.DEV_MODE_ENABLED);
         ForgePreferences.UPLOAD_DRAFT = ForgePreferences.NET_CONN;
 
+        System.err.println("FMODEL: initialize() - calling getMagicDb() for first time");
+        System.err.flush();
         getMagicDb().setStandardPredicate(getFormats().getStandard().getFilterRules());
+        System.err.println("FMODEL: initialize() - Standard predicate set");
+        System.err.flush();
         getMagicDb().setPioneerPredicate(getFormats().getPioneer().getFilterRules());
+        System.err.println("FMODEL: initialize() - Pioneer predicate set");
+        System.err.flush();
         getMagicDb().setModernPredicate(getFormats().getModern().getFilterRules());
+        System.err.println("FMODEL: initialize() - Modern predicate set");
+        System.err.flush();
         getMagicDb().setCommanderPredicate(getFormats().get("Commander").getFilterRules());
+        System.err.println("FMODEL: initialize() - Commander predicate set");
+        System.err.flush();
         getMagicDb().setOathbreakerPredicate(getFormats().get("Oathbreaker").getFilterRules());
+        System.err.println("FMODEL: initialize() - Oathbreaker predicate set");
+        System.err.flush();
         getMagicDb().setBrawlPredicate(getFormats().get("Brawl").getFilterRules());
+        System.err.println("FMODEL: initialize() - Brawl predicate set");
+        System.err.flush();
 
+        System.err.println("FMODEL: initialize() - setting filtered hands and mulligan rule");
+        System.err.flush();
         getMagicDb().setFilteredHandsEnabled(preferences.getPrefBoolean(FPref.FILTERED_HANDS));
         try {
             getMagicDb().setMulliganRule(MulliganDefs.MulliganRule.valueOf(preferences.getPref(FPref.MULLIGAN_RULE)));
         } catch(Exception e) {
             getMagicDb().setMulliganRule(MulliganDefs.MulliganRule.London);
         }
+        System.err.println("FMODEL: initialize() - filtered hands and mulligan rule set");
+        System.err.flush();
 
+        System.err.println("FMODEL: initialize() - setting performance mode");
+        System.err.flush();
         Spell.setPerformanceMode(preferences.getPrefBoolean(FPref.PERFORMANCE_MODE));
+        System.err.println("FMODEL: initialize() - performance mode set");
+        System.err.flush();
 
         if (progressBar != null) {
             FThreads.invokeInEdtLater(() -> progressBar.setDescription(Localizer.getInstance().getMessage("splash.loading.decks")));
         }
 
+        System.err.println("FMODEL: initialize() - loading CardPreferences");
+        System.err.flush();
         CardPreferences.load();
+        System.err.println("FMODEL: initialize() - CardPreferences loaded");
+        System.err.flush();
+
+        System.err.println("FMODEL: initialize() - loading DeckPreferences");
+        System.err.flush();
         DeckPreferences.load();
+        System.err.println("FMODEL: initialize() - DeckPreferences loaded");
+        System.err.flush();
+
+        System.err.println("FMODEL: initialize() - loading ItemManagerConfig");
+        System.err.flush();
         ItemManagerConfig.load();
+        System.err.println("FMODEL: initialize() - ItemManagerConfig loaded");
+        System.err.flush();
 
         // Preload AI profiles
+        System.err.println("FMODEL: initialize() - loading AI profiles");
+        System.err.flush();
         AiProfileUtil.loadAllProfiles(ForgeConstants.AI_PROFILE_DIR);
+        System.err.println("FMODEL: initialize() - AI profiles loaded");
+        System.err.flush();
         AiProfileUtil.setAiSideboardingMode(AiProfileUtil.AISideboardingMode.normalizedValueOf(getPreferences().getPref(FPref.MATCH_AI_SIDEBOARDING_MODE)));
+        System.err.println("FMODEL: initialize() - AI sideboarding mode set");
+        System.err.flush();
 
         // Generate Deck Gen matrix
         if(getPreferences().getPrefBoolean(FPref.DECKGEN_CARDBASED)) {
+            System.err.println("FMODEL: initialize() - generating deck gen matrix (DECKGEN_CARDBASED enabled)");
+            System.err.flush();
             boolean commanderDeckGenMatrixLoaded=CardRelationMatrixGenerator.initialize();
+            System.err.println("FMODEL: initialize() - CardRelationMatrixGenerator.initialize() completed");
+            System.err.flush();
             deckGenMatrixLoaded=CardArchetypeLDAGenerator.initialize();
+            System.err.println("FMODEL: initialize() - CardArchetypeLDAGenerator.initialize() completed");
+            System.err.flush();
             if(!commanderDeckGenMatrixLoaded){
                 deckGenMatrixLoaded=false;
             }
+        } else {
+            System.err.println("FMODEL: initialize() - skipping deck gen matrix (DECKGEN_CARDBASED disabled)");
+            System.err.flush();
         }
+
+        System.err.println("FMODEL: initialize() - COMPLETED SUCCESSFULLY");
+        System.err.flush();
     }
 
     private static boolean deckGenMatrixLoaded = false;
@@ -350,29 +454,64 @@ public final class FModel {
      * Load dynamic gamedata.
      */
     public static void loadDynamicGamedata() {
+        System.err.println("FMODEL: loadDynamicGamedata() - starting");
+        System.err.flush();
+
         if (!CardType.Constant.LOADED.isSet()) {
-            
+            System.err.println("FMODEL: loadDynamicGamedata() - CardType constants not loaded, loading now");
+            System.err.flush();
+
+            System.err.println("FMODEL: loadDynamicGamedata() - reading TYPE_LIST_FILE: " + ForgeConstants.TYPE_LIST_FILE);
+            System.err.flush();
             final Map<String, List<String>> contents = FileSection.parseSections(FileUtil.readFile(ForgeConstants.TYPE_LIST_FILE));
-            
+            System.err.println("FMODEL: loadDynamicGamedata() - TYPE_LIST_FILE read successfully, parsing sections");
+            System.err.flush();
+
             for (String sectionName: contents.keySet()) {
                 CardType.Helper.parseTypes(sectionName, contents.get(sectionName));
             }
+            System.err.println("FMODEL: loadDynamicGamedata() - sections parsed, setting LOADED flag");
+            System.err.flush();
 
             CardType.Constant.LOADED.set();
+            System.err.println("FMODEL: loadDynamicGamedata() - CardType constants loaded successfully");
+            System.err.flush();
+        } else {
+            System.err.println("FMODEL: loadDynamicGamedata() - CardType constants already loaded, skipping");
+            System.err.flush();
         }
 
         if (!keywordsLoaded) {
+            System.err.println("FMODEL: loadDynamicGamedata() - keywords not loaded, loading now");
+            System.err.flush();
+
+            System.err.println("FMODEL: loadDynamicGamedata() - reading KEYWORD_LIST_FILE: " + ForgeConstants.KEYWORD_LIST_FILE);
+            System.err.flush();
             final List<String> nskwListFile = FileUtil.readFile(ForgeConstants.KEYWORD_LIST_FILE);
+            System.err.println("FMODEL: loadDynamicGamedata() - KEYWORD_LIST_FILE read successfully, size=" + nskwListFile.size());
+            System.err.flush();
 
             if (nskwListFile.size() > 1) {
+                System.err.println("FMODEL: loadDynamicGamedata() - processing " + nskwListFile.size() + " keywords");
+                System.err.flush();
                 for (final String s : nskwListFile) {
                     if (s.length() > 1) {
                         CardUtil.NON_STACKING_LIST.add(s);
                     }
                 }
+                System.err.println("FMODEL: loadDynamicGamedata() - keywords processed");
+                System.err.flush();
             }
             keywordsLoaded = true;
+            System.err.println("FMODEL: loadDynamicGamedata() - keywords loaded successfully");
+            System.err.flush();
+        } else {
+            System.err.println("FMODEL: loadDynamicGamedata() - keywords already loaded, skipping");
+            System.err.flush();
         }
+
+        System.err.println("FMODEL: loadDynamicGamedata() - COMPLETED");
+        System.err.flush();
     }
 
     public static StaticData getMagicDb() {

@@ -3,7 +3,7 @@ package forge.ai;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.game.GameObject;
 import org.apache.commons.lang3.ObjectUtils;

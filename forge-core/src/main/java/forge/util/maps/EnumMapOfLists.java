@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import forge.util.function.Supplier;
 
 public class EnumMapOfLists<K extends Enum<K>, V> extends EnumMap<K, Collection<V>> implements MapOfLists<K, V> {
     private final Supplier<? extends Collection<V>> factory;

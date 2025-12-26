@@ -459,7 +459,7 @@ public final class ImageKeys {
                 System.err.println(e);
             }
         }
-        HashSet<String> content = cachedContent.getOrDefault(keyParts[0], null);
+        HashSet<String> content = cachedContent.containsKey(keyParts[0]) ? cachedContent.get(keyParts[0]) : null;
         //avoid checking for file if edition doesn't have any images
         return editionHasImage && hitCache(content, keyParts[1]);
     }

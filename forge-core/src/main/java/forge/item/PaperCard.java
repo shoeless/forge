@@ -25,8 +25,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * A lightweight version of a card that matches real-world cards, to use outside of games (eg. inventory, decks, trade).
@@ -370,10 +368,21 @@ public class PaperCard implements Comparable<IPaperCard>, InventoryItemFromSet, 
                 names.add(mainFlavor + " // " + otherFlavor);
         }
         if(!"en-US".equals(language)) {
-            Set<String> translated = names.stream().map(CardTranslation::getTranslatedName).filter(Objects::nonNull).collect(Collectors.toSet());
+            // iOS compatibility: Use traditional loop instead of Stream + map + filter + Collectors (not available on iOS runtime)
+            Set<String> translated = new HashSet<>();
+            for (String name : names) {
+                String translatedName = CardTranslation.getTranslatedName(name);
+                if (translatedName != null) {
+                    translated.add(translatedName);
+                }
+            }
             names.addAll(translated);
         }
-        Set<String> noAccents = names.stream().map(StringUtils::stripAccents).collect(Collectors.toSet());
+        // iOS compatibility: Use traditional loop instead of Stream + map + Collectors (not available on iOS runtime)
+        Set<String> noAccents = new HashSet<>();
+        for (String name : names) {
+            noAccents.add(StringUtils.stripAccents(name));
+        }
         names.addAll(noAccents);
         return names;
     }
@@ -591,7 +600,12 @@ public class PaperCard implements Comparable<IPaperCard>, InventoryItemFromSet, 
 
     @Override
     public List<ICardFace> getAllFaces() {
-        return StreamUtil.stream(this.rules.getAllFaces()).map(this::getVariantForFace).collect(Collectors.toList());
+        // iOS compatibility: Use traditional loop instead of Stream + map + Collectors (not available on iOS runtime)
+        List<ICardFace> result = new ArrayList<>();
+        for (ICardFace face : this.rules.getAllFaces()) {
+            result.add(getVariantForFace(face));
+        }
+        return result;
     }
 
     private ICardFace getVariantForFace(ICardFace face) {
@@ -691,9 +705,17 @@ public class PaperCard implements Comparable<IPaperCard>, InventoryItemFromSet, 
 
         @Override
         public String toString() {
-            return this.toMap().entrySet().stream()
-                    .map((e) -> e.getKey() + "=" + e.getValue())
-                    .collect(Collectors.joining("\t"));
+            // iOS compatibility: Use traditional loop instead of Stream + map + Collectors (not available on iOS runtime)
+            StringBuilder sb = new StringBuilder();
+            boolean first = true;
+            for (Map.Entry<String, String> e : this.toMap().entrySet()) {
+                if (!first) {
+                    sb.append("\t");
+                }
+                sb.append(e.getKey()).append("=").append(e.getValue());
+                first = false;
+            }
+            return sb.toString();
         }
 
         @Override

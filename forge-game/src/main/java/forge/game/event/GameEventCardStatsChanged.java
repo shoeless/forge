@@ -11,7 +11,24 @@ import forge.game.card.Card;
 /**
  * This means card's characteristics have changed on server, clients must re-request them
  */
-public record GameEventCardStatsChanged(Collection<Card> cards, boolean transform) implements GameEvent {
+public class GameEventCardStatsChanged implements GameEvent {
+    private final Collection<Card> cards;
+    private final boolean transform;
+
+    public GameEventCardStatsChanged(Collection<Card> cards, boolean transform) {
+        this.cards = cards;
+        this.transform = transform;
+    }
+
+    public Collection<Card> cards() {
+        return cards;
+    }
+
+    public boolean transform() {
+        return transform;
+    }
+
+
 
     public GameEventCardStatsChanged(Card affected) {
         this(affected, false);
@@ -50,5 +67,20 @@ public record GameEventCardStatsChanged(Collection<Card> cards, boolean transfor
                   card.getNetPower() + "/" + card.getNetToughness() +
                   " and " + (cards.size() - 1) + " more";
     }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        result = 31 * result + (cards != null ? cards.hashCode() : 0);
+        result = 31 * result + (transform ? 1 : 0);
+        return result;
+    }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        GameEventCardStatsChanged that = (GameEventCardStatsChanged) obj;
+        return java.util.Objects.equals(cards, that.cards) &&
+               transform == that.transform;
+    }
 }

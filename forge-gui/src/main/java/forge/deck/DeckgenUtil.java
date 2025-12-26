@@ -31,7 +31,7 @@ import forge.util.storage.IStorage;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /** 
  * Utility collection for various types of decks.

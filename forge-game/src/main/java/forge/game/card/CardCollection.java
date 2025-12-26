@@ -2,7 +2,7 @@ package forge.game.card;
 
 import forge.util.collect.FCollection;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class CardCollection extends FCollection<Card> implements CardCollectionView {
     private static final long serialVersionUID = -8133537013727100275L;

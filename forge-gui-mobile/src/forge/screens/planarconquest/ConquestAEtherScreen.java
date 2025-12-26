@@ -5,8 +5,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import forge.util.function.Predicate;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
@@ -386,9 +385,33 @@ public class ConquestAEtherScreen extends FScreen {
     }
 
     private class ColorButton extends AbstractFilterButton<ColorSet> {
+        // iOS compatibility: Static method to get sorted ColorSets
+        private static ColorSet[] getSortedColorSets() {
+            ColorSet[] sorted = ColorSet.values();
+            Arrays.sort(sorted, new Comparator<ColorSet>() {
+                @Override
+                public int compare(ColorSet c1, ColorSet c2) {
+                    return Float.compare(c1.getOrderWeight(), c2.getOrderWeight());
+                }
+            });
+            return sorted;
+        }
+
         private ColorButton(String caption0) {
-            super(caption0, Arrays.stream(ColorSet.values()).sorted(Comparator.comparing(ColorSet::getOrderWeight)).toArray(ColorSet[]::new),
-                    c -> "Playable in " + c.stream().map(MagicColor.Color::getSymbol).collect(Collectors.joining()));
+            super(caption0, getSortedColorSets(),
+                    c -> {
+                        // iOS compatibility: Replace stream().map().collect() with traditional for loop
+                        StringBuilder sb = new StringBuilder("Playable in ");
+                        boolean first = true;
+                        for (MagicColor.Color color : c) {
+                            if (!first) {
+                                sb.append("");
+                            }
+                            sb.append(color.getSymbol());
+                            first = false;
+                        }
+                        return sb.toString();
+                    });
         }
 
         @Override
@@ -403,9 +426,25 @@ public class ConquestAEtherScreen extends FScreen {
             return card.getRules().getColorIdentity().hasNoColorsExcept(selectedOption);
         }
 
-        private record ColorSetImage(ColorSet colorSet, int shardCount) implements FImage {
+        private static class ColorSetImage implements FImage {
+            private final ColorSet colorSet;
+            private final int shardCount;
+
             public ColorSetImage(ColorSet colorSet0) {
                 this(colorSet0, colorSet0.getOrderedColors().size());
+            }
+
+            public ColorSetImage(ColorSet colorSet, int shardCount) {
+                this.colorSet = colorSet;
+                this.shardCount = shardCount;
+            }
+
+            public ColorSet colorSet() {
+                return colorSet;
+            }
+
+            public int shardCount() {
+                return shardCount;
             }
 
             @Override
@@ -428,6 +467,28 @@ public class ConquestAEtherScreen extends FScreen {
                     w = w0;
                 }
                 CardFaceSymbols.drawColorSet(g, colorSet, x, y, imageSize);
+            }
+
+            @Override
+            public int hashCode() {
+                int result = 17;
+                result = 31 * result + (colorSet != null ? colorSet.hashCode() : 0);
+                result = 31 * result + shardCount;
+                return result;
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                if (this == obj) return true;
+                if (obj == null || getClass() != obj.getClass()) return false;
+                ColorSetImage that = (ColorSetImage) obj;
+                return shardCount == that.shardCount &&
+                       java.util.Objects.equals(colorSet, that.colorSet);
+            }
+
+            @Override
+            public String toString() {
+                return "ColorSetImage[colorSet=" + colorSet + ", shardCount=" + shardCount + "]";
             }
         }
     }

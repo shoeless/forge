@@ -3,8 +3,8 @@ package forge.util;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
 import java.util.stream.StreamSupport;
 
 /**
@@ -36,11 +36,11 @@ public class IterableUtil {
     }
 
     public static <T> Iterable<T> filter(Iterable<T> iterable, Predicate<? super T> filter) {
-        return () -> StreamSupport.stream(iterable.spliterator(), false).filter(filter).iterator();
+        return () -> StreamSupport.stream(iterable.spliterator(), false).filter(t -> filter.test(t)).iterator();
     }
 
     public static <T> Iterable<T> filter(Collection<T> iterable, Predicate<? super T> filter) {
-        return () -> iterable.stream().filter(filter).iterator();
+        return () -> iterable.stream().filter(t -> filter.test(t)).iterator();
     }
 
     public static <T> Iterable<T> filter(final Iterable<?> iterable, final Class<T> desiredType) {
@@ -51,24 +51,24 @@ public class IterableUtil {
     }
 
     public static <T> boolean any(Iterable<T> iterable, Predicate<? super T> test) {
-        return StreamSupport.stream(iterable.spliterator(), false).anyMatch(test);
+        return StreamSupport.stream(iterable.spliterator(), false).anyMatch(t -> test.test(t));
     }
 
     public static <T> boolean all(Iterable<T> iterable, Predicate<? super T> test) {
-        return StreamSupport.stream(iterable.spliterator(), false).allMatch(test);
+        return StreamSupport.stream(iterable.spliterator(), false).allMatch(t -> test.test(t));
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     public static <T> T find(Iterable<T> iterable, Predicate<? super T> predicate) {
-        return StreamSupport.stream(iterable.spliterator(), false).filter(predicate).findFirst().get();
+        return StreamSupport.stream(iterable.spliterator(), false).filter(t -> predicate.test(t)).findFirst().get();
     }
 
     public static <T> T find(Iterable<T> iterable, Predicate<? super T> predicate, T defaultValue) {
-        return StreamSupport.stream(iterable.spliterator(), false).filter(predicate).findFirst().orElse(defaultValue);
+        return StreamSupport.stream(iterable.spliterator(), false).filter(t -> predicate.test(t)).findFirst().orElse(defaultValue);
     }
 
     public static <T> Optional<T> tryFind(Iterable<T> iterable, Predicate<? super T> predicate) {
-        return StreamSupport.stream(iterable.spliterator(), false).filter(predicate).findFirst();
+        return StreamSupport.stream(iterable.spliterator(), false).filter(t -> predicate.test(t)).findFirst();
     }
 
     public static <T> int indexOf(Iterable<T> iterable, Predicate<? super T> predicate) {
@@ -83,6 +83,6 @@ public class IterableUtil {
 
     public static <F, T> Iterable<T> transform(final Iterable<F> iterable, final Function<? super F, T> function) {
         //Should probably also be ? extends T in the function type
-        return () -> StreamSupport.stream(iterable.spliterator(), false).map(function).iterator();
+        return () -> StreamSupport.stream(iterable.spliterator(), false).map(f -> function.apply(f)).iterator();
     }
 }

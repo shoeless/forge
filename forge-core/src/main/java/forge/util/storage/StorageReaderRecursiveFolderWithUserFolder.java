@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.*;
-import java.util.function.Function;
 
 /**
  * This class treats every file in the given folder as a source for a named
@@ -52,8 +51,9 @@ public abstract class StorageReaderRecursiveFolderWithUserFolder<T> extends Stor
      * Instantiates a new storage reader folder.
      *
      * @param itemDir0 the item dir0
+     * @param keySelector0 the key selector (uses IKeySelector instead of Function for iOS compatibility)
      */
-    public StorageReaderRecursiveFolderWithUserFolder(final File itemDir0, final File userItemDir0, Function<? super T, String> keySelector0) {
+    public StorageReaderRecursiveFolderWithUserFolder(final File itemDir0, final File userItemDir0, IKeySelector<? super T> keySelector0) {
         super(keySelector0);
 
         this.directory = itemDir0;

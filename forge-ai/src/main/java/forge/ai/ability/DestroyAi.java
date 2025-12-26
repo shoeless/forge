@@ -1,6 +1,6 @@
 package forge.ai.ability;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.ai.*;
 import forge.game.ability.AbilityUtils;

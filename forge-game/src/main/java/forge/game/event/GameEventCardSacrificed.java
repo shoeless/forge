@@ -2,7 +2,18 @@ package forge.game.event;
 
 import forge.game.card.Card;
 
-public record GameEventCardSacrificed(Card card) implements GameEvent {
+public class GameEventCardSacrificed implements GameEvent {
+    private final Card card;
+
+    public GameEventCardSacrificed(Card card) {
+        this.card = card;
+    }
+
+    public Card card() {
+        return card;
+    }
+
+
 
     @Override
     public <T> T visit(IGameEventVisitor<T> visitor) {
@@ -15,5 +26,19 @@ public record GameEventCardSacrificed(Card card) implements GameEvent {
     @Override
     public String toString() {
         return "" + card.getController() + " sacrificed " + card;
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        result = 31 * result + (card != null ? card.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        GameEventCardSacrificed that = (GameEventCardSacrificed) obj;
+        return java.util.Objects.equals(card, that.card);
     }
 }

@@ -32,8 +32,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import forge.util.function.Predicate;
 import java.util.stream.Stream;
 
 public final class CardDb implements ICardDatabase, IDeckGenPool {
@@ -183,9 +182,17 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         private static String getFlagSegment(Map<String, String> flags) {
             if(flags == null)
                 return "";
-            String flagText = flags.entrySet().stream()
-                    .map(e -> e.getKey() + "=" + e.getValue())
-                    .collect(Collectors.joining(FlagSeparator));
+            // iOS compatibility: Use traditional loop instead of Stream + Collectors (not available on iOS runtime)
+            StringBuilder sb = new StringBuilder();
+            boolean first = true;
+            for (Map.Entry<String, String> e : flags.entrySet()) {
+                if (!first) {
+                    sb.append(FlagSeparator);
+                }
+                sb.append(e.getKey()).append("=").append(e.getValue());
+                first = false;
+            }
+            String flagText = sb.toString();
             return NameSetSeparator + FlagPrefix + "{" + flagText + "}";
         }
 
@@ -283,13 +290,18 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             }
             flagText = flagText.substring(1, flagText.length() - 1); //Trim the braces.
             //List of flags, a series of "key=value" text broken up by tabs.
-            return Arrays.stream(flagText.split(FlagSeparator))
-                    .map(f -> f.split("=", 2))
-                    .filter(f -> f.length > 0)
-                    .collect(Collectors.toMap(
-                            entry -> entry[0],
-                            entry -> entry.length > 1 ? entry[1] : "true" //If there's no '=' in the entry, treat it as a boolean flag.
-                    ));
+            // iOS compatibility: Use traditional loop instead of Stream + Collectors (not available on iOS runtime)
+            Map<String, String> result = new HashMap<>();
+            String[] flagPairs = flagText.split(FlagSeparator);
+            for (String flagPair : flagPairs) {
+                String[] parts = flagPair.split("=", 2);
+                if (parts.length > 0) {
+                    String key = parts[0];
+                    String value = parts.length > 1 ? parts[1] : "true"; // If there's no '=' in the entry, treat it as a boolean flag.
+                    result.put(key, value);
+                }
+            }
+            return result;
         }
     }
 
@@ -340,7 +352,10 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         String altName = face.getFlavorName();
         if(altName == null)
             return;
-        facesByName.putIfAbsent(altName, face);
+        // Use containsKey instead of putIfAbsent (not available on iOS runtime)
+        if (!facesByName.containsKey(altName)) {
+            facesByName.put(altName, face);
+        }
         final String normalAltName = StringUtils.stripAccents(altName);
         if (!normalAltName.equals(altName)) {
             normalizedNames.put(normalAltName, altName);
@@ -403,9 +418,15 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     private boolean addFromSetByName(String cardName, CardEdition ed, CardRules cr) {
         List<EditionEntry> cardsInSet = ed.getCardInSet(cardName);  // empty collection if not present
         if (cr.hasFunctionalVariants()) {
-            cardsInSet = cardsInSet.stream().filter(c -> StringUtils.isEmpty(c.getFunctionalVariantName())
-                    || cr.getSupportedFunctionalVariants().contains(c.getFunctionalVariantName())
-            ).collect(Collectors.toList());
+            // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+            List<EditionEntry> filtered = new ArrayList<>();
+            for (EditionEntry c : cardsInSet) {
+                if (StringUtils.isEmpty(c.getFunctionalVariantName())
+                    || cr.getSupportedFunctionalVariants().contains(c.getFunctionalVariantName())) {
+                    filtered.add(c);
+                }
+            }
+            cardsInSet = filtered;
         }
         if (cardsInSet.isEmpty())
             return false;
@@ -527,8 +548,16 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
 
         List<ICardFace> allFaces = paperCard.getAllFaces();
         Set<String> namesToAdd = new HashSet<>();
-        allFaces.stream().map(ICardCharacteristics::getName).forEach(namesToAdd::add);
-        allFaces.stream().map(ICardFace::getFlavorName).filter(Objects::nonNull).forEach(namesToAdd::add);
+        // iOS compatibility: Use traditional loop instead of Stream + map + forEach (not available on iOS runtime)
+        for (ICardFace face : allFaces) {
+            namesToAdd.add(face.getName());
+        }
+        for (ICardFace face : allFaces) {
+            String flavorName = face.getFlavorName();
+            if (flavorName != null) {
+                namesToAdd.add(flavorName);
+            }
+        }
         namesToAdd.remove(mainName);
         for(String name : namesToAdd)
             allCardsByName.put(name, paperCard);
@@ -567,7 +596,8 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     }
 
     public boolean hasPreferredArt(String cardName){
-        return artPrefs.getOrDefault(cardName, null) != null;
+        // Use containsKey instead of getOrDefault (not available on iOS runtime)
+        return artPrefs.containsKey(cardName) && artPrefs.get(cardName) != null;
     }
 
     public CardRules getRules(String cardName) {
@@ -883,7 +913,13 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             return cr.isFoil ? cards.get(0).getFoiled() : cards.get(0);
 
         if (flavorNameMappings.containsKey(cr.cardName)) {
-            Collection<PaperCard> matchingNames = cards.stream().filter(c -> c.getDisplayName().equals(cr.cardName)).collect(Collectors.toSet());
+            // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+            Set<PaperCard> matchingNames = new HashSet<>();
+            for (PaperCard c : cards) {
+                if (c.getDisplayName().equals(cr.cardName)) {
+                    matchingNames.add(c);
+                }
+            }
             if(!matchingNames.isEmpty())
                 cards.retainAll(matchingNames);
         }
@@ -909,7 +945,13 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             return null;  // nothing to do
 
         // Filter Cards Editions based on set preferences
-        List<CardEdition> acceptedEditions = cardEditions.stream().filter(artPref::accept).collect(Collectors.toList());
+        // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+        List<CardEdition> acceptedEditions = new ArrayList<>();
+        for (CardEdition ed : cardEditions) {
+            if (artPref.accept(ed)) {
+                acceptedEditions.add(ed);
+            }
+        }
 
         /* At this point, it may be possible that Art Preference is too-strict for the requested card!
             i.e. acceptedEditions.size() == 0!
@@ -1026,6 +1068,8 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         return Multimaps.filterEntries(allCardsByName, entry -> entry.getKey().equals(entry.getValue().getName())).values();
     }
 
+    // iOS compatibility: Stream API not available on iOS runtime - these methods are kept for desktop compatibility
+    // but should not be used in mobile code paths
     @Override
     public Stream<PaperCard> streamAllCards() {
         return allCardsByName.values().stream();
@@ -1062,12 +1106,19 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     };
 
     public Collection<PaperCard> getAllNonPromosNonReprintsNoAlt() {
-        return streamAllCardsNoAlt().filter(EDITION_NON_REPRINT).collect(Collectors.toList());
+        // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+        List<PaperCard> result = new ArrayList<>();
+        for (Map.Entry<String, PaperCard> entry : allCardsByName.entries()) {
+            if (entry.getKey().equals(entry.getValue().getName()) && EDITION_NON_REPRINT.test(entry.getValue())) {
+                result.add(entry.getValue());
+            }
+        }
+        return result;
     }
 
     public String getNormalizedName(final String cardName) {
-        // normalize Names first
-        return normalizedNames.getOrDefault(cardName, cardName);
+        // normalize Names first (use containsKey instead of getOrDefault - not available on iOS)
+        return normalizedNames.containsKey(cardName) ? normalizedNames.get(cardName) : cardName;
     }
 
     @Override
@@ -1084,19 +1135,40 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
      */
     @Override
     public List<PaperCard> getAllCards(Predicate<PaperCard> predicate) {
-        return streamAllCards().filter(predicate).collect(Collectors.toCollection(ArrayList::new));
+        // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+        List<PaperCard> result = new ArrayList<>();
+        for (PaperCard card : allCardsByName.values()) {
+            if (predicate.test(card)) {
+                result.add(card);
+            }
+        }
+        return result;
     }
 
     @Override
     public List<PaperCard> getAllCards(final String cardName, Predicate<PaperCard> predicate){
-        return getAllCards(cardName).stream().filter(predicate).collect(Collectors.toCollection(ArrayList::new));
+        // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+        List<PaperCard> result = new ArrayList<>();
+        for (PaperCard card : getAllCards(cardName)) {
+            if (predicate.test(card)) {
+                result.add(card);
+            }
+        }
+        return result;
     }
 
     /**
      * Returns a modifiable list of cards matching the given predicate
      */
     public List<PaperCard> getAllCardsNoAlt(Predicate<PaperCard> predicate) {
-        return streamAllCardsNoAlt().filter(predicate).collect(Collectors.toCollection(ArrayList::new));
+        // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+        List<PaperCard> result = new ArrayList<>();
+        for (Map.Entry<String, PaperCard> entry : allCardsByName.entries()) {
+            if (entry.getKey().equals(entry.getValue().getName()) && predicate.test(entry.getValue())) {
+                result.add(entry.getValue());
+            }
+        }
+        return result;
     }
 
     // Do I want a foiled version of these cards?
@@ -1129,11 +1201,17 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     @Override
     public Predicate<? super PaperCard> wasPrintedInSets(Collection<String> setCodes) {
         Set<String> sets = new HashSet<>(setCodes);
-        return paperCard -> getAllCards(paperCard.getName()).stream()
-                .map(PaperCard::getEdition).anyMatch(editionCode ->
-                    sets.contains(editionCode) &&
-                        StaticData.instance().getCardEdition(editionCode).isCardObtainable(paperCard.getName())
-                );
+        return paperCard -> {
+            // iOS compatibility: Use traditional loop instead of Stream + map + anyMatch (not available on iOS runtime)
+            for (PaperCard card : getAllCards(paperCard.getName())) {
+                String editionCode = card.getEdition();
+                if (sets.contains(editionCode) &&
+                    StaticData.instance().getCardEdition(editionCode).isCardObtainable(paperCard.getName())) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     // This Predicate validates if a card is legal in a given format (identified by the list of allowed sets)
@@ -1146,9 +1224,15 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     // This Predicate validates if a card was printed at [rarity], on any of its printings
     @Override
     public Predicate<? super PaperCard> wasPrintedAtRarity(CardRarity rarity) {
-        return paperCard -> getAllCards(paperCard.getName()).stream()
-                .map(PaperCard::getRarity)
-                .anyMatch(rarity::equals);
+        return paperCard -> {
+            // iOS compatibility: Use traditional loop instead of Stream + map + anyMatch (not available on iOS runtime)
+            for (PaperCard card : getAllCards(paperCard.getName())) {
+                if (rarity.equals(card.getRarity())) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     public PaperCard createUnsupportedCard(String cardRequest) {

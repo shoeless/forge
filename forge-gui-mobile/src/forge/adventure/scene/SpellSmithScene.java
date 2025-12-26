@@ -24,10 +24,9 @@ import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.StreamUtil;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.Predicate;
+import java.util.concurrent.TimeUnit;
+import forge.util.function.Predicate;
 import java.util.stream.Collectors;
 
 
@@ -173,8 +172,9 @@ public class SpellSmithScene extends UIScene {
             if (CardEdition.Type.REPRINT_SET_TYPES.contains(input.getType()))
                 return false;
             if (input.getDate() != null) {
-                Instant now = Instant.now(); //this should filter upcoming sets from release date + 1 day..
-                if (input.getDate().after(Date.from(now.minus(1, ChronoUnit.DAYS))))
+                // iOS compatibility: Use System.currentTimeMillis() and Date comparison instead of Instant
+                long oneDayAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1);
+                if (input.getDate().after(new Date(oneDayAgo)))
                     return false;
             }
             String code = input.getCode();

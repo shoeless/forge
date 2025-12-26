@@ -5,8 +5,6 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 
 public class CardTranslation {
@@ -24,7 +22,8 @@ public class CardTranslation {
     private static void readTranslationFile(String language, String languagesDirectory) {
         String filename = "cardnames-" + language + ".txt";
 
-        try (LineReader translationFile = new LineReader(Files.newInputStream(Paths.get(languagesDirectory + filename)), StandardCharsets.UTF_8)) {
+        // Use FileInputStream instead of Files.newInputStream() to avoid Paths.get() (not available on iOS)
+        try (LineReader translationFile = new LineReader(new java.io.FileInputStream(new java.io.File(languagesDirectory + filename)), StandardCharsets.UTF_8)) {
             for (String line : translationFile.readLines()) {
                 String[] matches = line.split("\\|");
                 if (matches.length >= 2) {
@@ -63,7 +62,10 @@ public class CardTranslation {
                 int splitIndex = name.indexOf(" // ");
                 String leftname = name.substring(0, splitIndex);
                 String rightname = name.substring(splitIndex + 4);
-                return translatednames.getOrDefault(leftname, leftname) + " // " + translatednames.getOrDefault(rightname, rightname);
+                // Use containsKey instead of getOrDefault (not available on iOS runtime)
+                String leftTranslated = translatednames.containsKey(leftname) ? translatednames.get(leftname) : leftname;
+                String rightTranslated = translatednames.containsKey(rightname) ? translatednames.get(rightname) : rightname;
+                return leftTranslated + " // " + rightTranslated;
             }
             try {
                 if (name.endsWith(" Token")) {
@@ -219,7 +221,9 @@ public class CardTranslation {
     public static String getTranslatedType(ITranslatable item) {
         if (!needsTranslation())
             return item.getUntranslatedType();
-        return translatedtypes.getOrDefault(item.getTranslationKey(), item.getUntranslatedType());
+        // Use containsKey instead of getOrDefault (not available on iOS runtime)
+        String key = item.getTranslationKey();
+        return translatedtypes.containsKey(key) ? translatedtypes.get(key) : item.getUntranslatedType();
     }
 
     public static String getTranslatedOracle(String name) {
@@ -235,7 +239,9 @@ public class CardTranslation {
         if(!needsTranslation())
             return ""; //card.getUntranslatedOracle();
         //Fallbacks and english versions of oracle texts are handled elsewhere.
-        return translatedoracles.getOrDefault(card.getTranslationKey(), "");
+        // Use containsKey instead of getOrDefault (not available on iOS runtime)
+        String key = card.getTranslationKey();
+        return translatedoracles.containsKey(key) ? translatedoracles.get(key) : "";
     }
 
     public static HashMap<String, String> getTranslationTexts(ITranslatable card) {

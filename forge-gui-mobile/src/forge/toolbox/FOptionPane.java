@@ -1,7 +1,7 @@
 package forge.toolbox;
 
 import java.util.List;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import org.apache.commons.lang3.StringUtils;
 

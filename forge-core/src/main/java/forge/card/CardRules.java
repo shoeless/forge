@@ -27,7 +27,6 @@ import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static forge.card.MagicColor.Constant.BASIC_LANDS;
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
@@ -72,8 +71,13 @@ public final class CardRules implements ICardCharacteristics {
             specializedParts.put(CardStateName.SpecializeG, faces[6]);
         }
 
-        // Android doesn't support toUnmodifiableList
-        allFaces = Arrays.stream(faces).filter(Objects::nonNull).collect(Collectors.toList());
+        // iOS compatibility: Replace Arrays.stream() with traditional for loop
+        allFaces = new ArrayList<>();
+        for (ICardFace face : faces) {
+            if (face != null) {
+                allFaces.add(face);
+            }
+        }
 
         aiHints = cah;
         meldWith = "";

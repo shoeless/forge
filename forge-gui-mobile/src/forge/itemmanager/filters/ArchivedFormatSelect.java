@@ -3,7 +3,7 @@ package forge.itemmanager.filters;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import com.badlogic.gdx.utils.Align;
 

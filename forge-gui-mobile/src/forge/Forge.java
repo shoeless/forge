@@ -49,15 +49,13 @@ import forge.util.*;
 import io.sentry.ScopeType;
 import io.sentry.Sentry;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 public class Forge implements ApplicationListener {
     private static ApplicationListener app = null;
     static Scene currentScene = null;
-    static Array<Scene> lastScene = new Array<>();
+    static Array<Scene> lastScene = null; // Initialize to null - was new Array<>() which may fail on iOS during class loading
     private static float animationTimeout;
     static Batch animationBatch;
     static TextureRegion lastScreenTexture;
@@ -166,26 +164,72 @@ public class Forge implements ApplicationListener {
             localizer = Localizer.getInstance();
         return localizer;
     }
+    public String testMethod() {
+        System.err.println("FORGE: testMethod() called!");
+        System.err.flush();
+        return "testMethod works!";
+    }
+
     @Override
     public void create() {
-        //install our error handler
-        ExceptionHandler.registerErrorHandling();
+        System.err.println("FORGE: Forge.create() ENTERED");
+        System.err.flush();
+
+        // Initialize static fields that couldn't be initialized during class loading
+        System.err.println("FORGE: create() - initializing lastScene");
+        System.err.flush();
+        if (lastScene == null) {
+            lastScene = new Array<>();
+        }
+        System.err.println("FORGE: create() - lastScene initialized");
+        System.err.flush();
+
+        //install our error handler (commented out - crashes on iOS due to AWT dependency in ExceptionHandler static initializer)
+        System.err.println("FORGE: create() - skipping error handler");
+        System.err.flush();
+        //ExceptionHandler.registerErrorHandling();
         //init hwInfo to log
+        System.err.println("FORGE: create() - printing hwInfo");
+        System.err.flush();
         System.out.println(GuiBase.getHWInfo());
         // closeSplashScreen() is called early on non-Windows OS so it will not crash, LWJGL3 bug on AWT Splash.
+        System.err.println("FORGE: create() - checking Windows");
+        System.err.flush();
         if (OperatingSystem.isWindows())
             getDeviceAdapter().closeSplashScreen();
 
+        System.err.println("FORGE: create() - setting isAndroid flag");
+        System.err.flush();
         GuiBase.setIsAndroid(Gdx.app.getType() == Application.ApplicationType.Android);
 
+        System.err.println("FORGE: create() - initializing Utils");
+        System.err.flush();
+        Utils.ensureInitialized(); // Initialize screen dimensions before any UI classes load
+        System.err.println("FORGE: create() - Utils initialized");
+        System.err.flush();
+
+        System.err.println("FORGE: create() - setting allowCardBG");
+        System.err.flush();
         if (!GuiBase.isAndroid() || (androidVersion > 25 && totalDeviceRAM > 3400)) {
             allowCardBG = true;
         }
+        System.err.println("FORGE: create() - creating Assets");
+        System.err.flush();
         assets = new Assets();
+        System.err.println("FORGE: create() - creating Graphics");
+        System.err.flush();
         graphics = new Graphics();
+        System.err.println("FORGE: create() - creating SplashScreen");
+        System.err.flush();
         splashScreen = new SplashScreen();
+        System.err.println("FORGE: create() - creating FrameRate");
+        System.err.flush();
         frameRate = new FrameRate();
+        System.err.println("FORGE: create() - creating SpriteBatch");
+        System.err.flush();
         animationBatch = new SpriteBatch();
+        System.err.println("FORGE: create() - SpriteBatch created successfully");
+        System.err.flush();
         inputProcessor = new MainInputProcessor();
         //screenWidth and screenHeight should be set initially and only change upon restarting the app
         screenWidth = Gdx.app.getGraphics().getWidth();
@@ -200,7 +244,7 @@ public class Forge implements ApplicationListener {
          */
         Gdx.input.setCatchKey(Keys.BACK, true);
         destroyThis = true; //Prevent back()
-        if (Files.exists(Paths.get(ForgeConstants.DEFAULT_SKINS_DIR+ForgeConstants.ADV_TEXTURE_BG_FILE)))
+        if (FileUtil.doesFileExist(ForgeConstants.DEFAULT_SKINS_DIR+ForgeConstants.ADV_TEXTURE_BG_FILE))
             selector = getForgePreferences().getPref(FPref.UI_SELECTOR_MODE);
         boolean landscapeMode = GuiBase.isAndroid() ? !isPortraitMode : screenWidth > screenHeight;
         //update landscape mode preference if it doesn't match what the app loaded as
@@ -243,21 +287,45 @@ public class Forge implements ApplicationListener {
             initialized = true;
 
             Runnable runnable = () -> {
+                System.err.println("FORGE: runnable - starting background initialization");
+                System.err.flush();
                 safeToClose = false;
+                System.err.println("FORGE: runnable - setting isLibGDXPort");
+                System.err.flush();
                 ImageKeys.setIsLibGDXPort(GuiBase.getInterface().isLibgdxPort());
+                System.err.println("FORGE: runnable - calling FModel.initialize");
+                System.err.flush();
                 FModel.initialize(getSplashScreen().getProgressBar(), null);
+                System.err.println("FORGE: runnable - FModel.initialize completed");
+                System.err.flush();
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingFonts"));
+                System.err.println("FORGE: runnable - loading fonts");
+                System.err.flush();
                 FSkinFont.preloadAll(locale);
+                System.err.println("FORGE: runnable - fonts loaded");
+                System.err.flush();
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingCardTranslations"));
+                System.err.println("FORGE: runnable - loading card translations");
+                System.err.flush();
                 CardTranslation.preloadTranslation(locale, ForgeConstants.LANG_DIR);
+                System.err.println("FORGE: runnable - card translations loaded");
+                System.err.flush();
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblPrepareDatabase"));
+                System.err.println("FORGE: runnable - calling afterDbLoaded");
+                System.err.flush();
                 Gdx.app.postRunnable(this::afterDbLoaded);
+                System.err.println("FORGE: runnable - afterDbLoaded queued");
+                System.err.flush();
             };
             //see if app or assets need updating
+            System.err.println("FORGE: create() - checking for asset updates");
+            System.err.flush();
             FThreads.invokeInBackgroundThread(() -> AssetsDownloader.checkForUpdates(exited, runnable));
+            System.err.println("FORGE: create() - asset update check started");
+            System.err.flush();
         }
     }
     public static void setAltZoneTabMode(String mode) {

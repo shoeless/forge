@@ -140,39 +140,84 @@ public class Localizer {
     }
 
     public void setLanguage(final String languageRegionID, final String languagesDirectory) {
+        System.err.println("LOCALIZER: setLanguage() - starting, languageRegionID=" + languageRegionID + ", languagesDirectory=" + languagesDirectory);
+        System.err.flush();
+
         String[] splitLocale = languageRegionID.split("-");
+        System.err.println("LOCALIZER: setLanguage() - split locale: [" + splitLocale[0] + ", " + splitLocale[1] + "]");
+        System.err.flush();
 
         Locale oldLocale = locale;
         locale = new Locale(splitLocale[0], splitLocale[1]);
+        System.err.println("LOCALIZER: setLanguage() - created new Locale");
+        System.err.flush();
 
         //Don't reload the language if nothing changed
         if (oldLocale == null || !oldLocale.equals(locale)) {
+            System.err.println("LOCALIZER: setLanguage() - locale changed, reloading language files");
+            System.err.flush();
 
             File file = new File(languagesDirectory);
+            System.err.println("LOCALIZER: setLanguage() - created File object for: " + file.getAbsolutePath());
+            System.err.println("LOCALIZER: setLanguage() - file exists: " + file.exists() + ", isDirectory: " + file.isDirectory());
+            System.err.flush();
+
             URL[] urls = null;
 
             try {
+                System.err.println("LOCALIZER: setLanguage() - converting file to URL");
+                System.err.flush();
                 urls = new URL[] { file.toURI().toURL() };
+                System.err.println("LOCALIZER: setLanguage() - URL created: " + urls[0]);
+                System.err.flush();
             } catch (MalformedURLException e) {
+                System.err.println("LOCALIZER: setLanguage() - MalformedURLException: " + e.getMessage());
+                System.err.flush();
                 e.printStackTrace();
             }
 
+            System.err.println("LOCALIZER: setLanguage() - creating URLClassLoader");
+            System.err.flush();
             ClassLoader loader = new URLClassLoader(urls);
+            System.err.println("LOCALIZER: setLanguage() - URLClassLoader created");
+            System.err.flush();
 
             try {
+                System.err.println("LOCALIZER: setLanguage() - loading resourceBundle for: " + languageRegionID);
+                System.err.flush();
                 resourceBundle = ResourceBundle.getBundle(languageRegionID, new Locale(splitLocale[0], splitLocale[1]), loader);
+                System.err.println("LOCALIZER: setLanguage() - resourceBundle loaded");
+                System.err.flush();
+
+                System.err.println("LOCALIZER: setLanguage() - loading englishBundle");
+                System.err.flush();
                 englishBundle = ResourceBundle.getBundle("en-US", new Locale("en", "US"), loader);
+                System.err.println("LOCALIZER: setLanguage() - englishBundle loaded");
+                System.err.flush();
             } catch (NullPointerException | MissingResourceException e) {
+                System.err.println("LOCALIZER: setLanguage() - exception loading bundles: " + e.getMessage());
+                System.err.flush();
                 //If the language can't be loaded, default to US English
                 resourceBundle = ResourceBundle.getBundle("en-US", new Locale("en_US"), loader);
                 e.printStackTrace();
             }
 
-            System.out.println("Language '" + resourceBundle.getBaseBundleName() + "' loaded successfully.");
+            System.err.println("LOCALIZER: Language '" + languageRegionID + "' loaded successfully.");
+            System.err.flush();
 
+            System.err.println("LOCALIZER: setLanguage() - notifying observers");
+            System.err.flush();
             notifyObservers();
+            System.err.println("LOCALIZER: setLanguage() - observers notified");
+            System.err.flush();
 
+        } else {
+            System.err.println("LOCALIZER: setLanguage() - locale unchanged, skipping reload");
+            System.err.flush();
         }
+
+        System.err.println("LOCALIZER: setLanguage() - COMPLETED");
+        System.err.flush();
     }
 
     public List<Language> getLanguages() {

@@ -4,7 +4,7 @@ import forge.card.MagicColor;
 import forge.game.card.Card;
 import forge.game.card.CardPredicates;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public enum AttackRestrictionType {
 

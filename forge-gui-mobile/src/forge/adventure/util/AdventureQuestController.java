@@ -17,9 +17,8 @@ import forge.adventure.world.WorldSave;
 import forge.util.Aggregates;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 import static forge.adventure.util.AdventureQuestController.QuestStatus.*;
 
@@ -41,7 +40,11 @@ public class AdventureQuestController implements Serializable {
                         continue;
                     }
                     for (EnemyData enemy : WorldData.getAllEnemies()) {
-                        List<String> candidateTags = Arrays.stream(enemy.questTags).collect(Collectors.toList());
+                        // iOS compatibility: Replace Arrays.stream().collect() with traditional for loop
+                        List<String> candidateTags = new ArrayList<>();
+                        for (String tag : enemy.questTags) {
+                            candidateTags.add(tag);
+                        }
                         boolean match = true;
                         for (String targetTag : c.enemyTags) {
                             if (!candidateTags.contains(targetTag)) {
@@ -74,7 +77,11 @@ public class AdventureQuestController implements Serializable {
                     List<String> toBoost = new ArrayList<>();
                     if (c.mixedEnemies){
                         for (EnemyData enemy : localSpawns){
-                            List<String> candidateTags = Arrays.stream(enemy.questTags).collect(Collectors.toList());
+                            // iOS compatibility: Replace Arrays.stream().collect() with traditional for loop
+                            List<String> candidateTags = new ArrayList<>();
+                            for (String tag : enemy.questTags) {
+                                candidateTags.add(tag);
+                            }
                             boolean match = true;
                             for (String targetTag : c.enemyTags) {
                                 if (!candidateTags.contains(targetTag)) {
@@ -559,7 +566,9 @@ public class AdventureQuestController implements Serializable {
                 return ret;
             }
         }
-        if (nextQuestDate.containsKey(pointID) && nextQuestDate.get(pointID) >= LocalDate.now().toEpochDay()){
+        // iOS compatibility: Use System.currentTimeMillis() to calculate days since epoch
+        long currentDay = TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+        if (nextQuestDate.containsKey(pointID) && nextQuestDate.get(pointID) >= currentDay){
             //No more side quests available here today due to previous activity
             DialogData response = new DialogData();
             response.text = "\"We don't have anything new for you to do right now. Come back tomorrow.\"";
@@ -583,7 +592,8 @@ public class AdventureQuestController implements Serializable {
             return ret;
         }
         //todo - Should quest availability be weighted instead of uniform?
-        nextQuestDate.put(pointID, LocalDate.now().toEpochDay());
+        // iOS compatibility: Use System.currentTimeMillis() to calculate days since epoch
+        nextQuestDate.put(pointID, TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis()));
 
         Array<AdventureQuestData> validSideQuests = new Array<>();
         for (AdventureQuestData option : allSideQuests){

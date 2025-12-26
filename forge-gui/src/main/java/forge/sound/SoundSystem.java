@@ -470,8 +470,12 @@ public class SoundSystem {
         Set<String> foundSets = new HashSet<>();
         for(String path : SOUND_RESOURCE_PATHS) {
             File[] files = new File(path + subPath).listFiles(File::isDirectory);
-            if(files != null)
-                Arrays.stream(files).map(File::getName).forEach(foundSets::add);
+            if(files != null) {
+                // iOS compatibility: Replace Arrays.stream().map().forEach() with traditional for loop
+                for (File file : files) {
+                    foundSets.add(file.getName());
+                }
+            }
         }
         foundSets.remove("Default");
         List<String> availableSets = new ArrayList<>(foundSets);

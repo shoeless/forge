@@ -15,7 +15,7 @@ import forge.model.FModel;
 import forge.screens.home.LoadGameMenu.LoadGameScreen;
 import forge.toolbox.FOptionPane;
 
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 public class DraftingProcessScreen extends FDeckEditor {
     private boolean isDraftSaved;

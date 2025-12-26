@@ -1,7 +1,7 @@
 package forge.gamemodes.limited;
 
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;

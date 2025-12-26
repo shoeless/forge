@@ -13,7 +13,7 @@ import forge.toolbox.FOverlay;
 import forge.util.Aggregates;
 import forge.util.PhysicsObject;
 
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 public class ConquestChaosWheel extends FOverlay {
     public static void spin(Consumer<ChaosWheelOutcome> callback0) {

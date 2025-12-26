@@ -2,10 +2,11 @@ package forge.item;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+// import forge.util.function.Function; // Not available on iOS runtime
+// import java.util.stream.Collectors; // Not available on iOS runtime
 
 public class SealedTemplateWithSlots extends SealedTemplate {
     private final List<BoosterSlot> boosterSlots;
@@ -16,6 +17,11 @@ public class SealedTemplateWithSlots extends SealedTemplate {
     }
 
     public Map<String, BoosterSlot> getNamedSlots() {
-        return boosterSlots.stream().collect(Collectors.toMap(BoosterSlot::getSlotName, Function.identity()));
+        // iOS compatibility: Use traditional loop instead of Stream + Collectors (not available on iOS runtime)
+        Map<String, BoosterSlot> result = new HashMap<>();
+        for (BoosterSlot slot : boosterSlots) {
+            result.put(slot.getSlotName(), slot);
+        }
+        return result;
     }
 }

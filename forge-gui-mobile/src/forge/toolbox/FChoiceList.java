@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.Align;

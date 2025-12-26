@@ -21,7 +21,7 @@ import forge.item.PaperCard;
 
 import java.util.Comparator;
 import java.util.Map.Entry;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 
 /**

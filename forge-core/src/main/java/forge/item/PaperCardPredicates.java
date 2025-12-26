@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * Filters based on PaperCard values.

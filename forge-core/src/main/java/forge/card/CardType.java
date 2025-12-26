@@ -22,13 +22,11 @@ import com.google.common.collect.*;
 import forge.util.ITranslatable;
 import forge.util.Localizer;
 import forge.util.Settable;
-import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import forge.util.function.Predicate;
 
 /**
  * <p>
@@ -62,9 +60,18 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
         public final boolean isPermanent;
         public final String pluralName;
         public final String label;
-        private static Map<String, CoreType> stringToCoreType = EnumUtils.getEnumMap(CoreType.class);
-        private static final Set<String> allCoreTypeNames = stringToCoreType.keySet();
+        private static Map<String, CoreType> stringToCoreType;
+        private static final Set<String> allCoreTypeNames;
         public static final Set<CoreType> spellTypes = ImmutableSet.of(Instant, Sorcery);
+
+        static {
+            // Manual map building to avoid EnumUtils.getEnumMap() which requires java.util.function.Function (not available on iOS)
+            stringToCoreType = new HashMap<>();
+            for (CoreType type : CoreType.values()) {
+                stringToCoreType.put(type.name(), type);
+            }
+            allCoreTypeNames = stringToCoreType.keySet();
+        }
 
         public static CoreType getEnum(String name) {
             return stringToCoreType.get(name);
@@ -118,7 +125,15 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
 
         public final String label;
 
-        private static Map<String, Supertype> stringToSupertype = EnumUtils.getEnumMap(Supertype.class);
+        private static Map<String, Supertype> stringToSupertype;
+
+        static {
+            // Manual map building to avoid EnumUtils.getEnumMap() which requires java.util.function.Function (not available on iOS)
+            stringToSupertype = new HashMap<>();
+            for (Supertype type : Supertype.values()) {
+                stringToSupertype.put(type.name(), type);
+            }
+        }
 
         public static Supertype getEnum(String name) {
             return stringToSupertype.get(name);
@@ -340,8 +355,15 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
 
     public Set<String> getBattleTypes() {
         if(!isBattle())
-            return Set.of();
-        return subtypes.stream().filter(CardType::isABattleType).collect(Collectors.toSet());
+            return Collections.emptySet();
+        // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
+        Set<String> result = new HashSet<>();
+        for (String subtype : subtypes) {
+            if (CardType.isABattleType(subtype)) {
+                result.add(subtype);
+            }
+        }
+        return result;
     }
 
     @Override
@@ -674,7 +696,8 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
             allowedTypes = allowedTypes.or(CardType::isAPlanarType);
         }
 
-        subtypes.removeIf(allowedTypes.negate());
+        final Predicate<String> finalFilter = allowedTypes;
+        subtypes.removeIf(s -> !finalFilter.test(s));
     }
 
     @Override

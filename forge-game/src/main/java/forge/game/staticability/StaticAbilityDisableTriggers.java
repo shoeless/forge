@@ -11,7 +11,7 @@ import forge.game.zone.ZoneType;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class StaticAbilityDisableTriggers {
 

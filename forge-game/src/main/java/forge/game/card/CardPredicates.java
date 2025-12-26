@@ -31,7 +31,7 @@ import forge.util.PredicateString;
 import forge.util.collect.FCollectionView;
 
 import java.util.Comparator;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 /**

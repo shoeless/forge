@@ -17,7 +17,7 @@ import forge.util.StreamUtil;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * Data class that will be used to read Json configuration files

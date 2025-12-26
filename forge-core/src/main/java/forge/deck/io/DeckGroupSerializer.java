@@ -19,7 +19,6 @@ package forge.deck.io;
 
 import com.google.common.collect.ImmutableList;
 import forge.deck.Deck;
-import forge.deck.DeckBase;
 import forge.deck.DeckGroup;
 import forge.util.IItemSerializer;
 import forge.util.storage.StorageReaderFolder;
@@ -44,7 +43,13 @@ public class DeckGroupSerializer extends StorageReaderFolder<DeckGroup> implemen
      * @param deckDir0 the deck dir0
      */
     public DeckGroupSerializer(final File deckDir0, String rootDir0) {
-        super(deckDir0, DeckBase::getName);
+        // Use IKeySelector instead of method reference (not available on iOS runtime)
+        super(deckDir0, new forge.util.storage.IKeySelector<DeckGroup>() {
+            @Override
+            public String apply(DeckGroup deckGroup) {
+                return deckGroup.getName();
+            }
+        });
         rootDir = rootDir0;
     }
 

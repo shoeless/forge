@@ -7,7 +7,7 @@ import forge.toolbox.FContainer;
 import forge.toolbox.FDisplayObject;
 import forge.util.Utils;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public abstract class ItemFilter<T extends InventoryItem> {

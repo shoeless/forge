@@ -18,8 +18,8 @@
 package forge.localinstance.properties;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Map;
 import java.util.Properties;
 
@@ -61,7 +61,8 @@ public class ForgeProfileProperties {
         final File propFile = new File(ForgeConstants.PROFILE_FILE);
         try {
             if (propFile.canRead() && !isUsingAppDirectory) {
-                props.load(Files.newInputStream(propFile.toPath()));
+                // Use FileInputStream instead of Files.newInputStream() to avoid file.toPath() (not available on iOS)
+                props.load(new FileInputStream(propFile));
             }
         } catch (final IOException e) {
             System.err.println("error while reading from profile properties file");
@@ -159,6 +160,14 @@ public class ForgeProfileProperties {
     // returns a pair <userDir, cacheDir>
     private static Pair<String, String> getDefaultDirs() {
         if (!GuiBase.getInterface().isRunningOnDesktop()) { //special case for mobile devices
+            // iOS: Check for system properties set by iOS Main.java for writable directories
+            // This avoids iOS sandbox violations when trying to write to the read-only app bundle
+            String iosUserDir = System.getProperty("forge.ios.userDir");
+            String iosCacheDir = System.getProperty("forge.ios.cacheDir");
+            if (iosUserDir != null && iosCacheDir != null) {
+                return Pair.of(iosUserDir, iosCacheDir);
+            }
+            // Fallback to old behavior (will fail on iOS with sandbox violation)
             final String assetsDir = ForgeConstants.ASSETS_DIR;
             return Pair.of(assetsDir + "data" + File.separator, assetsDir + "cache" + File.separator);
         }

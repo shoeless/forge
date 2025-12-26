@@ -11,7 +11,7 @@ import forge.toolbox.FLabel;
 import forge.toolbox.FTextArea;
 import forge.util.Utils;
 
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 public class AdventureScreen extends LaunchScreen {
     private static final float PADDING = Utils.scale(10);

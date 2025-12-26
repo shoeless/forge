@@ -2,7 +2,7 @@ package forge.deck.generation;
 
 import forge.item.PaperCard;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public interface IDeckGenPool {
     PaperCard getCard(String name);

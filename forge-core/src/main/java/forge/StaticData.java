@@ -15,11 +15,11 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.File;
 import java.util.*;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+// import java.util.stream.Collectors; // Not available on iOS runtime
 
 /**
  * The class holding game invariants, such as cards, editions, game formats. All that data, which is not supposed to be changed by player
@@ -69,9 +69,15 @@ public class StaticData {
     }
 
     public StaticData(CardStorageReader cardReader, CardStorageReader tokenReader, CardStorageReader customCardReader, CardStorageReader customTokenReader, String editionFolder, String customEditionsFolder, String blockDataFolder, String setLookupFolder, String cardArtPreference, boolean enableUnknownCards, boolean loadNonLegalCards, boolean allowCustomCardsInDecksConformance, boolean enableSmartCardArtSelection) {
+        System.err.println("STATICDATA: Constructor starting");
+        System.err.flush();
         this.cardReader = cardReader;
         this.tokenReader = tokenReader;
+        System.err.println("STATICDATA: Creating CardEdition.Collection from: " + editionFolder);
+        System.err.flush();
         this.editions = new CardEdition.Collection(new CardEdition.Reader(new File(editionFolder)));
+        System.err.println("STATICDATA: Main editions loaded");
+        System.err.flush();
         this.blockDataFolder = blockDataFolder;
         this.allowCustomCardsInDecksConformance = allowCustomCardsInDecksConformance;
         this.enableSmartCardArtSelection = enableSmartCardArtSelection;
@@ -80,7 +86,11 @@ public class StaticData {
         Set<String> funnyCards = new HashSet<>();
         Set<String> filtered = new HashSet<>();
 
+        System.err.println("STATICDATA: Appending custom editions from: " + customEditionsFolder);
+        System.err.flush();
         editions.append(new CardEdition.Collection(new CardEdition.Reader(new File(customEditionsFolder), true)));
+        System.err.println("STATICDATA: Custom editions loaded");
+        System.err.flush();
 
         {
             final Map<String, CardRules> regularCards = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -873,11 +883,20 @@ public class StaticData {
                 }
             }
         }
-        // stream().toList() causes crash on Android 8-13, use Collectors.toList()
-        List<String> NIF = new ArrayList<>(NIF_Q).stream().sorted().collect(Collectors.toList());
-        List<String> CNI = new ArrayList<>(CNI_Q).stream().sorted().collect(Collectors.toList());
-        List<String> TOK = new ArrayList<>(TOKEN_Q).stream().sorted().collect(Collectors.toList());
-        List<String> sorted_editions = EDITION_Q.stream().distinct().sorted().collect(Collectors.toList());
+        // iOS compatibility: Use traditional Collections.sort() instead of Stream + Collectors (not available on iOS runtime)
+        List<String> NIF = new ArrayList<>(NIF_Q);
+        Collections.sort(NIF);
+        List<String> CNI = new ArrayList<>(CNI_Q);
+        Collections.sort(CNI);
+        List<String> TOK = new ArrayList<>(TOKEN_Q);
+        Collections.sort(TOK);
+        // For sorted_editions, we need distinct too
+        Set<String> uniqueEditions = new LinkedHashSet<>();
+        for (String ed : EDITION_Q) {
+            uniqueEditions.add(ed);
+        }
+        List<String> sorted_editions = new ArrayList<>(uniqueEditions);
+        Collections.sort(sorted_editions);
         for (String edition : sorted_editions) {
             String[] arr =  edition.split("_");
             String code = arr[0];

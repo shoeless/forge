@@ -6,7 +6,7 @@ import forge.itemmanager.IItemManager;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class ColorDeckGenerator extends DeckProxy implements Comparable<ColorDeckGenerator> {
     public static List<DeckProxy> getColorDecks(final IItemManager<DeckProxy> lstDecks0, final Predicate<PaperCard> formatFilter0, final boolean isAi0) {

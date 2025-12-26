@@ -2,7 +2,7 @@ package forge.game.ability.effects;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.card.GamePieceType;
 import forge.item.PaperCardPredicates;

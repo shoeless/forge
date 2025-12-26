@@ -1,5 +1,6 @@
 package forge.assets;
 
+import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetLoaderParameters;
@@ -33,6 +34,21 @@ import java.util.Map;
 import static forge.assets.FSkin.getDefaultSkinFile;
 
 public class Assets implements Disposable {
+    /**
+     * Helper method to get FileHandle that works on both iOS and Android.
+     * On iOS/Android, bundled resources must use internal() with relative paths.
+     * On Desktop, we can use absolute() with full paths.
+     */
+    private static FileHandle getFileHandle(String path) {
+        if (Gdx.app != null && (Gdx.app.getType() == ApplicationType.iOS || Gdx.app.getType() == ApplicationType.Android)) {
+            // On iOS/Android, strip the assets directory prefix and use internal()
+            String relativePath = path.replace(ForgeConstants.ASSETS_DIR, "");
+            return Gdx.files.internal(relativePath);
+        } else {
+            // On Desktop, use absolute paths
+            return Gdx.files.absolute(path);
+        }
+    }
     private MemoryTrackingAssetManager manager;
     private HashMap<Integer, FSkinFont> fonts;
     private HashMap<String, FImageComplex> cardArtCache;
@@ -313,7 +329,7 @@ public class Assets implements Disposable {
 
     public Texture getDefaultImage() {
         if (defaultImage == null) {
-            FileHandle blankImage = Gdx.files.absolute(ForgeConstants.NO_CARD_FILE);
+            FileHandle blankImage = getFileHandle(ForgeConstants.NO_CARD_FILE);
             if (blankImage.exists()) {
                 defaultImage = manager().get(blankImage.path(), Texture.class, false);
                 if (defaultImage != null)

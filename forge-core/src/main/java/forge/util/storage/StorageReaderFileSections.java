@@ -24,7 +24,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * This class treats every line of a given file as a source for a named object.
@@ -35,11 +34,11 @@ import java.util.function.Function;
 public abstract class StorageReaderFileSections<T> extends StorageReaderBase<T> {
     private final File file;
 
-    public StorageReaderFileSections(final String pathname, final Function<? super T, String> keySelector0) {
+    public StorageReaderFileSections(final String pathname, final IKeySelector<? super T> keySelector0) {
         this(new File(pathname), keySelector0);
     }
 
-    public StorageReaderFileSections(final File file0, final Function<? super T, String> keySelector0) {
+    public StorageReaderFileSections(final File file0, final IKeySelector<? super T> keySelector0) {
         super(keySelector0);
         file = file0;
     }
