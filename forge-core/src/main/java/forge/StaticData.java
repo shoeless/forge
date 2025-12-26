@@ -19,7 +19,6 @@ import forge.util.function.Predicate;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Pattern;
-// import java.util.stream.Collectors; // Not available on iOS runtime
 
 /**
  * The class holding game invariants, such as cards, editions, game formats. All that data, which is not supposed to be changed by player

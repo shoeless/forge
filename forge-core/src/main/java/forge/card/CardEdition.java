@@ -40,7 +40,6 @@ import java.util.Map.Entry;
 import forge.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-// import java.util.stream.Collectors; // Not available on iOS runtime
 
 /**
  * <p>

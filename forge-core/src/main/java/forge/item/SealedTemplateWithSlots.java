@@ -5,8 +5,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-// import forge.util.function.Function; // Not available on iOS runtime
-// import java.util.stream.Collectors; // Not available on iOS runtime
 
 public class SealedTemplateWithSlots extends SealedTemplate {
     private final List<BoosterSlot> boosterSlots;
