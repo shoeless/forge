@@ -83,7 +83,7 @@ public class StorageBase<T> implements IStorage<T> {
 
     @Override
     public T find(Predicate<T> condition) {
-        return IterableUtil.tryFind(map.values(), condition).orElse(null);
+        return IterableUtil.tryFind(map.values(), condition);
     }
 
     @Override

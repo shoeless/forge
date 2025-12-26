@@ -1,88 +1,342 @@
 package forge.util;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
+import java.util.NoSuchElementException;
+
 import forge.util.function.Function;
 import forge.util.function.Predicate;
-import java.util.stream.StreamSupport;
 
 /**
  * Provides helper methods for Iterables and Predicates similar
- * to the Guava library, but supporting Java 8's implementation
- * of Predicates instead.
+ * to the Guava library, but supporting custom Predicate implementation
+ * compatible with iOS/RoboVM (no Stream API).
  */
-public class IterableUtil {
+public final class IterableUtil {
 
+    private IterableUtil() {
+        // Utility class - no instantiation
+    }
 
     /**
-     * Merges a collection of predicates into a single predicate,
-     * which requires the subject to match each of the component predicates.
+     * Merges predicates into one requiring all to match.
+     *
+     * @param <T> the type being tested
+     * @param components the predicates to merge
+     * @return combined predicate
      */
-    public static <T> Predicate<T> and(Iterable<? extends Predicate<? super T>> components) {
-        if(components instanceof List && ((List<?>) components).size() == 1)
-            return ((List<? extends Predicate<? super T>>) components).get(0)::test;
+    public static <T> Predicate<T> and(
+            final Iterable<? extends Predicate<? super T>> components) {
+        if (components instanceof List
+                && ((List<?>) components).size() == 1) {
+            return ((List<? extends Predicate<? super T>>)
+                    components).get(0)::test;
+        }
         return x -> all(components, i -> i.test(x));
     }
 
     /**
-     * Merges a collection of predicates into a single predicate,
-     * which requires the subject to match at least one of the component predicates.
+     * Merges predicates into one requiring at least one to match.
+     *
+     * @param <T> the type being tested
+     * @param components the predicates to merge
+     * @return combined predicate
      */
-    public static <T> Predicate<T> or(Iterable<? extends Predicate<? super T>> components) {
-        if(components instanceof List && ((List<?>) components).size() == 1)
-            return ((List<? extends Predicate<? super T>>) components).get(0)::test;
+    public static <T> Predicate<T> or(
+            final Iterable<? extends Predicate<? super T>> components) {
+        if (components instanceof List
+                && ((List<?>) components).size() == 1) {
+            return ((List<? extends Predicate<? super T>>)
+                    components).get(0)::test;
+        }
         return x -> any(components, i -> i.test(x));
     }
 
-    public static <T> Iterable<T> filter(Iterable<T> iterable, Predicate<? super T> filter) {
-        return () -> StreamSupport.stream(iterable.spliterator(), false).filter(t -> filter.test(t)).iterator();
+    /**
+     * Returns lazy iterable of filtered elements.
+     *
+     * @param <T> element type
+     * @param iterable source iterable
+     * @param filter predicate to test elements
+     * @return filtered iterable
+     */
+    public static <T> Iterable<T> filter(final Iterable<T> iterable,
+            final Predicate<? super T> filter) {
+        return () -> new FilterIterator<>(iterable.iterator(), filter);
     }
 
-    public static <T> Iterable<T> filter(Collection<T> iterable, Predicate<? super T> filter) {
-        return () -> iterable.stream().filter(t -> filter.test(t)).iterator();
+    /**
+     * Returns lazy iterable of filtered elements.
+     *
+     * @param <T> element type
+     * @param iterable source collection
+     * @param filter predicate to test elements
+     * @return filtered iterable
+     */
+    public static <T> Iterable<T> filter(final Collection<T> iterable,
+            final Predicate<? super T> filter) {
+        return () -> new FilterIterator<>(iterable.iterator(), filter);
     }
 
-    public static <T> Iterable<T> filter(final Iterable<?> iterable, final Class<T> desiredType) {
-        return () -> StreamSupport.stream(iterable.spliterator(), false)
-                .filter(desiredType::isInstance)
-                .map(desiredType::cast)
-                .iterator();
+    /**
+     * Returns lazy iterable of elements of desired type.
+     *
+     * @param <T> desired type
+     * @param iterable source iterable
+     * @param desiredType class to filter by
+     * @return filtered iterable
+     */
+    public static <T> Iterable<T> filter(final Iterable<?> iterable,
+            final Class<T> desiredType) {
+        return () -> new TypeFilterIterator<>(iterable.iterator(),
+                desiredType);
     }
 
-    public static <T> boolean any(Iterable<T> iterable, Predicate<? super T> test) {
-        return StreamSupport.stream(iterable.spliterator(), false).anyMatch(t -> test.test(t));
+    /**
+     * Tests if any element matches predicate.
+     *
+     * @param <T> element type
+     * @param iterable source iterable
+     * @param test predicate to test
+     * @return true if any match
+     */
+    public static <T> boolean any(final Iterable<T> iterable,
+            final Predicate<? super T> test) {
+        for (T item : iterable) {
+            if (test.test(item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public static <T> boolean all(Iterable<T> iterable, Predicate<? super T> test) {
-        return StreamSupport.stream(iterable.spliterator(), false).allMatch(t -> test.test(t));
+    /**
+     * Tests if all elements match predicate.
+     *
+     * @param <T> element type
+     * @param iterable source iterable
+     * @param test predicate to test
+     * @return true if all match
+     */
+    public static <T> boolean all(final Iterable<T> iterable,
+            final Predicate<? super T> test) {
+        for (T item : iterable) {
+            if (!test.test(item)) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    public static <T> T find(Iterable<T> iterable, Predicate<? super T> predicate) {
-        return StreamSupport.stream(iterable.spliterator(), false).filter(t -> predicate.test(t)).findFirst().get();
+    /**
+     * Finds first matching element.
+     *
+     * @param <T> element type
+     * @param iterable source iterable
+     * @param predicate predicate to match
+     * @return first match or null
+     */
+    public static <T> T find(final Iterable<T> iterable,
+            final Predicate<? super T> predicate) {
+        for (T item : iterable) {
+            if (predicate.test(item)) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    public static <T> T find(Iterable<T> iterable, Predicate<? super T> predicate, T defaultValue) {
-        return StreamSupport.stream(iterable.spliterator(), false).filter(t -> predicate.test(t)).findFirst().orElse(defaultValue);
+    /**
+     * Finds first matching element or returns default.
+     *
+     * @param <T> element type
+     * @param iterable source iterable
+     * @param predicate predicate to match
+     * @param defaultValue value to return if not found
+     * @return first match or defaultValue
+     */
+    public static <T> T find(final Iterable<T> iterable,
+            final Predicate<? super T> predicate,
+            final T defaultValue) {
+        for (T item : iterable) {
+            if (predicate.test(item)) {
+                return item;
+            }
+        }
+        return defaultValue;
     }
 
-    public static <T> Optional<T> tryFind(Iterable<T> iterable, Predicate<? super T> predicate) {
-        return StreamSupport.stream(iterable.spliterator(), false).filter(t -> predicate.test(t)).findFirst();
+    /**
+     * Tries to find first matching element.
+     * Returns null if not found.
+     *
+     * @param <T> element type
+     * @param iterable source iterable
+     * @param predicate predicate to match
+     * @return first match or null
+     */
+    public static <T> T tryFind(final Iterable<T> iterable,
+            final Predicate<? super T> predicate) {
+        for (T item : iterable) {
+            if (predicate.test(item)) {
+                return item;
+            }
+        }
+        return null;
     }
 
-    public static <T> int indexOf(Iterable<T> iterable, Predicate<? super T> predicate) {
+    /**
+     * Returns index of first matching element.
+     *
+     * @param <T> element type
+     * @param iterable source iterable
+     * @param predicate predicate to match
+     * @return index or -1 if not found
+     */
+    public static <T> int indexOf(final Iterable<T> iterable,
+            final Predicate<? super T> predicate) {
         int index = 0;
-        for(T i : iterable) {
-            if(predicate.test(i))
+        for (T i : iterable) {
+            if (predicate.test(i)) {
                 return index;
+            }
             index++;
         }
         return -1;
     }
 
-    public static <F, T> Iterable<T> transform(final Iterable<F> iterable, final Function<? super F, T> function) {
-        //Should probably also be ? extends T in the function type
-        return () -> StreamSupport.stream(iterable.spliterator(), false).map(f -> function.apply(f)).iterator();
+    /**
+     * Returns lazy iterable of transformed elements.
+     *
+     * @param <F> source type
+     * @param <T> target type
+     * @param iterable source iterable
+     * @param function transformation function
+     * @return transformed iterable
+     */
+    public static <F, T> Iterable<T> transform(final Iterable<F> iterable,
+            final Function<? super F, T> function) {
+        return () -> new TransformIterator<>(iterable.iterator(), function);
+    }
+
+    // Helper iterator classes for lazy evaluation
+
+    private static final class FilterIterator<T> implements Iterator<T> {
+        private final Iterator<T> source;
+        private final Predicate<? super T> predicate;
+        private T next;
+        private boolean hasNext;
+
+        FilterIterator(final Iterator<T> source,
+                final Predicate<? super T> predicate) {
+            this.source = source;
+            this.predicate = predicate;
+            advance();
+        }
+
+        private void advance() {
+            while (source.hasNext()) {
+                T candidate = source.next();
+                if (predicate.test(candidate)) {
+                    next = candidate;
+                    hasNext = true;
+                    return;
+                }
+            }
+            hasNext = false;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return hasNext;
+        }
+
+        @Override
+        public T next() {
+            if (!hasNext) {
+                throw new NoSuchElementException();
+            }
+            T result = next;
+            advance();
+            return result;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class TypeFilterIterator<T> implements Iterator<T> {
+        private final Iterator<?> source;
+        private final Class<T> type;
+        private T next;
+        private boolean hasNext;
+
+        TypeFilterIterator(final Iterator<?> source, final Class<T> type) {
+            this.source = source;
+            this.type = type;
+            advance();
+        }
+
+        private void advance() {
+            while (source.hasNext()) {
+                Object candidate = source.next();
+                if (type.isInstance(candidate)) {
+                    next = type.cast(candidate);
+                    hasNext = true;
+                    return;
+                }
+            }
+            hasNext = false;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return hasNext;
+        }
+
+        @Override
+        public T next() {
+            if (!hasNext) {
+                throw new NoSuchElementException();
+            }
+            T result = next;
+            advance();
+            return result;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class TransformIterator<F, T>
+            implements Iterator<T> {
+        private final Iterator<F> source;
+        private final Function<? super F, T> function;
+
+        TransformIterator(final Iterator<F> source,
+                final Function<? super F, T> function) {
+            this.source = source;
+            this.function = function;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return source.hasNext();
+        }
+
+        @Override
+        public T next() {
+            return function.apply(source.next());
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
     }
 }
