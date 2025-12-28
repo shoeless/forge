@@ -375,11 +375,11 @@ public final class ForgeConstants {
     public static final String[] VIDEO_MODES = {"720p", "768p", "900p", "1080p", "1440p", "2160p"};
 
     public static Map<String, String> getUPnPPreferenceMapping() {
-        return Map.of(
-                localizer.getMessage("lblAsk"), "ASK",
-                localizer.getMessage("lblAlways"), "ALWAYS",
-                localizer.getMessage("lblNever"), "NEVER"
-        );
+        Map<String, String> mapping = new java.util.HashMap<>();
+        mapping.put(localizer.getMessage("lblAsk"), "ASK");
+        mapping.put(localizer.getMessage("lblAlways"), "ALWAYS");
+        mapping.put(localizer.getMessage("lblNever"), "NEVER");
+        return java.util.Collections.unmodifiableMap(mapping);
     }
 
     public enum CounterDisplayLocation {

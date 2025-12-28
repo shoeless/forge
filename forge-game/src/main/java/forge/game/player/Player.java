@@ -64,7 +64,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.*;
 import java.util.Map.Entry;
 import forge.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -2129,7 +2128,7 @@ public class Player extends GameEntity implements Comparable<Player> {
     }
 
     public final boolean hasRevolt() {
-        return getGame().getLeftBattlefieldThisTurn().stream().anyMatch(CardPredicates.isController(this));
+        return forge.util.IterableUtil.any(getGame().getLeftBattlefieldThisTurn(), CardPredicates.isController(this));
     }
 
     public final int getDescended() {
@@ -2147,8 +2146,8 @@ public class Player extends GameEntity implements Comparable<Player> {
     }
 
     public final boolean hasLandfall() {
-        return getZone(ZoneType.Battlefield).getCardsAddedThisTurn(null).stream()
-                .anyMatch(CardPredicates.LANDS);
+        return forge.util.IterableUtil.any(getZone(ZoneType.Battlefield).getCardsAddedThisTurn(null),
+                CardPredicates.LANDS);
     }
 
     public boolean hasFerocious() {
@@ -3091,13 +3090,14 @@ public class Player extends GameEntity implements Comparable<Player> {
     }
 
     public void initCommanderColor(Card cmd) {
-        if (cmd.getStaticAbilities().stream().anyMatch(stAb -> stAb.hasParam("Description") && stAb.getParam("Description")
+        // iOS compatibility: Replace Stream API with IterableUtil
+        if (IterableUtil.any(cmd.getStaticAbilities(), stAb -> stAb.hasParam("Description") && stAb.getParam("Description")
                 .contains("If CARDNAME is your commander, choose a color before the game begins."))) {
             Player p = cmd.getController();
             String prompt = Localizer.getInstance().getMessage("lblChooseAColorFor", cmd.getName());
             SpellAbility cmdColorsa = new SpellAbility.EmptySa(ApiType.ChooseColor, cmd, p);
             byte chosenColor = p.getController().chooseColor(prompt, cmdColorsa, ColorSet.WUBRG);
-            cmd.setChosenColors(List.of(MagicColor.toLongString(chosenColor)));
+            cmd.setChosenColors(java.util.Collections.singletonList(MagicColor.toLongString(chosenColor)));
             p.getGame().getAction().notifyOfValue(cmdColorsa, cmd,
                     Localizer.getInstance().getMessage("lblPlayerPickedChosen", p.getName(), MagicColor.toLongString(chosenColor)), p);
         }
@@ -4056,11 +4056,14 @@ public class Player extends GameEntity implements Comparable<Player> {
     }
 
     public List<String> getUnlockedDoors() {
-        return StreamUtil.stream(getCardsIn(ZoneType.Battlefield))
-                .filter(Card::isRoom)
-                .map(Card::getUnlockedRoomNames)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+        // iOS compatibility: Replace stream().filter().map().flatMap().collect() with loop
+        List<String> result = new ArrayList<>();
+        for (Card card : getCardsIn(ZoneType.Battlefield)) {
+            if (card.isRoom()) {
+                result.addAll(card.getUnlockedRoomNames());
+            }
+        }
+        return result;
     }
 
     public int getDevotionMod() {

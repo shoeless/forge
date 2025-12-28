@@ -31,9 +31,31 @@ public interface IDeviceAdapter {
     boolean needFileAccess();
     void requestFileAcces();
 
-    Set<String> LWJGL_SUPPORTED_AUDIO_TYPES = Set.of(".wav", ".mp3", ".ogg");
+    Set<String> LWJGL_SUPPORTED_AUDIO_TYPES = java.util.Collections.unmodifiableSet(
+        new java.util.HashSet<>(java.util.Arrays.asList(".wav", ".mp3", ".ogg"))
+    );
     default boolean isSupportedAudioFormat(File file) {
-        String path = file.getPath().toLowerCase();
-        return LWJGL_SUPPORTED_AUDIO_TYPES.stream().anyMatch(path::endsWith);
+        try {
+            if (file == null) {
+                return false;
+            }
+            String path = file.getPath();
+            if (path == null || path.isEmpty()) {
+                return false;
+            }
+            String lowerPath = path.toLowerCase();
+            if (lowerPath == null) {
+                return false;
+            }
+            for (String ext : LWJGL_SUPPORTED_AUDIO_TYPES) {
+                if (ext != null && lowerPath.endsWith(ext)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            // iOS safety: catch any unexpected exceptions
+            return false;
+        }
     }
 }

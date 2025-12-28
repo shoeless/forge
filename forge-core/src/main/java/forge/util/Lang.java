@@ -230,10 +230,13 @@ public abstract class Lang {
     }
 
     public String formatValidDesc(String valid) {
-        List<String> commonStuff = List.of(
-                //list of common one word non-core type ValidTgts that should be lowercase in the target prompt
-                "Player", "Opponent", "Card", "Spell", "Permanent"
-        );
+        List<String> commonStuff = new java.util.ArrayList<>();
+        //list of common one word non-core type ValidTgts that should be lowercase in the target prompt
+        commonStuff.add("Player");
+        commonStuff.add("Opponent");
+        commonStuff.add("Card");
+        commonStuff.add("Spell");
+        commonStuff.add("Permanent");
         if (commonStuff.contains(valid) || CardType.isACardType(valid)) {
             valid = valid.toLowerCase();
         }

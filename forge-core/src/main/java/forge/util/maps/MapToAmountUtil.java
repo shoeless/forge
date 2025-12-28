@@ -131,7 +131,13 @@ public final class MapToAmountUtil {
         for (final Entry<T, Integer> entry : map.entrySet()) {
             entries.add(Pair.of(entry.getKey(), entry.getValue()));
         }
-        entries.sort(Entry.comparingByValue());
+        // iOS compatibility: Use anonymous Comparator instead of Entry.comparingByValue()
+        Collections.sort(entries, new java.util.Comparator<Pair<T, Integer>>() {
+            @Override
+            public int compare(Pair<T, Integer> o1, Pair<T, Integer> o2) {
+                return o1.getValue().compareTo(o2.getValue());
+            }
+        });
         return entries;
     }
 

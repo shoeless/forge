@@ -44,7 +44,7 @@ public class SGuiChoose {
         if ((choices == null) || choices.isEmpty()) {
             return null;
         }
-        final List<T> choice = SGuiChoose.getChoices(message, 0, 1, choices, selected == null ? null : List.of(selected), display);
+        final List<T> choice = SGuiChoose.getChoices(message, 0, 1, choices, selected == null ? null : java.util.Collections.singletonList(selected), display);
         return choice.isEmpty() ? null : choice.get(0);
     }
 
@@ -60,7 +60,7 @@ public class SGuiChoose {
             return Iterables.getFirst(choices, null);
         }
 
-        final List<T> choice = SGuiChoose.getChoices(message, 1, 1, choices, selected == null ? null : List.of(selected), display);
+        final List<T> choice = SGuiChoose.getChoices(message, 1, 1, choices, selected == null ? null : java.util.Collections.singletonList(selected), display);
         assert choice.size() == 1;
         return choice.get(0);
     }
@@ -152,7 +152,7 @@ public class SGuiChoose {
         return getChoices(message, min, max, Arrays.asList(choices), null, null);
     }
     public static <T> List<T> getChoices(final String message, final int min, final int max, final T[] choices, final T selected, final FSerializableFunction<T, String> display) {
-        return getChoices(message, min, max, Arrays.asList(choices), selected == null ? null : List.of(selected), display);
+        return getChoices(message, min, max, Arrays.asList(choices), selected == null ? null : java.util.Collections.singletonList(selected), display);
     }
     public static <T> List<T> getChoices(final String message, final int min, final int max, final Collection<T> choices) {
         return getChoices(message, min, max, choices, null, null);

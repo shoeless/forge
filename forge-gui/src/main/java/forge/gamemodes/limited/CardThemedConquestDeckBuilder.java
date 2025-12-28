@@ -1,7 +1,8 @@
 package forge.gamemodes.limited;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import forge.util.function.Predicate;
 
 import com.google.common.collect.Lists;
 
@@ -28,11 +29,16 @@ public class CardThemedConquestDeckBuilder extends CardThemedDeckBuilder {
         this.availableList = dList;
         keyCard = commanderCard0;
         secondKeyCard = null;
+        // iOS compatibility: Replace stream().filter().collect() with loop
         // remove Unplayables
         if(isForAI) {
-            this.aiPlayables = availableList.stream()
-                    .filter(PaperCardPredicates.fromRules(CardRulesPredicates.IS_KEPT_IN_AI_DECKS))
-                    .collect(Collectors.toList());
+            this.aiPlayables = new ArrayList<>();
+            Predicate<PaperCard> keptPredicate = PaperCardPredicates.fromRules(CardRulesPredicates.IS_KEPT_IN_AI_DECKS);
+            for (PaperCard card : availableList) {
+                if (keptPredicate.test(card)) {
+                    this.aiPlayables.add(card);
+                }
+            }
         }else{
             this.aiPlayables = Lists.newArrayList(availableList);
         }

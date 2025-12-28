@@ -14,6 +14,7 @@ import forge.game.player.PlayerActionConfirmMode;
 import forge.game.player.PlayerCollection;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 
 import java.util.Collection;
 import java.util.List;
@@ -181,7 +182,7 @@ public class CopyPermanentAi extends SpellAbilityAi {
 
                 list = CardLists.filter(list, c -> (!c.getType().isLegendary() || canCopyLegendary) || !c.getController().equals(aiPlayer));
                 Card choice;
-                if (list.stream().anyMatch(CardPredicates.CREATURES)) {
+                if (IterableUtil.any(list, CardPredicates.CREATURES)) {
                     if (sa.hasParam("TargetingPlayer")) {
                         choice = ComputerUtilCard.getWorstCreatureAI(list);
                     } else {

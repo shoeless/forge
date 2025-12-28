@@ -40,7 +40,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.stream.Stream;
 
 public abstract class GameState {
     private static final Map<ZoneType, String> ZONES = new HashMap<>();
@@ -486,17 +485,22 @@ public abstract class GameState {
     }
 
     public void parse(InputStream in) throws Exception {
+        // iOS compatibility: Replace br.lines() stream with manual line reading
         final BufferedReader br = new BufferedReader(new InputStreamReader(in));
-        parse(br.lines());
+        List<String> lines = new ArrayList<>();
+        String line;
+        while ((line = br.readLine()) != null) {
+            lines.add(line);
+        }
+        parse(lines);
     }
 
     public void parse(List<String> lines) {
-        parse(lines.stream());
-    }
-
-    public void parse(Stream<String> lines) {
+        // iOS compatibility: Replace stream().forEach() with loop
         playerStates.clear();
-        lines.forEach(this::parseLine);
+        for (String line : lines) {
+            parseLine(line);
+        }
     }
 
 

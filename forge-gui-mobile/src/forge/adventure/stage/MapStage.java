@@ -39,6 +39,7 @@ import forge.gui.FThreads;
 import forge.screens.TransitionScreen;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
+import forge.util.IterableUtil;
 
 import java.util.*;
 import java.util.Queue;
@@ -967,7 +968,16 @@ public class MapStage extends GameStage {
         }
         float mobSize = navMapSize; //todo: replace with actual size if multiple nav maps implemented
         ArrayList<NavigationVertex> verticesNearPlayer = new ArrayList<>(navMaps.get(mobSize).navGraph.getNodes());
-        verticesNearPlayer.sort(Comparator.comparingInt(o -> Math.round((o.pos.x - player.pos().x) * (o.pos.x - player.pos().x) + (o.pos.y - player.pos().y) * (o.pos.y - player.pos().y))));
+        // iOS compatibility: Replace Comparator.comparingInt() with anonymous Comparator
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+        IterableUtil.sort(verticesNearPlayer, new Comparator<NavigationVertex>() {
+            @Override
+            public int compare(NavigationVertex v1, NavigationVertex v2) {
+                int dist1 = Math.round((v1.pos.x - player.pos().x) * (v1.pos.x - player.pos().x) + (v1.pos.y - player.pos().y) * (v1.pos.y - player.pos().y));
+                int dist2 = Math.round((v2.pos.x - player.pos().x) * (v2.pos.x - player.pos().x) + (v2.pos.y - player.pos().y) * (v2.pos.y - player.pos().y));
+                return Integer.compare(dist1, dist2);
+            }
+        });
 
         if (!freezeAllEnemyBehaviors) {
             while (it.hasNext()) {

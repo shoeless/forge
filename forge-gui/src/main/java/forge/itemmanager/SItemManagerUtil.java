@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
+import forge.util.IterableUtil;
 import forge.util.function.Predicate;
 
 import forge.card.CardRules;
@@ -150,7 +151,14 @@ public final class SItemManagerUtil {
         for (final Entry<InventoryItem, Integer> itemEntry : items) {
             sorted.add(itemEntry);
         }
-        sorted.sort(Comparator.comparing(x -> x.getKey().toString()));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+        // Also replace Comparator.comparing with anonymous comparator
+        IterableUtil.sort(sorted, new Comparator<Entry<InventoryItem, Integer>>() {
+            @Override
+            public int compare(Entry<InventoryItem, Integer> e1, Entry<InventoryItem, Integer> e2) {
+                return e1.getKey().toString().compareTo(e2.getKey().toString());
+            }
+        });
         final StringBuilder builder = new StringBuilder();
         for (final Entry<InventoryItem, Integer> itemEntry : sorted) {
             builder.append("\n").append(itemEntry.getValue()).append(" * ").append(itemEntry.getKey().toString());

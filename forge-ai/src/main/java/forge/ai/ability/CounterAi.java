@@ -376,8 +376,19 @@ public class CounterAi extends SpellAbilityAi {
                 }
 
                 // TODO how to check if the Spell on the Stack is more valuable than the Cards in Hand?
-                int spellSum = spells.stream().map(SpellAbility::getHostCard).filter(CardPredicates.CREATURES).mapToInt(ComputerUtilCard::evaluateCreature).sum();
-                int handSum = hand.stream().filter(CardPredicates.CREATURES).mapToInt(ComputerUtilCard::evaluateCreature).sum();
+                int spellSum = 0;
+                for (SpellAbility spell : spells) {
+                    Card c = spell.getHostCard();
+                    if (CardPredicates.CREATURES.test(c)) {
+                        spellSum += ComputerUtilCard.evaluateCreature(c);
+                    }
+                }
+                int handSum = 0;
+                for (Card c : hand) {
+                    if (CardPredicates.CREATURES.test(c)) {
+                        handSum += ComputerUtilCard.evaluateCreature(c);
+                    }
+                }
                 if (spellSum <= handSum) {
                     return false;
                 }

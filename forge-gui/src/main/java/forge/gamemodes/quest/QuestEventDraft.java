@@ -20,6 +20,7 @@ package forge.gamemodes.quest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -46,6 +47,7 @@ import forge.item.PaperCard;
 import forge.model.CardBlock;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
+import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.NameGenerator;
 import forge.util.TextUtil;
@@ -964,13 +966,17 @@ public class QuestEventDraft implements IQuestEvent {
         }
 
         final boolean oldSetsFirst = sets.get(0).getDate().before(FModel.getMagicDb().getEditions().get("SOM").getDate());
-        allowedSets.sort((edition1, edition2) -> {
-            if (edition1.getDate().before(edition2.getDate())) {
-                return oldSetsFirst ? -1 : 1;
-            } else if (edition1.getDate().after(edition2.getDate())) {
-                return oldSetsFirst ? 1 : -1;
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available on iOS/RoboVM)
+        IterableUtil.sort(allowedSets, new Comparator<CardEdition>() {
+            @Override
+            public int compare(CardEdition edition1, CardEdition edition2) {
+                if (edition1.getDate().before(edition2.getDate())) {
+                    return oldSetsFirst ? -1 : 1;
+                } else if (edition1.getDate().after(edition2.getDate())) {
+                    return oldSetsFirst ? 1 : -1;
+                }
+                return 0;
             }
-            return 0;
         });
 
         boolean largeSetFound = false;

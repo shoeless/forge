@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.badlogic.gdx.files.FileHandle;
 import com.google.common.collect.ImmutableList;
 import forge.StaticData;
 import forge.gui.FThreads;
@@ -33,6 +32,7 @@ import forge.screens.TabPageScreen.TabPage;
 import forge.toolbox.FFileChooser;
 import forge.toolbox.FFileChooser.ChoiceType;
 import forge.toolbox.FGroupList;
+import forge.util.FileHandleUtil;
 import forge.toolbox.FList;
 import forge.toolbox.FOptionPane;
 import forge.toolbox.GuiChoose;
@@ -64,8 +64,8 @@ public class FilesPage extends TabPage<SettingsScreen> {
                 switch (result) {
                     case 0:
                         FThreads.invokeInEdtLater(() -> LoadingOverlay.show(Forge.getLocalizer().getMessage("lblBackupMsg"), true, () -> {
-                            File source = new FileHandle(ForgeProfileProperties.getUserDir()).file();
-                            File target = new FileHandle(Forge.getDeviceAdapter().getDownloadsDir()).file();
+                            File source = FileHandleUtil.getLocal(ForgeProfileProperties.getUserDir()).file();
+                            File target = FileHandleUtil.getLocal(Forge.getDeviceAdapter().getDownloadsDir()).file();
                             try {
                                 ZipUtil.zip(source, target, ZipUtil.backupClsFile);
                                 FOptionPane.showMessageDialog(Forge.getLocalizer().getMessage("lblSuccess") + "\n" + target.getAbsolutePath() + File.separator + ZipUtil.backupClsFile, Forge.getLocalizer().getMessage("lblBackup"), FOptionPane.INFORMATION_ICON);
@@ -76,8 +76,8 @@ public class FilesPage extends TabPage<SettingsScreen> {
                         break;
                     case 1:
                         FThreads.invokeInEdtLater(() -> LoadingOverlay.show(Forge.getLocalizer().getMessage("lblRestoreMsg"), true, () -> {
-                            File source = new FileHandle(Forge.getDeviceAdapter().getDownloadsDir() + ZipUtil.backupClsFile).file();
-                            File target = new FileHandle(ForgeProfileProperties.getUserDir()).file().getParentFile();
+                            File source = FileHandleUtil.getLocal(Forge.getDeviceAdapter().getDownloadsDir() + ZipUtil.backupClsFile).file();
+                            File target = FileHandleUtil.getLocal(ForgeProfileProperties.getUserDir()).file().getParentFile();
                             try {
                                 String msg = ZipUtil.unzip(source, target);
                                 FOptionPane.showMessageDialog(Forge.getLocalizer().getMessage("lblSuccess") + "\n" + msg, Forge.getLocalizer().getMessage("lblRestore"), FOptionPane.INFORMATION_ICON);

@@ -278,7 +278,13 @@ public class ItemPool<T extends InventoryItem> implements Iterable<Entry<T, Inte
     }
 
     public T find(Predicate<T> filter) {
-        return items.keySet().stream().filter(t -> filter.test(t)).findFirst().orElse(null);
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (T t : items.keySet()) {
+            if (filter.test(t)) {
+                return t;
+            }
+        }
+        return null;
     }
 
     public void clear() {

@@ -9,8 +9,8 @@ import com.badlogic.gdx.utils.Array;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import forge.util.IterableUtil;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class NavigationGraph implements IndexedGraph<NavigationVertex> {
     private int lastNodeIndex = 0;
@@ -55,7 +55,8 @@ public class NavigationGraph implements IndexedGraph<NavigationVertex> {
     }
 
     public void removeVertexIf(Predicate<NavigationVertex> predicate) {
-        removeVertices(nodes.values().stream().filter(predicate).collect(Collectors.toList()));
+        // iOS compatibility: Replace stream().filter().collect() with IterableUtil helper
+        removeVertices(IterableUtil.filterToList(nodes.values(), predicate));
     }
 
     public int lookupIndex(NavigationVertex item) {

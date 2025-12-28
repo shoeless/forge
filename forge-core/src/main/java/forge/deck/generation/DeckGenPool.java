@@ -37,10 +37,14 @@ public class DeckGenPool implements IDeckGenPool {
 
     @Override
     public PaperCard getCard(String name, String edition) {
+        // iOS compatibility: Replace Stream API with traditional loop
         Predicate<PaperCard> filter = PaperCardPredicates.printedInSet(edition).and(PaperCardPredicates.name(name));
-        return cards.values().stream()
-                .filter(c -> filter.test(c))
-                .findFirst().orElseGet(() -> getCard(name));
+        for (PaperCard c : cards.values()) {
+            if (filter.test(c)) {
+                return c;
+            }
+        }
+        return getCard(name);
     }
 
     @Override

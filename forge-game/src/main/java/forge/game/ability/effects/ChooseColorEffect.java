@@ -15,7 +15,6 @@ import forge.util.Localizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ChooseColorEffect extends SpellAbilityEffect {
 
@@ -48,7 +47,11 @@ public class ChooseColorEffect extends SpellAbilityEffect {
             if (cs.isColorless()) {
                 return;
             }
-            colorChoices = cs.stream().map(Object::toString).collect(Collectors.toCollection(ArrayList::new));
+            // iOS compatibility: Replace Stream API with IterableUtil
+            colorChoices = new ArrayList<>();
+            for (MagicColor.Color c : cs) {
+                colorChoices.add(c.toString());
+            }
         }
         if (sa.hasParam("Exclude")) {
             for (String s : sa.getParam("Exclude").split(",")) {
@@ -91,8 +94,15 @@ public class ChooseColorEffect extends SpellAbilityEffect {
             if (chosenColors.isColorless()) {
                 return;
             }
-            card.setChosenColors(chosenColors.stream().map(MagicColor.Color::getName).collect(Collectors.toList()));
-            String desc = Lang.joinHomogenous(chosenColors.stream().map(MagicColor.Color::getTranslatedName).collect(Collectors.toList()));
+            // iOS compatibility: Replace Stream API with IterableUtil
+            List<String> colorNames = new ArrayList<>();
+            List<String> translatedNames = new ArrayList<>();
+            for (MagicColor.Color c : chosenColors) {
+                colorNames.add(c.getName());
+                translatedNames.add(c.getTranslatedName());
+            }
+            card.setChosenColors(colorNames);
+            String desc = Lang.joinHomogenous(translatedNames);
             p.getGame().getAction().notifyOfValue(sa, p, desc, noNotify);
         }
     }

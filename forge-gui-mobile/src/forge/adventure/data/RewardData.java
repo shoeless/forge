@@ -13,7 +13,6 @@ import forge.item.PaperCardPredicates;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.IterableUtil;
-import forge.util.StreamUtil;
 
 import java.io.Serializable;
 import java.util.*;
@@ -267,23 +266,44 @@ public class RewardData implements Serializable {
                     if (colors == null) {
                         CardEdition.Collection editions = FModel.getMagicDb().getEditions();
                         Predicate<CardEdition> filter = CardEdition.Predicates.CAN_MAKE_BOOSTER;
+                        // iOS compatibility: Replace stream().filter().filter().forEach() with loop
                         List<CardEdition> allEditions = new ArrayList<>();
-                        StreamUtil.stream(editions)
-                            .filter(filter)
-                            .filter(CardEdition::hasBoosterTemplate)
-                            .forEach(allEditions::add);
+                        for (CardEdition edition : editions) {
+                            if (filter.test(edition) && edition.hasBoosterTemplate()) {
+                                allEditions.add(edition);
+                            }
+                        }
                         ConfigData configData = Config.instance().getConfigData();
 
+                        // iOS compatibility: Replace removeIf() with iterator for removal during iteration
                         for (String restricted : configData.restrictedEditions) {
-                            allEditions.removeIf(q -> q.getCode().equals(restricted));
+                            Iterator<CardEdition> iter = allEditions.iterator();
+                            while (iter.hasNext()) {
+                                if (iter.next().getCode().equals(restricted)) {
+                                    iter.remove();
+                                }
+                            }
                         }
                         for (String restrictedCard : configData.restrictedCards) {
-                            allEditions.removeIf(cardEdition -> cardEdition.getObtainableCards().stream().anyMatch(
-                                o -> o.name().equals(restrictedCard)));
+                            Iterator<CardEdition> iter = allEditions.iterator();
+                            while (iter.hasNext()) {
+                                CardEdition cardEdition = iter.next();
+                                // Replace stream().anyMatch() with IterableUtil.any()
+                                if (IterableUtil.any(cardEdition.getObtainableCards(), o -> o.name().equals(restrictedCard))) {
+                                    iter.remove();
+                                }
+                            }
                         }
 
                         endDate = endDate == 0 ? 9999 : endDate;
-                        allEditions.removeIf(q -> q.getDate().getYear()+1900 < startDate || q.getDate().getYear()+1900 > endDate);
+                        // iOS compatibility: Replace removeIf() with iterator
+                        Iterator<CardEdition> dateIter = allEditions.iterator();
+                        while (dateIter.hasNext()) {
+                            CardEdition q = dateIter.next();
+                            if (q.getDate().getYear() + 1900 < startDate || q.getDate().getYear() + 1900 > endDate) {
+                                dateIter.remove();
+                            }
+                        }
                         for (int i = 0; i < count + addedCount; i++) {
                             ret.add(new Reward(AdventureEventController.instance().generateBooster(
                                 allEditions.get(WorldSave.getCurrentSave().getWorld().getRandom().nextInt(allEditions.size())).getCode())));

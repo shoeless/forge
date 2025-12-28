@@ -12,8 +12,7 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.tiles.AnimatedTiledMapTile;
 import com.badlogic.gdx.utils.*;
 import forge.Forge;
-
-import java.io.File;
+import forge.util.FileHandleUtil;
 
 /**
  * Rewritten the loadObject method of TmxMapLoader to support templates in tiled map.
@@ -26,8 +25,8 @@ public class TemplateTmxMapLoader extends TmxMapLoader {
     @Override
     public TiledMap load(String fileName) {
         TmxMapLoader.Parameters parameter = new TmxMapLoader.Parameters();
-        File f = new File(fileName);
-        FileHandle tmxFile = new FileHandle(f);
+        // Use internal files for bundled map resources
+        FileHandle tmxFile = FileHandleUtil.getInternal(fileName);
 
         this.root = xml.parse(tmxFile);
         parameter.generateMipMaps=true;

@@ -14,10 +14,16 @@ public interface BiFunction<T, U, R> {
      * Returns a composed function that first applies this function to
      * its input, and then applies the {@code after} function to the result.
      */
-    default <V> BiFunction<T, U, V> andThen(Function<? super R, ? extends V> after) {
+    default <V> BiFunction<T, U, V> andThen(final Function<? super R, ? extends V> after) {
         if (after == null) {
             throw new NullPointerException();
         }
-        return (t, u) -> after.apply(apply(t, u));
+        final BiFunction<T, U, R> self = this;
+        return new BiFunction<T, U, V>() {
+            @Override
+            public V apply(T t, U u) {
+                return after.apply(self.apply(t, u));
+            }
+        };
     }
 }

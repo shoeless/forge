@@ -1,6 +1,7 @@
 package forge.deck;
 
 import com.badlogic.gdx.Input.Keys;
+import forge.util.IterableUtil;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.google.common.collect.ImmutableList;
@@ -82,9 +83,16 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
         public boolean allowsCardReplacement() { return hasInfiniteCardPool() || usePlayerInventory(); }
 
         public List<CardEdition> getBasicLandSets(Deck currentDeck) {
-            if(hasInfiniteCardPool())
-                return FModel.getMagicDb().getSortedEditions().stream().filter(CardEdition::hasBasicLands).collect(Collectors.toList());
-            return List.of(DeckProxy.getDefaultLandSet(currentDeck));
+            if(hasInfiniteCardPool()) {
+                List<CardEdition> result = new java.util.ArrayList<>();
+                for (CardEdition ed : FModel.getMagicDb().getSortedEditions()) {
+                    if (ed.hasBasicLands()) {
+                        result.add(ed);
+                    }
+                }
+                return result;
+            }
+            return java.util.Collections.singletonList(DeckProxy.getDefaultLandSet(currentDeck));
         }
 
         protected abstract IDeckController getController();
@@ -652,7 +660,7 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
     protected void showAddBasicLandsDialog() {
         List<CardEdition> allowedLandSets = this.editorConfig.getBasicLandSets(getDeck());
         if(allowedLandSets == null || allowedLandSets.isEmpty())
-            allowedLandSets = List.of(FModel.getMagicDb().getEditions().get("JMP"));
+            allowedLandSets = java.util.Collections.singletonList(FModel.getMagicDb().getEditions().get("JMP"));
         CardEdition defaultLandSet = allowedLandSets.get(0);
         List<CardEdition> finalAllowedLandSets = allowedLandSets;
         FThreads.invokeInEdtNowOrLater(() -> {
@@ -1405,7 +1413,7 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
             }
             Localizer localizer = Localizer.getInstance();
             String action = localizer.getMessage(labelAction);
-            String label = String.join(" ", action, localizer.getMessage(labelSection));
+            String label = IterableUtil.join(" ", action, localizer.getMessage(labelSection));
             String prompt = String.format("%s - %s %s", sampleCard, action, localizer.getMessage("lblHowMany"));
 
             FImage icon;
@@ -1433,7 +1441,7 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
 
             if(destination instanceof DeckSectionPage && ((DeckSectionPage) destination).deckSection == DeckSection.Avatar) {
                 Localizer localizer = Localizer.getInstance();
-                String caption = String.join(" ", localizer.getMessage("lblAddCommander"), localizer.getMessage("lblasavatar"));
+                String caption = IterableUtil.join(" ", localizer.getMessage("lblAddCommander"), localizer.getMessage("lblasavatar"));
                 menu.addItem(new FMenuItem(caption, destination.getIcon(), e -> setVanguard(card)));
                 return;
             }
@@ -1523,15 +1531,15 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
                     captionSuffix = localizer.getMessage("lblasoathbreaker");
                 else
                     captionSuffix = localizer.getMessage("lblascommander");
-                String caption = String.join(" ", captionPrefix, captionSuffix);
+                String caption = IterableUtil.join(" ", captionPrefix, captionSuffix);
                 menu.addItem(new FMenuItem(caption, icon, e -> setCommander(card)));
             }
             if (canBePartnerCommander(card)) {
-                String caption = String.join(" ", captionPrefix, localizer.getMessage("lblaspartnercommander"));
+                String caption = IterableUtil.join(" ", captionPrefix, localizer.getMessage("lblaspartnercommander"));
                 menu.addItem(new FMenuItem(caption, icon, e -> setPartnerCommander(card)));
             }
             if (canBeSignatureSpell(card)) {
-                String caption = String.join(" ", captionPrefix, localizer.getMessage("lblassignaturespell"));
+                String caption = IterableUtil.join(" ", captionPrefix, localizer.getMessage("lblassignaturespell"));
                 menu.addItem(new FMenuItem(caption, FSkinImage.SORCERY, e -> setSignatureSpell(card)));
             }
         }
@@ -2059,10 +2067,15 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
             if (markedColorCount > 0) {
                 menu.addItem(new FMenuItem(Forge.getLocalizer().getMessage("lblColorIdentity"), Forge.hdbuttons ? FSkinImage.HDPREFERENCE : FSkinImage.SETTINGS, e -> {
                     Set<String> currentColors;
-                    if(card.getMarkedColors() != null)
-                        currentColors = card.getMarkedColors().stream().map(MagicColor.Color::getName).collect(Collectors.toSet());
-                    else
+                    if(card.getMarkedColors() != null) {
+                        // iOS compatibility: Replace stream().map().collect(toSet()) with loop
+                        currentColors = new HashSet<>();
+                        for (MagicColor.Color color : card.getMarkedColors()) {
+                            currentColors.add(color.getName());
+                        }
+                    } else {
                         currentColors = null;
+                    }
                     String prompt = Forge.getLocalizer().getMessage("lblChooseAColor", Lang.getNumeral(markedColorCount));
                     GuiChoose.getChoices(prompt, markedColorCount, markedColorCount, MagicColor.Constant.ONLY_COLORS, currentColors, null, result -> {
                         addCard(card.copyWithMarkedColors(ColorSet.fromNames(result)));

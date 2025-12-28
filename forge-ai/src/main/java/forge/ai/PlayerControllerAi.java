@@ -49,7 +49,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
+import forge.util.IterableUtil;
 
 
 /**
@@ -1053,7 +1053,8 @@ public class PlayerControllerAi extends PlayerController {
 
     @Override
     public ColorSet chooseColors(String message, SpellAbility sa, int min, int max, ColorSet options) {
-        return ColorSet.fromNames(ComputerUtilCard.chooseColor(sa, min, max, options.stream().map(MagicColor.Color::getName).collect(Collectors.toList())));
+        // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+        return ColorSet.fromNames(ComputerUtilCard.chooseColor(sa, min, max, IterableUtil.mapToList(options, MagicColor.Color::getName)));
     }
 
     /*

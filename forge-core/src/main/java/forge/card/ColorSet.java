@@ -23,7 +23,6 @@ import forge.util.BinaryUtil;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Stream;
 
 /**
  * <p>CardColor class.</p>
@@ -358,9 +357,7 @@ public enum ColorSet implements Iterable<Color>, Serializable {
         return this.orderedShards.iterator();
     }
 
-    public Stream<Color> stream() {
-        return this.orderedShards.stream();
-    }
+    // iOS compatibility: stream() method removed - use iterator() or getOrderedColors() instead
 
     //Get array of mana cost shards for color set in the proper order
     public Collection<Color> getOrderedColors() {

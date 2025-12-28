@@ -46,8 +46,19 @@ public interface IPaperCard extends InventoryItem, Serializable {
     @Override
     default String getTranslationKey() {
         //Cards with flavor names will use that flavor name as their translation key. Other variants are just appended as a suffix.
-        if(!NO_FUNCTIONAL_VARIANT.equals(getFunctionalVariant()) && getAllFaces().stream().noneMatch(pc -> pc.getFlavorName() != null))
-            return getName() + " $" + getFunctionalVariant();
+        if(!NO_FUNCTIONAL_VARIANT.equals(getFunctionalVariant())) {
+            // iOS compatibility: Replace Stream API with traditional loop
+            boolean hasFlavorName = false;
+            for (ICardFace pc : getAllFaces()) {
+                if (pc.getFlavorName() != null) {
+                    hasFlavorName = true;
+                    break;
+                }
+            }
+            if (!hasFlavorName) {
+                return getName() + " $" + getFunctionalVariant();
+            }
+        }
         return getDisplayName();
     }
 

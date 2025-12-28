@@ -236,9 +236,14 @@ public abstract class DeckGeneratorBase {
         else if (actualSize > targetSize) {
 
             for (int i = 0; i < 3 && actualSize > targetSize; i++) {
-                List<PaperCard> toRemove = tDeck.toFlatList().stream()
-                        .filter(c -> PaperCardPredicates.NOT_BASIC_LAND.test(c))
-                        .collect(StreamUtil.random(actualSize - targetSize));
+                // iOS compatibility: Replace Stream API with traditional loop
+                List<PaperCard> candidates = new ArrayList<>();
+                for (PaperCard c : tDeck.toFlatList()) {
+                    if (PaperCardPredicates.NOT_BASIC_LAND.test(c)) {
+                        candidates.add(c);
+                    }
+                }
+                List<PaperCard> toRemove = forge.util.Aggregates.random(candidates, actualSize - targetSize);
                 tDeck.removeAllFlat(toRemove);
 
                 for (PaperCard c : toRemove) {

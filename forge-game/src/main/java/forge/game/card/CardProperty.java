@@ -372,7 +372,8 @@ public class CardProperty {
             }
         } else if (property.startsWith("ExiledWithSourceLKI")) {
             List<Card> exiled = card.getZone().getCardsAddedThisTurn(null);
-            exiled.sort(CardPredicates.compareByGameTimestamp());
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(exiled, CardPredicates.compareByGameTimestamp());
             int idx = exiled.lastIndexOf(card);
             if (idx == -1) {
                 return false;
@@ -828,7 +829,7 @@ public class CardProperty {
                 } else if (restriction.equals(ZoneType.Battlefield.toString())) {
                     return game.getCardsIn(ZoneType.Battlefield).anyMatch(CardPredicates.sharesNameWith(card));
                 } else if (restriction.equals("ThisTurnCast")) {
-                    return CardUtil.getThisTurnCast("Card", source, spellAbility, sourceController).stream().anyMatch(CardPredicates.sharesNameWith(card));
+                    return forge.util.IterableUtil.any(CardUtil.getThisTurnCast("Card", source, spellAbility, sourceController), CardPredicates.sharesNameWith(card));
                 } else if (restriction.equals("MovedToGrave")) {
                     if (!(spellAbility instanceof SpellAbility)) {
                         final SpellAbility root = ((SpellAbility) spellAbility).getRootAbility();
@@ -1606,7 +1607,7 @@ public class CardProperty {
                 return false;
             }
             String valid = property.split(" ")[1];
-            if (blocked.stream().anyMatch(CardPredicates.restriction(valid, card.getController(), source, spellAbility))) {
+            if (forge.util.IterableUtil.any(blocked, CardPredicates.restriction(valid, card.getController(), source, spellAbility))) {
                 return true;
             }
             for (Card c : AbilityUtils.getDefinedCards(source, valid, spellAbility)) {
@@ -1621,7 +1622,7 @@ public class CardProperty {
                 return false;
             }
             String valid = property.split(" ")[1];
-            if (blocked.stream().anyMatch(CardPredicates.restriction(valid, card.getController(), source, spellAbility))) {
+            if (forge.util.IterableUtil.any(blocked, CardPredicates.restriction(valid, card.getController(), source, spellAbility))) {
                 return true;
             }
             for (Card c : AbilityUtils.getDefinedCards(source, valid, spellAbility)) {

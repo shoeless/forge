@@ -33,7 +33,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.*;
 import java.util.Map.Entry;
 import forge.util.function.Predicate;
-import java.util.stream.Stream;
 
 public final class CardDb implements ICardDatabase, IDeckGenPool {
     public final static String foilSuffix = "+";
@@ -285,7 +284,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
                 //Legacy form for marked colors. They'll be of the form "W#B#R"
                 Map<String, String> flags = new HashMap<>();
                 String normalizedColorString = ColorSet.fromNames(flagText.split(FlagPrefix)).toString();
-                flags.put("markedColors", String.join("", normalizedColorString));
+                flags.put("markedColors", normalizedColorString); // No join needed for empty delimiter
                 return flags;
             }
             flagText = flagText.substring(1, flagText.length() - 1); //Trim the braces.
@@ -602,7 +601,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
 
     public CardRules getRules(String cardName) {
         CardRules result = rulesByName.get(cardName);
-        return Objects.requireNonNullElseGet(result, () -> CardRules.getUnsupportedCardNamed(cardName));
+        return result != null ? result : CardRules.getUnsupportedCardNamed(cardName);
     }
 
     public CardArtPreference getCardArtPreference(){ return this.defaultCardArtPreference; }
@@ -1068,26 +1067,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         return Multimaps.filterEntries(allCardsByName, entry -> entry.getKey().equals(entry.getValue().getName())).values();
     }
 
-    // iOS compatibility: Stream API not available on iOS runtime - these methods are kept for desktop compatibility
-    // but should not be used in mobile code paths
-    @Override
-    public Stream<PaperCard> streamAllCards() {
-        return allCardsByName.values().stream();
-    }
-    @Override
-    public Stream<PaperCard> streamUniqueCards() {
-        return uniqueCardsByName.values().stream();
-    }
-    public Stream<PaperCard> streamAllCardsNoAlt() {
-        return allCardsByName.entries().stream().filter(e -> e.getKey().equals(e.getValue().getName())).map(Entry::getValue);
-    }
-    public Stream<PaperCard> streamUniqueCardsNoAlt() {
-        return uniqueCardsByName.entrySet().stream().filter(e -> e.getKey().equals(e.getValue().getName())).map(Entry::getValue);
-    }
-
-    public Stream<ICardFace> streamAllFaces() {
-        return facesByName.values().stream();
-    }
+    // iOS compatibility: Stream API methods removed - use getAllCards() or getUniqueCards() instead
 
     public static final Predicate<PaperCard> EDITION_NON_PROMO = paperCard -> {
         String code = paperCard.getEdition();

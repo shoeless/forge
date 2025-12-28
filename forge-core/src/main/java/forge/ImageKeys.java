@@ -333,7 +333,12 @@ public final class ImageKeys {
         if (filename == null)
             return false;
         if (!StaticData.instance().getSetLookup().isEmpty()) {
-            return StaticData.instance().getSetLookup().keySet().stream().anyMatch(filename::startsWith);
+            // iOS compatibility: Replace Stream API with traditional loop
+            for (String setKey : StaticData.instance().getSetLookup().keySet()) {
+                if (filename.startsWith(setKey)) {
+                    return true;
+                }
+            }
         }
 
         return false;

@@ -148,14 +148,33 @@ public class FSkin {
         Forge.hdbuttons = false;
         Forge.hdstart = false;
         // TODO: the "v2" string should be a property of the default skin.
-        FileHandle v2File = getFileHandle(ForgeConstants.FONTS_DIR + "v2");
+        // iOS compatibility: Use writable local storage for marker file on iOS
+        FileHandle v2File = null;
+        if (Gdx.app != null && Gdx.app.getType() == ApplicationType.iOS) {
+            // On iOS, use local (writable) storage for the marker file
+            v2File = Gdx.files.local("fonts/v2");
+        } else {
+            // On other platforms, use the standard location
+            v2File = getFileHandle(ForgeConstants.FONTS_DIR + "v2");
+        }
+
         if (v2File == null || !v2File.exists()) {
             //delete cached fonts
             FSkinFont.deleteCachedFiles();
             try {
-                v2File.file().createNewFile();
+                if (v2File != null) {
+                    // Ensure parent directory exists
+                    FileHandle parent = v2File.parent();
+                    if (parent != null && !parent.exists()) {
+                        parent.mkdirs();
+                    }
+                    // Create the marker file using libGDX API
+                    v2File.writeString("", false);
+                }
             } catch (Exception e) {
-                e.printStackTrace();
+                // iOS compatibility: Silently ignore if we can't create the marker file
+                // The font cache will be deleted each time, which is safe but less efficient
+                System.err.println("Warning: Could not create font version marker file: " + e.getMessage());
             }
         }
 

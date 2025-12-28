@@ -343,12 +343,19 @@ public class PaperCard implements Comparable<IPaperCard>, InventoryItemFromSet, 
             //99% of cases will land here. This could possibly be optimized further by computing and storing this on
             //the CardRules instead, but flavor names will still need to work per-print, or at least per-variant.
             if("en-US".equals(language))
-                return Set.of(this.name);
+                return java.util.Collections.singleton(this.name);
             else {
                 String translatedName = CardTranslation.getTranslatedName(this.name);
-                return Stream.of(this.name, translatedName, StringUtils.stripAccents(translatedName))
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toSet());
+                Set<String> names = new java.util.HashSet<>();
+                names.add(this.name);
+                if (translatedName != null) {
+                    names.add(translatedName);
+                    String stripped = StringUtils.stripAccents(translatedName);
+                    if (stripped != null) {
+                        names.add(stripped);
+                    }
+                }
+                return java.util.Collections.unmodifiableSet(names);
             }
         }
         Set<String> names = new HashSet<>();
@@ -658,7 +665,7 @@ public class PaperCard implements Comparable<IPaperCard>, InventoryItemFromSet, 
 
         //TODO: Could probably move foil here.
 
-        static final PaperCardFlags IDENTITY_FLAGS = new PaperCardFlags(Map.of());
+        static final PaperCardFlags IDENTITY_FLAGS = new PaperCardFlags(java.util.Collections.emptyMap());
 
         protected PaperCardFlags(Map<String, String> flags) {
             if(flags.containsKey("markedColors"))

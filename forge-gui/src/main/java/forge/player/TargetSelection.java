@@ -40,7 +40,6 @@ import forge.util.TextUtil;
 
 import java.util.*;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -181,7 +180,12 @@ public class TargetSelection {
         }
 
         PlayerView playerView = controller.getLocalPlayerView();
-        PlayerZoneUpdates playerZoneUpdates = controller.getGui().openZones(playerView, validTargets.stream().map(c -> c.getZone().getZoneType()).collect(Collectors.toSet()), playersWithValidTargets, true);
+        // iOS compatibility: Replace stream().map().collect(toSet()) with loop
+        Set<ZoneType> zoneTypes = new HashSet<>();
+        for (Card c : validTargets) {
+            zoneTypes.add(c.getZone().getZoneType());
+        }
+        PlayerZoneUpdates playerZoneUpdates = controller.getGui().openZones(playerView, zoneTypes, playersWithValidTargets, true);
         if (!zones.contains(ZoneType.Stack)) {
             InputSelectTargets inp = new InputSelectTargets(controller, validTargets, ability, mandatory, numTargets, divisionValues, filter, mustTargetFiltered);
             inp.showAndWait();

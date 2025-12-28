@@ -260,7 +260,7 @@ public class Untap extends Phase {
         final Game game = previous.getGame();
         List<Card> casted = game.getStack().getSpellsCastLastTurn();
 
-        if (game.isDay() && casted.stream().noneMatch(CardPredicates.isController(previous))) {
+        if (game.isDay() && !forge.util.IterableUtil.any(casted, CardPredicates.isController(previous))) {
             game.setDayTime(true);
         } else if (game.isNight() && CardLists.count(casted, CardPredicates.isController(previous)) > 1) {
             game.setDayTime(false);

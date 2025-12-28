@@ -111,8 +111,15 @@ public class ChooseCardNameEffect extends SpellAbilityEffect {
                     cpp = CardFacePredicates.valid(valid);
                 }
                 if (randomChoice) {
-                    chosen = StaticData.instance().getCommonCards().streamAllFaces()
-                            .filter(cpp).collect(StreamUtil.random()).map(ICardFace::getName).orElse("");
+                    // iOS compatibility: Use getAllFaces() instead of streamAllFaces()
+                    List<ICardFace> allFaces = new ArrayList<>(StaticData.instance().getCommonCards().getAllFaces());
+                    List<ICardFace> faces = new ArrayList<>();
+                    for (ICardFace face : allFaces) {
+                        if (cpp.test(face)) {
+                            faces.add(face);
+                        }
+                    }
+                    chosen = faces.isEmpty() ? "" : Aggregates.random(faces).getName();
                 } else {
                     chosen = p.getController().chooseCardName(sa, cpp, valid, message);
                 }

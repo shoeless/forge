@@ -7,6 +7,7 @@ import forge.card.ColorSet;
 import forge.card.DeckHints;
 import forge.card.MagicColor;
 import forge.item.PaperCard;
+import forge.util.IterableUtil;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
@@ -119,7 +120,8 @@ public class CardRanker {
             cardScores.add(Pair.of(getRawScore(card), card));
         }
 
-        cardScores.sort(Collections.reverseOrder(new CardRankingComparator()));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(cardScores, Collections.reverseOrder(new CardRankingComparator()));
 
         List<PaperCard> rankedCards = new ArrayList<>(cardScores.size());
         for (Pair<Double, PaperCard> pair : cardScores) {
@@ -207,7 +209,8 @@ public class CardRanker {
     private static List<PaperCard> sortAndCreateList(List<Pair<Double, PaperCard>> cardScores) {
         // even if some cards might be assigned the same rank we don't need randomization here
         // as the limited variant is responsible for that during generation
-        cardScores.sort(Collections.reverseOrder(new CardRankingComparator()));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(cardScores, Collections.reverseOrder(new CardRankingComparator()));
 
         List<PaperCard> rankedCards = new ArrayList<>(cardScores.size());
         for (Pair<Double, PaperCard> pair : cardScores) {

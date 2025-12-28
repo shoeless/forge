@@ -30,12 +30,12 @@ import forge.game.cost.Cost;
 import forge.game.spellability.*;
 import forge.game.zone.ZoneType;
 import forge.util.FileSection;
+import forge.util.IterableUtil;
 import io.sentry.Breadcrumb;
 import io.sentry.Sentry;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -270,7 +270,8 @@ public final class AbilityFactory {
             final String key = "Choices";
             if (mapParams.containsKey(key)) {
                 List<String> names = Lists.newArrayList(mapParams.get(key).split(","));
-                spellAbility.setAdditionalAbilityList(key, names.stream().map(input -> {
+                // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+                spellAbility.setAdditionalAbilityList(key, IterableUtil.mapToList(names, input -> {
                     AbilitySub sub = getSubAbility(state, input, sVarHolder);
                     if (api == ApiType.GenericChoice) {
                         // support scripters adding restrictions to filter illegal choices
@@ -278,7 +279,7 @@ public final class AbilityFactory {
                         makeRestrictions(sub);
                     }
                     return sub;
-                }).collect(Collectors.toList()));
+                }));
             }
         }
 

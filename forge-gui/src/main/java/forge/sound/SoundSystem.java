@@ -10,6 +10,7 @@ import forge.model.FModel;
 import forge.player.GamePlayerUtil;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FilenameFilter;
 import java.util.*;
 
@@ -21,7 +22,20 @@ public class SoundSystem {
 
     public static final int DELAY = 30;
 
-    public static final FilenameFilter PLAYABLE_AUDIO = (dir, name) -> GuiBase.getInterface().isSupportedAudioFormat(new File(dir, name));
+    // iOS compatibility: Replace lambda in static field with anonymous class to avoid initialization issues
+    public static final FilenameFilter PLAYABLE_AUDIO = new FilenameFilter() {
+        @Override
+        public boolean accept(File dir, String name) {
+            if (dir == null || name == null) {
+                return false;
+            }
+            File file = new File(dir, name);
+            if (file == null) {
+                return false;
+            }
+            return GuiBase.getInterface().isSupportedAudioFormat(file);
+        }
+    };
     private static final String[] SOUND_RESOURCE_PATHS = {ForgeConstants.USER_CUSTOM_DIR, ForgeConstants.CACHE_DIR};
 
     private static final IAudioClip emptySound = new NoSoundClip();
@@ -427,14 +441,18 @@ public class SoundSystem {
         if(soundResourceAssetCache.containsKey(cacheKey) && soundResourceAssetCache.get(cacheKey).isFile())
             return soundResourceAssetCache.get(cacheKey);
         FilenameFilter nameFilter = (dir, name) -> name.equals(filename) || (name.startsWith(filename + ".") && PLAYABLE_AUDIO.accept(dir, name));
-        File out = getSoundResourceDirectoryFallbacks(profileName, ForgeConstants.SOUND_DIR).stream()
-                .map(File::new)
-                .filter(File::isDirectory)
-                .map((d) -> d.listFiles(nameFilter))
-                .filter(Objects::nonNull)
-                .flatMap(Arrays::stream)
-                .findFirst()
-                .orElse(null);
+        // iOS compatibility: Replace Stream API with traditional loop
+        File out = null;
+        for (String path : getSoundResourceDirectoryFallbacks(profileName, ForgeConstants.SOUND_DIR)) {
+            File dir = new File(path);
+            if (dir.isDirectory()) {
+                File[] matches = dir.listFiles(nameFilter);
+                if (matches != null && matches.length > 0) {
+                    out = matches[0];
+                    break;
+                }
+            }
+        }
         if(out != null)
             soundResourceAssetCache.put(cacheKey, out);
         return out;
@@ -458,18 +476,29 @@ public class SoundSystem {
      */
     public static File findMusicDirectory(MusicPlaylist playlist) {
         String profileName = FModel.getPreferences().getPref(FPref.UI_CURRENT_MUSIC_SET);
-        return getSoundResourceDirectoryFallbacks(profileName, ForgeConstants.MUSIC_DIR).stream()
-                .map((p) -> new File(p, playlist.getSubDir()))
-                .filter(File::isDirectory)
-                .filter((f) -> Objects.requireNonNull(f.listFiles(PLAYABLE_AUDIO)).length > 0)
-                .findFirst()
-                .orElse(null);
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (String path : getSoundResourceDirectoryFallbacks(profileName, ForgeConstants.MUSIC_DIR)) {
+            File musicDir = new File(path, playlist.getSubDir());
+            if (musicDir.isDirectory()) {
+                File[] audioFiles = musicDir.listFiles(PLAYABLE_AUDIO);
+                if (audioFiles != null && audioFiles.length > 0) {
+                    return musicDir;
+                }
+            }
+        }
+        return null;
     }
 
     private static List<String> collectProfiles(String subPath) {
         Set<String> foundSets = new HashSet<>();
         for(String path : SOUND_RESOURCE_PATHS) {
-            File[] files = new File(path + subPath).listFiles(File::isDirectory);
+            // iOS compatibility: Replace File::isDirectory method reference with anonymous class
+            File[] files = new File(path + subPath).listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File pathname) {
+                    return pathname.isDirectory();
+                }
+            });
             if(files != null) {
                 // iOS compatibility: Replace Arrays.stream().map().forEach() with traditional for loop
                 for (File file : files) {

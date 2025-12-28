@@ -3,7 +3,6 @@ package forge.itemmanager;
 import java.util.*;
 import java.util.Map.Entry;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -24,6 +23,7 @@ import forge.itemmanager.filters.CardTypeFilter;
 import forge.itemmanager.filters.TextSearchFilter;
 import forge.toolbox.FList;
 import forge.toolbox.FList.CompactModeHandler;
+import forge.util.IterableUtil;
 
 /** 
  * ItemManager for cards
@@ -94,7 +94,8 @@ public class CardManager extends ItemManager<PaperCard> {
 
             // Try to retain only those editions accepted by the current Card Art Preference Policy
             Predicate<CardEdition> editionPredicate = ed -> StaticData.instance().getCardArtPreference().accept(ed);
-            List<CardEdition> acceptedEditions = entriesByEdition.keySet().stream().filter(editionPredicate).collect(Collectors.toList());
+            // iOS compatibility: Replace stream().filter().collect() with IterableUtil helper
+            List<CardEdition> acceptedEditions = IterableUtil.filterToList(entriesByEdition.keySet(), editionPredicate);
 
             // If policy too strict, fall back to getting all editions.
             if (acceptedEditions.isEmpty())

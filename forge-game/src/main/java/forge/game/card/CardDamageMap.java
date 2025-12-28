@@ -10,6 +10,7 @@ import com.google.common.collect.Table;
 import forge.game.CardTraitBase;
 import forge.game.Game;
 import forge.game.GameEntity;
+import forge.game.GameObject;
 import forge.game.GameObjectPredicates;
 import forge.game.ability.AbilityKey;
 import forge.game.event.GameEventPlayerStatsChanged;
@@ -18,10 +19,10 @@ import forge.game.player.PlayerCollection;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class CardDamageMap extends ForwardingTable<Card, GameEntity, Integer> {
     private Table<Card, GameEntity, Integer> dataMap = HashBasedTable.create();
@@ -188,10 +189,22 @@ public class CardDamageMap extends ForwardingTable<Card, GameEntity, Integer> {
         Set<Card> filteredSource = null;
         Set<GameEntity> filteredTarget = null;
         if (validSource != null) {
-            filteredSource = rowKeySet().stream().filter(GameObjectPredicates.restriction(validSource.split(","), host.getController(), host, sa)).collect(Collectors.toSet());
+            filteredSource = new HashSet<>();
+            forge.util.function.Predicate<GameObject> sourcePred = GameObjectPredicates.restriction(validSource.split(","), host.getController(), host, sa);
+            for (Card card : rowKeySet()) {
+                if (sourcePred.test(card)) {
+                    filteredSource.add(card);
+                }
+            }
         }
         if (validTarget != null) {
-            filteredTarget = columnKeySet().stream().filter(GameObjectPredicates.restriction(validTarget.split(","), host.getController(), host, sa)).collect(Collectors.toSet());
+            filteredTarget = new HashSet<>();
+            forge.util.function.Predicate<GameObject> targetPred = GameObjectPredicates.restriction(validTarget.split(","), host.getController(), host, sa);
+            for (GameEntity entity : columnKeySet()) {
+                if (targetPred.test(entity)) {
+                    filteredTarget.add(entity);
+                }
+            }
         }
 
         for (Table.Cell<Card, GameEntity, Integer> c : cellSet()) {

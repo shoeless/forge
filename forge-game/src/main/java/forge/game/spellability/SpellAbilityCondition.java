@@ -369,7 +369,12 @@ public class SpellAbilityCondition extends SpellAbilityVariables {
             }
 
             Predicate<GameObject> restriction = GameObjectPredicates.restriction(getIsPresent().split(","), activator, host, sa);
-            final int left = (int) list.stream().filter(restriction).count();
+            int left = 0;
+            for (GameObject obj : list) {
+                if (restriction.test(obj)) {
+                    left++;
+                }
+            }
 
             final String rightString = this.getPresentCompare().substring(2);
             int right = AbilityUtils.calculateAmount(host, rightString, sa);
@@ -401,7 +406,12 @@ public class SpellAbilityCondition extends SpellAbilityVariables {
             }
 
             Predicate<GameObject> restriction = GameObjectPredicates.restriction(getIsPresent2().split(","), activator, host, sa);
-            final int left = (int) list.stream().filter(restriction).count();
+            int left = 0;
+            for (GameObject obj : list) {
+                if (restriction.test(obj)) {
+                    left++;
+                }
+            }
 
             final String rightString = this.getPresentCompare2().substring(2);
             int right = AbilityUtils.calculateAmount(host, rightString, sa);

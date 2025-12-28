@@ -85,7 +85,7 @@ public class SacrificeEffect extends SpellAbilityEffect {
         if (sa.hasParam("SacMessage")) {
             msg = sa.getParam("SacMessage");
         } else {
-            msg = Lang.getInstance().buildValidDesc(List.of(valid.split(",")), false);
+            msg = Lang.getInstance().buildValidDesc(java.util.Arrays.asList(valid.split(",")), false);
         }
 
         final boolean destroy = sa.hasParam("Destroy");
@@ -215,7 +215,7 @@ public class SacrificeEffect extends SpellAbilityEffect {
             if (sa.hasParam("SacMessage")) {
                 msg = sa.getParam("SacMessage");
             } else {
-                msg = Lang.getInstance().buildValidDesc(List.of(valid.split(",")), false);
+                msg = Lang.getInstance().buildValidDesc(java.util.Arrays.asList(valid.split(",")), false);
             }
 
             if (sa.hasParam("Destroy")) {

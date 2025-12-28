@@ -17,12 +17,11 @@
  */
 package forge.game.cost;
 
-import java.util.stream.Collectors;
-
 import forge.card.MagicColor;
 import forge.game.card.Card;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
+import forge.util.IterableUtil;
 
 /**
  * the class CostChooseColor
@@ -58,7 +57,8 @@ public class CostChooseColor extends CostPart {
 
     @Override
     public boolean payAsDecided(Player payer, PaymentDecision pd, SpellAbility sa, final boolean effect) {
-        sa.getHostCard().setChosenColors(pd.colors.stream().map(MagicColor.Color::getName).collect(Collectors.toList()));
+        // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+        sa.getHostCard().setChosenColors(IterableUtil.mapToList(pd.colors, MagicColor.Color::getName));
         return true;
     }
 

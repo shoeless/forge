@@ -131,7 +131,11 @@ public class CardCollection extends FCollection<Card> implements CardCollectionV
      */
     public CardCollection filter(Predicate<? super Card> test) {
         CardCollection out = new CardCollection();
-        this.stream().filter(test).forEach(out::add);
+        for (Card card : this) {
+            if (test.test(card)) {
+                out.add(card);
+            }
+        }
         return out;
     }
 

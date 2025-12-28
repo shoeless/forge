@@ -67,11 +67,17 @@ public abstract class PaperCardPredicates {
     public static Predicate<PaperCard> printedInAnyEditions(final String[] editionCodes) {
         Set<String> editions = new HashSet<>(Arrays.asList(editionCodes));
 
-        return card -> StaticData.instance().getCommonCards().getAllCards(card.getName()).stream()
-            .map(PaperCard::getEdition).anyMatch(editionCode ->
-                editions.contains(editionCode) &&
-                    StaticData.instance().getCardEdition(editionCode).isCardObtainable(card.getName())
-        );
+        return card -> {
+            // iOS compatibility: Replace Stream API with traditional loop
+            for (PaperCard pc : StaticData.instance().getCommonCards().getAllCards(card.getName())) {
+                String editionCode = pc.getEdition();
+                if (editions.contains(editionCode) &&
+                    StaticData.instance().getCardEdition(editionCode).isCardObtainable(card.getName())) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     /**
@@ -80,21 +86,33 @@ public abstract class PaperCardPredicates {
     public static Predicate<PaperCard> onlyPrintedInEditions(final String[] editionCodes) {
         Set<String> editions = new HashSet<>(Arrays.asList(editionCodes));
 
-        return card -> StaticData.instance().getCommonCards().getAllCards(card.getName()).stream()
-            .map(PaperCard::getEdition).allMatch(editionCode ->
-                editions.contains(editionCode) &&
-                    StaticData.instance().getCardEdition(editionCode).isCardObtainable(card.getName())
-        );
+        return card -> {
+            // iOS compatibility: Replace Stream API with traditional loop
+            for (PaperCard pc : StaticData.instance().getCommonCards().getAllCards(card.getName())) {
+                String editionCode = pc.getEdition();
+                if (!editions.contains(editionCode) ||
+                    !StaticData.instance().getCardEdition(editionCode).isCardObtainable(card.getName())) {
+                    return false;
+                }
+            }
+            return true;
+        };
     }
 
     /**
      * Filters cards that are obtainable in any edition.
      */
     public static Predicate<PaperCard> isObtainableAnyEdition() {
-        return card -> StaticData.instance().getCommonCards().getAllCards(card.getName()).stream()
-            .map(PaperCard::getEdition).anyMatch(editionCode ->
-                StaticData.instance().getCardEdition(editionCode).isCardObtainable(card.getName())
-            );
+        return card -> {
+            // iOS compatibility: Replace Stream API with traditional loop
+            for (PaperCard pc : StaticData.instance().getCommonCards().getAllCards(card.getName())) {
+                String editionCode = pc.getEdition();
+                if (StaticData.instance().getCardEdition(editionCode).isCardObtainable(card.getName())) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     /**
@@ -120,12 +138,18 @@ public abstract class PaperCardPredicates {
 
         @Override
         public boolean test(final PaperCard card) {
-            return StaticData.instance().getEditions().stream()
-                .anyMatch(ce -> {
-                    List<EditionEntry> entries = ce.getCardInSet(card.getName());
-                    return entries != null && entries.stream()
-                        .anyMatch(ee -> ee.rarity() == matchingRarity);
-                });
+            // iOS compatibility: Replace Stream API with traditional loop
+            for (CardEdition ce : StaticData.instance().getEditions()) {
+                List<EditionEntry> entries = ce.getCardInSet(card.getName());
+                if (entries != null) {
+                    for (EditionEntry ee : entries) {
+                        if (ee.rarity() == matchingRarity) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
         private PredicatePrintedWithRarity(final CardRarity rarity) {
@@ -216,7 +240,13 @@ public abstract class PaperCardPredicates {
 
         @Override
         public boolean test(PaperCard paperCard) {
-            return paperCard.getAllSearchableNames().stream().anyMatch(name -> this.op(name, this.operand));
+            // iOS compatibility: Replace Stream API with traditional loop
+            for (String name : paperCard.getAllSearchableNames()) {
+                if (this.op(name, this.operand)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

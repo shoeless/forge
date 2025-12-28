@@ -46,12 +46,12 @@ import forge.game.trigger.TriggerHandler;
 import forge.game.trigger.TriggerType;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -660,7 +660,8 @@ public class AbilityManaPart implements java.io.Serializable {
         }
         // replace Chosen for Spire colors
         if (origProduced.contains("ColorID")) {
-            String str = sa.getHostCard().getMarkedColors().stream().map(c -> c.getShortName()).collect(Collectors.joining(" "));
+            // iOS compatibility: Replace stream().map().collect(joining()) with IterableUtil helper
+            String str = IterableUtil.join(" ", IterableUtil.mapToList(sa.getHostCard().getMarkedColors(), c -> c.getShortName()));
             origProduced = origProduced.replace("ColorID", str);
         }
         if (origProduced.contains("NotedColors")) {

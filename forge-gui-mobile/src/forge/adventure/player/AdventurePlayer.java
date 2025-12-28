@@ -513,17 +513,17 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
             unsupportedCards.addAll(sideBoardCards.getFilteredPool(isUnsupported).toFlatList());
         }
         if (data.containsKey("attractionDeckCards")) {
-            CardPool attractionDeckCards = CardPool.fromCardList(List.of((String[]) data.readObject("attractionDeckCards")));
+            CardPool attractionDeckCards = CardPool.fromCardList(java.util.Arrays.asList((String[]) data.readObject("attractionDeckCards")));
             deck.getOrCreate(DeckSection.Attractions).addAll(attractionDeckCards.getFilteredPool(isValid));
             unsupportedCards.addAll(attractionDeckCards.getFilteredPool(isUnsupported).toFlatList());
         }
         if (data.containsKey("contraptionDeckCards")) {//TODO: Generalize this. Can't we just serialize the whole deck?
-            CardPool contraptionDeckCards = CardPool.fromCardList(List.of((String[]) data.readObject("contraptionDeckCards")));
+            CardPool contraptionDeckCards = CardPool.fromCardList(java.util.Arrays.asList((String[]) data.readObject("contraptionDeckCards")));
             deck.getOrCreate(DeckSection.Contraptions).addAll(contraptionDeckCards.getFilteredPool(isValid));
             unsupportedCards.addAll(contraptionDeckCards.getFilteredPool(isUnsupported).toFlatList());
         }
         if (data.containsKey("commanderCards")) {
-            CardPool commanderCards = CardPool.fromCardList(List.of((String[]) data.readObject("commanderCards")));
+            CardPool commanderCards = CardPool.fromCardList(java.util.Arrays.asList((String[]) data.readObject("commanderCards")));
             deck.getOrCreate(DeckSection.Commander).addAll(commanderCards.getFilteredPool(isValid));
             unsupportedCards.addAll(commanderCards.getFilteredPool(isUnsupported).toFlatList());
         }
@@ -596,7 +596,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
                     unsupportedCards.addAll(contraptionCards.getFilteredPool(isUnsupported).toFlatList());
                 }
                 if (data.containsKey("commanderCards_" + i)) {
-                    CardPool commanderCards = CardPool.fromCardList(List.of((String[]) data.readObject("commanderCards_" + i)));
+                    CardPool commanderCards = CardPool.fromCardList(java.util.Arrays.asList((String[]) data.readObject("commanderCards_" + i)));
                     decks.get(i).getOrCreate(DeckSection.Commander).addAll(commanderCards.getFilteredPool(isValid));
                     unsupportedCards.addAll(commanderCards.getFilteredPool(isUnsupported).toFlatList());
                 }
@@ -623,7 +623,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
                     unsupportedCards.addAll(sideBoardCards.getFilteredPool(isUnsupported).toFlatList());
                 }
                 if (data.containsKey("commanderCards_" + i)) {
-                    CardPool commanderCards = CardPool.fromCardList(List.of((String[]) data.readObject("commanderCards_" + i)));
+                    CardPool commanderCards = CardPool.fromCardList(java.util.Arrays.asList((String[]) data.readObject("commanderCards_" + i)));
                     decks.get(i).getOrCreate(DeckSection.Commander).addAll(commanderCards.getFilteredPool(isValid));
                     unsupportedCards.addAll(commanderCards.getFilteredPool(isUnsupported).toFlatList());
                 }

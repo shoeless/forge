@@ -86,8 +86,8 @@ public class FDeckImportDialog extends FDialog {
         GameType gameType = editorConfig.getGameType();
         controller.setGameFormat(gameType);
         List<DeckSection> supportedSections = new ArrayList<>();
-        supportedSections.addAll(List.of(editorConfig.getPrimarySections()));
-        supportedSections.addAll(List.of(editorConfig.getExtraSections()));
+        supportedSections.addAll(java.util.Arrays.asList(editorConfig.getPrimarySections()));
+        supportedSections.addAll(java.util.Arrays.asList(editorConfig.getExtraSections()));
         controller.setAllowedSections(supportedSections);
         controller.setCurrentDeckInEditor(currentDeck);
         if(usingInventory)

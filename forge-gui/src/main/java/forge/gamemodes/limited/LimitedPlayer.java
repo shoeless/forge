@@ -12,10 +12,10 @@ import forge.gui.util.SGuiChoose;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
+import forge.util.IterableUtil;
 import forge.util.TextUtil;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class LimitedPlayer {
     // A Player class for inside some type of limited environment, like Draft.
@@ -318,9 +318,9 @@ public class LimitedPlayer {
                 availableColors.remove(c);
 
                 List<String> note = noted.computeIfAbsent(bestPick.getName(), k -> Lists.newArrayList());
-                note.add(String.join(",", chosenColors));
+                note.add(IterableUtil.join(",", chosenColors));
 
-                addLog(name() + " revealed " + bestPick.getDisplayName() + " and noted " + String.join(",", chosenColors) + " chosen colors.");
+                addLog(name() + " revealed " + bestPick.getDisplayName() + " and noted " + IterableUtil.join(",", chosenColors) + " chosen colors.");
             }
             else {
                 if (Iterables.contains(draftActions, "You may look at the next card drafted from this booster pack.")) {
@@ -521,7 +521,7 @@ public class LimitedPlayer {
                 }
             }
 
-            note.add(String.join(",", keywords));
+            note.add(IterableUtil.join(",", keywords));
         } else if (host.equals("Cogwork Grinder")) {
             note.add(bestPick.getName());
         }
@@ -740,9 +740,13 @@ public class LimitedPlayer {
     public void addSingleBoosterPack() {
         // if this is just a normal draft, allow picking a pack from any set
         // If this is adventure or quest or whatever then we should limit it to something
-        List<CardEdition> possibleEditions = FModel.getMagicDb().getEditions().stream()
-                .filter(CardEdition.Predicates.CAN_MAKE_BOOSTER)
-                .collect(Collectors.toList());
+        // iOS compatibility: Replace stream().filter().collect() with loop
+        List<CardEdition> possibleEditions = new ArrayList<>();
+        for (CardEdition edition : FModel.getMagicDb().getEditions()) {
+            if (CardEdition.Predicates.CAN_MAKE_BOOSTER.test(edition)) {
+                possibleEditions.add(edition);
+            }
+        }
         CardEdition edition = chooseEdition(possibleEditions);
         if (edition == null) {
             addLog(name() + " chose not to add a booster pack to the draft.");

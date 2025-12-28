@@ -55,8 +55,8 @@ import forge.game.trigger.WrappedAbility;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
 import forge.util.Aggregates;
+import forge.util.IterableUtil;
 import forge.util.MyRandom;
-import forge.util.StreamUtil;
 import forge.util.collect.FCollection;
 import org.apache.commons.lang3.StringUtils;
 
@@ -2305,9 +2305,15 @@ public class ComputerUtil {
         // not enough good choices, need to fill the rest
         int minDiff = min - goodChoices.size();
         if (minDiff > 0) {
-            List<Card> choices = validCards.stream()
-                    .filter(Predicate.not(goodChoices::contains))
-                    .collect(StreamUtil.random(minDiff));
+            // Filter out cards already in goodChoices
+            List<Card> filtered = new ArrayList<>();
+            for (Card card : validCards) {
+                if (!goodChoices.contains(card)) {
+                    filtered.add(card);
+                }
+            }
+            // Select minDiff random cards from filtered list
+            List<Card> choices = Aggregates.random(filtered, minDiff);
             goodChoices.addAll(choices);
             return goodChoices;
         }
@@ -2929,11 +2935,11 @@ public class ComputerUtil {
                 repParams,
                 ReplacementLayer.Other);
 
-        if (list.stream().anyMatch(CardTraitPredicates.hasParam("AILogic", "NoLife"))) {
+        if (IterableUtil.any(list, CardTraitPredicates.hasParam("AILogic", "NoLife"))) {
             return false;
-        } else if (list.stream().anyMatch(CardTraitPredicates.hasParam("AILogic", "LoseLife"))) {
+        } else if (IterableUtil.any(list, CardTraitPredicates.hasParam("AILogic", "LoseLife"))) {
             return false;
-        } else if (list.stream().anyMatch(CardTraitPredicates.hasParam("AILogic", "LichDraw"))) {
+        } else if (IterableUtil.any(list, CardTraitPredicates.hasParam("AILogic", "LichDraw"))) {
             return false;
         }
         return true;
@@ -2958,13 +2964,13 @@ public class ComputerUtil {
             ReplacementLayer.Other
         );
 
-        if (list.stream().anyMatch(CardTraitPredicates.hasParam("AILogic", "NoLife"))) {
+        if (IterableUtil.any(list, CardTraitPredicates.hasParam("AILogic", "NoLife"))) {
             // no life gain is not negative
             return false;
-        } else if (list.stream().anyMatch(CardTraitPredicates.hasParam("AILogic", "LoseLife"))) {
+        } else if (IterableUtil.any(list, CardTraitPredicates.hasParam("AILogic", "LoseLife"))) {
             // lose life is only negative is the player can lose life
             return player.canLoseLife();
-        } else if (list.stream().anyMatch(CardTraitPredicates.hasParam("AILogic", "LichDraw"))) {
+        } else if (IterableUtil.any(list, CardTraitPredicates.hasParam("AILogic", "LichDraw"))) {
             // if it would draw more cards than player has, then its negative
             return player.getCardsIn(ZoneType.Library).size() <= n;
         }

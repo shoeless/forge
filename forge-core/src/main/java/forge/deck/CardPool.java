@@ -28,6 +28,7 @@ import forge.item.PaperCard;
 import forge.util.ItemPool;
 import forge.util.ItemPoolSorter;
 import forge.util.MyRandom;
+import forge.util.IterableUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -340,7 +341,13 @@ public class CardPool extends ItemPool<PaperCard> {
         ListMultimap<Integer, CardEdition> editionsStatistics = this.getCardEditionsGroupedByNumberOfCards(false);
         List<Integer> frequencyValues = new ArrayList<>(editionsStatistics.keySet());
         // Sort in descending order
-        frequencyValues.sort(Comparator.reverseOrder());
+        // iOS compatibility: Use anonymous Comparator instead of Comparator.reverseOrder()
+        Collections.sort(frequencyValues, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                return o2.compareTo(o1);
+            }
+        });
         float weightedMean = 0;
         int sumWeights = 0;
         for (Integer freq : frequencyValues) {
@@ -368,7 +375,13 @@ public class CardPool extends ItemPool<PaperCard> {
         // Now Get editions corresponding to pivot frequency
         List<CardEdition> pivotCandidates = new ArrayList<>(editionsStatistics.get(pivotFrequency));
         // Now Sort candidates chronologically
-        pivotCandidates.sort(CardEdition::compareTo);
+        // iOS compatibility: Use anonymous Comparator instead of method reference
+        Collections.sort(pivotCandidates, new Comparator<CardEdition>() {
+            @Override
+            public int compare(CardEdition o1, CardEdition o2) {
+                return o1.compareTo(o2);
+            }
+        });
         boolean searchPolicyAndPoolAreCompliant = isLatestCardArtPreference == this.isModern();
         if (!searchPolicyAndPoolAreCompliant)
             Collections.reverse(pivotCandidates);  // reverse to have latest-first.
@@ -429,7 +442,7 @@ public class CardPool extends ItemPool<PaperCard> {
     public static CardPool fromSingleCardRequest(String cardRequest) {
         if(StringUtils.isBlank(cardRequest))
             return new CardPool();
-        return fromCardList(List.of(cardRequest));
+        return fromCardList(java.util.Collections.singletonList(cardRequest));
     }
 
     public static List<Pair<String, Integer>> processCardList(final Iterable<String> lines) {
@@ -458,7 +471,8 @@ public class CardPool extends ItemPool<PaperCard> {
 
     public String toCardList(String separator) {
         List<Entry<PaperCard, Integer>> main2sort = Lists.newArrayList(this);
-        main2sort.sort(ItemPoolSorter.BY_NAME_THEN_SET);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(main2sort, ItemPoolSorter.BY_NAME_THEN_SET);
         StringBuilder sb = new StringBuilder();
 
         boolean isFirst = true;

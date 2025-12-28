@@ -2,6 +2,7 @@ package forge.adventure.stage;
 
 
 import com.badlogic.gdx.math.Vector2;
+import forge.util.IterableUtil;
 import com.badlogic.gdx.utils.Array;
 import forge.Forge;
 import forge.StaticData;
@@ -90,7 +91,7 @@ public class ConsoleCommandInterpreter {
             currentCommand = currentCommand.children.get(name);
         }
         if (currentCommand.function == null) {
-            return "Command not found. Available commands:\n" + String.join(" ", Arrays.copyOfRange(words, 0, i)) + "\n" + String.join("\n", currentCommand.children.keySet());
+            return "Command not found. Available commands:\n" + IterableUtil.join(" ", Arrays.copyOfRange(words, 0, i)) + "\n" + IterableUtil.join("\n", currentCommand.children.keySet());
         }
         String[] parameters = Arrays.copyOfRange(words, i, words.length);
         // this removes apostrophe...
@@ -335,7 +336,7 @@ public class ConsoleCommandInterpreter {
                 for (PointOfInterestData poi : data.getPointsOfInterest())
                     poiNames.add(poi.name + " - " + poi.type);
             }
-            System.out.println("POI Names - Types\n" + String.join("\n", poiNames));
+            System.out.println("POI Names - Types\n" + IterableUtil.join("\n", poiNames));
             return "POI lists dumped to stdout.";
         });
         registerCommand(new String[]{"setColorID"}, s -> {
@@ -524,7 +525,7 @@ public class ConsoleCommandInterpreter {
                 CardEdition edition = FModel.getMagicDb().getEditions().find(e -> e.getCode().equalsIgnoreCase(blockName) || e.getName().equalsIgnoreCase(blockName));
                 if(edition == null)
                     return "Unable to find edition or block: " + blockName;
-                eventCardBlock = Aggregates.random(AdventureEventData.getValidDraftBlocks(List.of(edition)));
+                eventCardBlock = Aggregates.random(AdventureEventData.getValidDraftBlocks(java.util.Collections.singletonList(edition)));
                 if(eventCardBlock == null)
                     return "Unable to find a valid event block that exclusively contains edition " + edition.getName();
             }

@@ -13,6 +13,7 @@ import forge.adventure.util.AdventureQuestEvent;
 import forge.adventure.util.Current;
 import forge.adventure.world.WorldSave;
 import forge.util.Aggregates;
+import forge.util.IterableUtil;
 
 import java.io.Serializable;
 import java.util.*;
@@ -465,7 +466,14 @@ public class AdventureQuestData implements Serializable {
         }
         if (validPOIs.isEmpty())
             return null;
-        validPOIs.sort(Comparator.comparingInt(a -> (int) a.getPosition().dst(pos)));
+        // iOS compatibility: Replace Comparator.comparingInt() with anonymous Comparator
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+        IterableUtil.sort(validPOIs, new Comparator<PointOfInterest>() {
+            @Override
+            public int compare(PointOfInterest a1, PointOfInterest a2) {
+                return Integer.compare((int) a1.getPosition().dst(pos), (int) a2.getPosition().dst(pos));
+            }
+        });
         return validPOIs.get(0);
     }
 

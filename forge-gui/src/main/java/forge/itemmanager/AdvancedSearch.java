@@ -44,6 +44,7 @@ import forge.item.SealedProduct;
 import forge.model.FModel;
 import forge.util.CardTranslation;
 import forge.util.FSerializableFunction;
+import forge.util.IterableUtil;
 import forge.util.Localizer;
 
 public class AdvancedSearch {
@@ -171,7 +172,7 @@ public class AdvancedSearch {
                 return input.getRules().getColor().countColors();
             }
         }),
-        CARD_SUPER_TYPE("lblSupertype", PaperCard.class, FilterOperator.COMBINATION_OPS, new CustomListEvaluator<PaperCard, CardType.Supertype>(List.of(CardType.Supertype.values()), CardType.Supertype::getTranslatedName) {
+        CARD_SUPER_TYPE("lblSupertype", PaperCard.class, FilterOperator.COMBINATION_OPS, new CustomListEvaluator<PaperCard, CardType.Supertype>(java.util.Arrays.asList(CardType.Supertype.values()), CardType.Supertype::getTranslatedName) {
             @Override
             protected CardType.Supertype getItemValue(PaperCard input) {
                 throw new RuntimeException("getItemValues should be called instead");
@@ -199,7 +200,7 @@ public class AdvancedSearch {
                 return types;
             }
         }),
-        CARD_TYPE("lblType", PaperCard.class, FilterOperator.COMBINATION_OPS, new CustomListEvaluator<PaperCard, CardType.CoreType>(List.of(CardType.CoreType.values()), CardType.CoreType::getTranslatedName) {
+        CARD_TYPE("lblType", PaperCard.class, FilterOperator.COMBINATION_OPS, new CustomListEvaluator<PaperCard, CardType.CoreType>(java.util.Arrays.asList(CardType.CoreType.values()), CardType.CoreType::getTranslatedName) {
             @Override
             protected CardType.CoreType getItemValue(PaperCard input) {
                 throw new RuntimeException("getItemValues should be called instead");
@@ -303,7 +304,8 @@ public class AdvancedSearch {
                     return true;
                 }
 
-                cards.sort(FModel.getMagicDb().getEditions().CARD_EDITION_COMPARATOR);
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                IterableUtil.sort(cards, FModel.getMagicDb().getEditions().CARD_EDITION_COMPARATOR);
                 return cards.get(0) == input;
             }
         }),
@@ -448,7 +450,7 @@ public class AdvancedSearch {
                 return ((PaperCard) input).getRules().getColor().countColors();
             }
         }),
-        INVITEM_SUPER_TYPE("lblSupertype", InventoryItem.class, FilterOperator.COMBINATION_OPS, new CustomListEvaluator<InventoryItem, CardType.Supertype>(List.of(CardType.Supertype.values()), CardType.Supertype::getTranslatedName) {
+        INVITEM_SUPER_TYPE("lblSupertype", InventoryItem.class, FilterOperator.COMBINATION_OPS, new CustomListEvaluator<InventoryItem, CardType.Supertype>(java.util.Arrays.asList(CardType.Supertype.values()), CardType.Supertype::getTranslatedName) {
             @Override
             protected CardType.Supertype getItemValue(InventoryItem input) {
                 throw new RuntimeException("getItemValues should be called instead");
@@ -467,7 +469,7 @@ public class AdvancedSearch {
                 return types;
             }
         }),
-        INVITEM_TYPE("lblType", InventoryItem.class, FilterOperator.COMBINATION_OPS, new CustomListEvaluator<InventoryItem, CardType.CoreType>(List.of(CardType.CoreType.values()), CardType.CoreType::getTranslatedName) {
+        INVITEM_TYPE("lblType", InventoryItem.class, FilterOperator.COMBINATION_OPS, new CustomListEvaluator<InventoryItem, CardType.CoreType>(java.util.Arrays.asList(CardType.CoreType.values()), CardType.CoreType::getTranslatedName) {
             @Override
             protected CardType.CoreType getItemValue(InventoryItem input) {
                 throw new RuntimeException("getItemValues should be called instead");
@@ -561,7 +563,8 @@ public class AdvancedSearch {
                     return true;
                 }
 
-                cards.sort(FModel.getMagicDb().getEditions().CARD_EDITION_COMPARATOR);
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                IterableUtil.sort(cards, FModel.getMagicDb().getEditions().CARD_EDITION_COMPARATOR);
                 return cards.get(0) == input;
             }
         }),

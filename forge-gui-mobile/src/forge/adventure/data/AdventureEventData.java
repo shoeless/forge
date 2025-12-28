@@ -22,7 +22,6 @@ import forge.model.FModel;
 import forge.util.Aggregates;
 import forge.util.IterableUtil;
 import forge.util.MyRandom;
-import forge.util.StreamUtil;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -189,7 +188,20 @@ public class AdventureEventData implements Serializable {
         return rolledFilter;
     }
 
-    private static final Set<String> POWER_NINE = Set.of("Black Lotus", "Mox Emerald", "Mox Pearl", "Mox Ruby", "Mox Sapphire", "Mox Jet", "Ancestral Recall", "Timetwister", "Time Walk");
+    private static final Set<String> POWER_NINE;
+    static {
+        Set<String> powerNine = new java.util.HashSet<>();
+        powerNine.add("Black Lotus");
+        powerNine.add("Mox Emerald");
+        powerNine.add("Mox Pearl");
+        powerNine.add("Mox Ruby");
+        powerNine.add("Mox Sapphire");
+        powerNine.add("Mox Jet");
+        powerNine.add("Ancestral Recall");
+        powerNine.add("Timetwister");
+        powerNine.add("Time Walk");
+        POWER_NINE = java.util.Collections.unmodifiableSet(powerNine);
+    }
 
     private static CardBlock pickWeightedCardBlock() {
         CardEdition.Collection editions = FModel.getMagicDb().getEditions();
@@ -197,7 +209,7 @@ public class AdventureEventData implements Serializable {
         Predicate<CardEdition> filter = CardEdition.Predicates.CAN_MAKE_BOOSTER;
 
         if(configData.allowedEvents != null && configData.allowedEvents.length > 0) {
-            Set<String> allowedEvents = Set.of(configData.allowedEvents);
+            Set<String> allowedEvents = new java.util.HashSet<>(java.util.Arrays.asList(configData.allowedEvents));
             filter = filter.and(q -> allowedEvents.contains(q.getCode()));
         }
         else
@@ -206,11 +218,11 @@ public class AdventureEventData implements Serializable {
             if(configData.restrictedEvents != null) {
                 //Temporary restriction until rewards are more diverse - don't want to award restricted cards so these editions need different rewards added.
                 //Also includes sets that use conspiracy or commander drafts.
-                Set<String> restrictedEvents = Set.of(configData.restrictedEvents);
+                Set<String> restrictedEvents = new java.util.HashSet<>(java.util.Arrays.asList(configData.restrictedEvents));
                 filter = filter.and((q) -> !restrictedEvents.contains(q.getCode()));
             }
             if (configData.allowedEditions != null && configData.allowedEditions.length > 0) {
-                Set<String> allowed = Set.of(configData.allowedEditions);
+                Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList(configData.allowedEditions));
                 filter = filter.and(q -> allowed.contains(q.getCode()));
             } else if(configData.restrictedEditions != null) {
                 List<String> restrictedList = Arrays.asList(configData.restrictedEditions);
@@ -219,15 +231,25 @@ public class AdventureEventData implements Serializable {
             }
 
             Predicate<CardEdition> setPoolFilter = selectSetPool();
-            if(editions.stream().anyMatch(setPoolFilter))
+            // iOS compatibility: Replace stream().anyMatch() with loop
+            boolean hasMatch = false;
+            for (CardEdition edition : editions) {
+                if (setPoolFilter.test(edition)) {
+                    hasMatch = true;
+                    break;
+                }
+            }
+            if(hasMatch)
                 filter = filter.and(setPoolFilter);
         }
 
+        // iOS compatibility: Replace stream().filter().filter().forEach() with loop
         List<CardEdition> allEditions = new ArrayList<>();
-        StreamUtil.stream(editions)
-                .filter(filter)
-                .filter(CardEdition::hasBoosterTemplate)
-                .forEach(allEditions::add);
+        for (CardEdition edition : editions) {
+            if (filter.test(edition) && edition.hasBoosterTemplate()) {
+                allEditions.add(edition);
+            }
+        }
 
         List<CardBlock> legalBlocks = getValidDraftBlocks(allEditions);
 
@@ -268,7 +290,7 @@ public class AdventureEventData implements Serializable {
         List<CardBlock> legalBlocks = new ArrayList<>();
         ConfigData configData = Config.instance().getConfigData();
         if (configData.allowedJumpstart != null) {
-            Set<String> allowed = Set.of(configData.allowedJumpstart);
+            Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList(configData.allowedJumpstart));
             for (CardBlock b : src) { // for each block
                 if (allowed.contains(b.getName())) {
                     legalBlocks.add(b);
@@ -288,7 +310,7 @@ public class AdventureEventData implements Serializable {
                 }
             }
             if (configData.allowedEditions != null) {
-                Set<String> allowed = Set.of(configData.allowedEditions);
+                Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList(configData.allowedEditions));
                 legalBlocks.removeIf(q -> !allowed.contains(q.getName()));
             } else {
                 for (String restricted : configData.restrictedEditions) {
@@ -720,7 +742,7 @@ public class AdventureEventData implements Serializable {
         if (format == AdventureEventController.EventFormat.Draft) {
             description = "Event Type: Booster Draft\n";
             description += "Block: " + getCardBlock() + "\n";
-            description += "Boosters: " + String.join(", ", packConfiguration) + "\n";
+            description += "Boosters: " + IterableUtil.join(", ", packConfiguration) + "\n";
             description += "Competition Style: " + participants.length + " players, matches played as best of " + eventRules.gamesPerMatch + ", " + (eventRules.getPairingDescription()) + "\n\n";
 
             if (eventStatus == AdventureEventController.EventStatus.Available) {

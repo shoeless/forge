@@ -48,7 +48,16 @@ public class NewGameMenu extends FPopupMenu {
                     screen.setHeaderCaption(Forge.getLocalizer().getMessageorUseDefault("lblNewGame", "New Game") + " - " + item.getText());
                 }
                 catch (Exception e) {
+                    // iOS compatibility: Log exception details to system log for debugging
+                    System.err.println("ERROR: Failed to initialize screen: " + screenClass.getName());
+                    System.err.println("Exception type: " + e.getClass().getName());
+                    System.err.println("Exception message: " + e.getMessage());
                     e.printStackTrace();
+                    if (e.getCause() != null) {
+                        System.err.println("Caused by: " + e.getCause().getClass().getName());
+                        System.err.println("Cause message: " + e.getCause().getMessage());
+                        e.getCause().printStackTrace();
+                    }
                     return;
                 }
             }

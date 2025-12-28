@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import forge.util.IterableUtil;
 
 /**
  * Related decks usually pertaining to a limited experience like draft or sealed
@@ -80,13 +81,14 @@ public class DeckGroup extends DeckBase {
     /**
      * Evaluate and 'rank' the ai decks.
      *
-     * 
+     *
      */
     public final void rankAiDecks(Comparator<Deck> comparator) {
         if (aiDecks.size() < 2) {
             return;
         }
-        aiDecks.sort(comparator);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(aiDecks, comparator);
     }
     
     @Override

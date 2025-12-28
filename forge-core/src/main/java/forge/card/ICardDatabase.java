@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import forge.util.function.Predicate;
-import java.util.stream.Stream;
 
 /**
  * Magic Cards Database.
@@ -84,8 +83,7 @@ public interface ICardDatabase extends Iterable<PaperCard> {
     Collection<PaperCard> getAllCards(CardEdition edition);
     Collection<PaperCard> getUniqueCards();
 
-    Stream<PaperCard> streamAllCards();
-    Stream<PaperCard> streamUniqueCards();
+    // iOS compatibility: Stream API methods removed - use getAllCards() or getUniqueCards() instead
 
     /* UTILITY METHODS
      * =============== */

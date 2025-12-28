@@ -46,8 +46,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import forge.util.function.Predicate;
 
 public class AbilityUtils {
     private final static ImmutableList<String> cmpList = ImmutableList.of("LT", "LE", "EQ", "GE", "GT", "NE");
@@ -2594,7 +2593,12 @@ public class AbilityUtils {
                 // extra logic for "all creature types" cards
                 if (type.hasAllCreatureTypes()) {
                     // one of the party types could be excluded, so check each of them separate
-                    creatureTypes = CardType.Constant.PARTY_TYPES.stream().filter(p -> type.hasCreatureType(p)).collect(Collectors.toSet());
+                    creatureTypes = new HashSet<>();
+                    for (String p : CardType.Constant.PARTY_TYPES) {
+                        if (type.hasCreatureType(p)) {
+                            creatureTypes.add(p);
+                        }
+                    }
                 } else { // shortcut for others 
                     creatureTypes = type.getCreatureTypes();
                     creatureTypes.retainAll(CardType.Constant.PARTY_TYPES);
@@ -2624,16 +2628,22 @@ public class AbilityUtils {
             if (chosenParty.size() + wildcard < 4) {
                 multityped.keySet().removeAll(chosenParty);
 
+                // iOS compatibility: Replace Stream API with traditional sorting
                 // sort by amount of members
-                Multimaps.asMap(multityped).entrySet().stream()
-                    .sorted(Map.Entry.<String, List<Card>>comparingByValue(Comparator.<List<Card>>comparingInt(Collection::size)))
-                    .forEach(e -> {
-                        e.getValue().removeAll(chosenMulti);
-                        if (e.getValue().size() > 0) {
-                            chosenParty.add(e.getKey());
-                            chosenMulti.add(e.getValue().get(0));
-                        }
-                    });
+                List<Map.Entry<String, List<Card>>> entries = new ArrayList<>(Multimaps.asMap(multityped).entrySet());
+                Collections.sort(entries, new Comparator<Map.Entry<String, List<Card>>>() {
+                    @Override
+                    public int compare(Map.Entry<String, List<Card>> e1, Map.Entry<String, List<Card>> e2) {
+                        return Integer.compare(e1.getValue().size(), e2.getValue().size());
+                    }
+                });
+                for (Map.Entry<String, List<Card>> e : entries) {
+                    e.getValue().removeAll(chosenMulti);
+                    if (e.getValue().size() > 0) {
+                        chosenParty.add(e.getKey());
+                        chosenMulti.add(e.getValue().get(0));
+                    }
+                }
             }
 
             return doXMath(Math.min(chosenParty.size() + wildcard, 4), expr, c, ctb);
@@ -2868,6 +2878,18 @@ public class AbilityUtils {
         }
 
         // TODO move below to handlePaid
+        if (sq[0].startsWith("DifferentPower_")) {
+            final String restriction = l[0].substring(15);
+            Set<Integer> powers = new HashSet<>();
+            Predicate<Card> predicate = CardPredicates.restriction(restriction, player, c, ctb);
+            for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
+                if (predicate.test(card)) {
+                    powers.add(card.getNetPower());
+                }
+            }
+            final int uniquePowers = powers.size();
+            return doXMath(uniquePowers, expr, c, ctb);
+        }
         if (sq[0].startsWith("DifferentCounterKinds_")) {
             final Set<CounterType> kinds = Sets.newHashSet();
             final String rest = l[0].substring(22);
@@ -3862,8 +3884,10 @@ public class AbilityUtils {
         for (Card c1 : list) {
             c1.getType().getCoreTypes().forEach(types::add);
         }
-        if (permanentTypes)
-            return (int) types.stream().filter(type -> type.isPermanent).count();
+        if (permanentTypes) {
+            // iOS compatibility: Replace Stream API with IterableUtil
+            return IterableUtil.count(types, type -> type.isPermanent);
+        }
         return types.size();
     }
 

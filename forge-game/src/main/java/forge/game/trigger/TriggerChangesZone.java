@@ -124,7 +124,8 @@ public class TriggerChangesZone extends Trigger {
                 moved = (Card) runParams.get(AbilityKey.CardLKI);
             } else if ("Battlefield".equals(runParams.get(AbilityKey.Destination))) {
                 List<Card> etbLKI = moved.getController().getZone(ZoneType.Battlefield).getCardsAddedThisTurn(null);
-                etbLKI.sort(CardPredicates.compareByGameTimestamp());
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                IterableUtil.sort(etbLKI, CardPredicates.compareByGameTimestamp());
                 moved = etbLKI.get(etbLKI.lastIndexOf(moved));
             }
 

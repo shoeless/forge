@@ -9,6 +9,7 @@ import forge.adventure.util.AdventureQuestEvent;
 import forge.adventure.util.AdventureQuestEventType;
 import forge.adventure.util.Current;
 import forge.util.Aggregates;
+import forge.util.IterableUtil;
 
 import java.io.Serializable;
 import java.util.*;
@@ -135,7 +136,8 @@ public class AdventureQuestStage implements Serializable {
             targetIndex = Math.max(0, (int) (targetIndex - variance + (new Random().nextFloat() * variance * 2)));
 
             if (targetIndex < validPOIs.size() && targetIndex >= 0) {
-                validPOIs.sort(new AdventureQuestController.DistanceSort());
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+                IterableUtil.sort(validPOIs, new AdventureQuestController.DistanceSort());
                 setTargetPOI(validPOIs.get(targetIndex));
             } else {
                 if (count1 != 0 || count2 != 0) {

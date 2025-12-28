@@ -9,11 +9,11 @@ import forge.item.PaperCardPredicates;
 import forge.model.FModel;
 import forge.util.ItemPool;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Created by maustin on 09/05/2017.
@@ -39,11 +39,16 @@ public class CommanderDeckGenerator extends DeckProxy implements Comparable<Comm
             uniqueCards = ItemPool.createFrom(FModel.getMagicDb().getCommonCards().getUniqueCards(), PaperCard.class);
         }
         Predicate<CardRules> canPlay = isForAi ? DeckGeneratorBase.AI_CAN_PLAY : CardRulesPredicates.IS_KEPT_IN_RANDOM_DECKS;
-        return uniqueCards.toFlatList().stream()
-                .filter(format.isLegalCommanderPredicate())
-                .filter(PaperCardPredicates.fromRules(canPlay))
-                .map(legend -> new CommanderDeckGenerator(legend, format, isForAi, isCardGen))
-                .collect(Collectors.toList());
+        // iOS compatibility: Replace stream().filter().filter().map().collect() with loops
+        Predicate<PaperCard> commanderFilter = format.isLegalCommanderPredicate();
+        Predicate<PaperCard> canPlayFilter = PaperCardPredicates.fromRules(canPlay);
+        List<DeckProxy> result = new ArrayList<>();
+        for (PaperCard card : uniqueCards.toFlatList()) {
+            if (commanderFilter.test(card) && canPlayFilter.test(card)) {
+                result.add(new CommanderDeckGenerator(card, format, isForAi, isCardGen));
+            }
+        }
+        return result;
     }
 
     public static List<DeckProxy> getBrawlDecks(final DeckFormat format, boolean isForAi, boolean isCardGen){
@@ -60,11 +65,16 @@ public class CommanderDeckGenerator extends DeckProxy implements Comparable<Comm
             uniqueCards = ItemPool.createFrom(FModel.getMagicDb().getCommonCards().getUniqueCards(), PaperCard.class);
         }
         Predicate<CardRules> canPlay = isForAi ? DeckGeneratorBase.AI_CAN_PLAY : CardRulesPredicates.IS_KEPT_IN_RANDOM_DECKS;
-        return uniqueCards.toFlatList().stream()
-                .filter(format.isLegalCardPredicate())
-                .filter(PaperCardPredicates.fromRules(CardRulesPredicates.CAN_BE_BRAWL_COMMANDER.and(canPlay)))
-                .map(legend -> new CommanderDeckGenerator(legend, format, isForAi, isCardGen))
-                .collect(Collectors.toList());
+        // iOS compatibility: Replace stream().filter().filter().map().collect() with loops
+        Predicate<PaperCard> legalFilter = format.isLegalCardPredicate();
+        Predicate<PaperCard> brawlCommanderFilter = PaperCardPredicates.fromRules(CardRulesPredicates.CAN_BE_BRAWL_COMMANDER.and(canPlay));
+        List<DeckProxy> result = new ArrayList<>();
+        for (PaperCard card : uniqueCards.toFlatList()) {
+            if (legalFilter.test(card) && brawlCommanderFilter.test(card)) {
+                result.add(new CommanderDeckGenerator(card, format, isForAi, isCardGen));
+            }
+        }
+        return result;
     }
 
     private final PaperCard legend;

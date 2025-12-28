@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.eventbus.Subscribe;
 import forge.LobbyPlayer;
+import forge.util.IterableUtil;
 import forge.StaticData;
 import forge.ai.AiProfileUtil;
 import forge.game.*;
@@ -119,7 +120,8 @@ public class HostedMatch {
         }
 
         final List<RegisteredPlayer> sortedPlayers = Lists.newArrayList(players);
-        sortedPlayers.sort((p1, p2) -> {
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+        IterableUtil.sort(sortedPlayers, (p1, p2) -> {
 
             final int v1 = p1.getPlayer() instanceof LobbyPlayerHuman ? 0 : 1;
             final int v2 = p2.getPlayer() instanceof LobbyPlayerHuman ? 0 : 1;

@@ -1589,7 +1589,7 @@ public class AiAttackController {
                     if (validTargets.isEmpty()) {
                         missTarget = true;
                         break;
-                    } else if (sa.isCurse() && validTargets.stream().noneMatch(
+                    } else if (sa.isCurse() && !IterableUtil.any(validTargets,
                             CardPredicates.isControlledByAnyOf(c.getController().getOpponents()))) {
                         // e.g. Ahn-Crop Crasher - the effect is only good when aimed at opponent's creatures
                         missTarget = true;

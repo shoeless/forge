@@ -3,6 +3,7 @@ package forge.gamemodes.tournament.system;
 import java.util.*;
 
 import com.google.common.collect.Lists;
+import forge.util.IterableUtil;
 
 @SuppressWarnings("serial")
 public class TournamentSwiss extends AbstractTournament {
@@ -129,7 +130,14 @@ public class TournamentSwiss extends AbstractTournament {
             return pairSwissGroup(players);
         }
 
-        players.sort(Comparator.comparingInt(o -> availableOpponents.get(o).size()));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+        // Also replace Comparator.comparingInt with anonymous comparator
+        IterableUtil.sort(players, new Comparator<TournamentPlayer>() {
+            @Override
+            public int compare(TournamentPlayer o1, TournamentPlayer o2) {
+                return Integer.compare(availableOpponents.get(o1).size(), availableOpponents.get(o2).size());
+            }
+        });
 
         while (players.size() > 1) {
             TournamentPlayer initialPlayer = players.get(0);

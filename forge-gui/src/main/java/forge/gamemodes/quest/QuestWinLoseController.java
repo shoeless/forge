@@ -515,7 +515,7 @@ public class QuestWinLoseController {
             for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
                 formats.add(f);
                 if (f.toString().equals(preferredFormat)) {
-                    pref = List.of(f);
+                    pref = java.util.Collections.singletonList(f);
                 }
             }
 

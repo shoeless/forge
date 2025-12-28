@@ -2,7 +2,6 @@ package forge.game.ability.effects;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -17,6 +16,7 @@ import forge.game.card.CardState;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.Localizer;
 
 public class UnlockDoorEffect extends SpellAbilityEffect {
@@ -52,7 +52,8 @@ public class UnlockDoorEffect extends SpellAbilityEffect {
                 c.unlockRoom(activator, sa.getCardStateName());
                 break;
             case "Unlock":
-                List<CardState> states = c.getLockedRooms().stream().map(c::getState).collect(Collectors.toList());
+                // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+                List<CardState> states = IterableUtil.mapToList(c.getLockedRooms(), stateName -> c.getState(stateName));
 
                 // need to choose Room Name
                 CardState chosen = activator.getController().chooseSingleCardState(sa, states, "Choose Room to unlock", params);
@@ -65,7 +66,8 @@ public class UnlockDoorEffect extends SpellAbilityEffect {
                 switch (c.getLockedRooms().size()) {
                 case 0:
                     // no locked, all unlocked, can only lock door
-                    List<CardState> unlockStates = c.getUnlockedRooms().stream().map(c::getState).collect(Collectors.toList());
+                    // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+                    List<CardState> unlockStates = IterableUtil.mapToList(c.getUnlockedRooms(), stateName -> c.getState(stateName));
                     CardState chosenUnlock = activator.getController().chooseSingleCardState(sa, unlockStates, "Choose Room to lock", params);
                     if (chosenUnlock == null) {
                         continue;
@@ -88,7 +90,8 @@ public class UnlockDoorEffect extends SpellAbilityEffect {
                     }
                     break;
                 case 2:
-                    List<CardState> lockStates = c.getLockedRooms().stream().map(c::getState).collect(Collectors.toList());
+                    // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+                    List<CardState> lockStates = IterableUtil.mapToList(c.getLockedRooms(), stateName -> c.getState(stateName));
 
                     // need to choose Room Name
                     CardState chosenLock = activator.getController().chooseSingleCardState(sa, lockStates, "Choose Room to unlock", params);

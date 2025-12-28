@@ -21,7 +21,6 @@ import static forge.gamemodes.quest.QuestUtilCards.isLegalInQuestFormat;
 
 import java.util.*;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import forge.card.*;
 import forge.item.*;
@@ -115,8 +114,13 @@ public final class BoosterUtils {
             filter = filter.and(formatStartingPool.getFilterPrinted());
         }
 
-        final List<PaperCard> cardPool = FModel.getMagicDb().getCommonCards().streamAllCards()
-                .filter(filter).collect(Collectors.toList());
+        // iOS compatibility: Replace streamAllCards().filter().collect(toList()) with loop
+        final List<PaperCard> cardPool = new ArrayList<>();
+        for (PaperCard card : FModel.getMagicDb().getCommonCards().getAllCards()) {
+            if (filter.test(card)) {
+                cardPool.add(card);
+            }
+        }
 
         if (userPrefs != null && userPrefs.grantCompleteSet()) {
             for (PaperCard card : cardPool) {
@@ -129,7 +133,14 @@ public final class BoosterUtils {
         }
 
         final boolean allowDuplicates = userPrefs != null && userPrefs.allowDuplicates();
-        final boolean mythicsAvailable = cardPool.stream().anyMatch(PaperCardPredicates.IS_MYTHIC_RARE);
+        // iOS compatibility: Replace stream().anyMatch() with loop
+        boolean mythicsAvailable = false;
+        for (PaperCard card : cardPool) {
+            if (PaperCardPredicates.IS_MYTHIC_RARE.test(card)) {
+                mythicsAvailable = true;
+                break;
+            }
+        }
         final int numMythics = mythicsAvailable ? numRares / RARES_PER_MYTHIC : 0;
         final int adjustedRares = numRares - numMythics;
 
@@ -297,7 +308,13 @@ public final class BoosterUtils {
                             Predicate<CardRules> predicateRules =  CardRulesPredicates.cost(StringOp.CONTAINS_IC, "p/");
                             Predicate<PaperCard> predicateCard = PaperCardPredicates.fromRules(predicateRules);
 
-                            int size = (int) cardPool.stream().filter(predicateCard).count();
+                            // iOS compatibility: Replace stream().filter().count() with loop
+                            int size = 0;
+                            for (PaperCard card : cardPool) {
+                                if (predicateCard.test(card)) {
+                                    size++;
+                                }
+                            }
                             int totalSize = cardPool.size();
 
                             double phyrexianAmount = (double) size / totalSize;
@@ -319,7 +336,14 @@ public final class BoosterUtils {
                         //Adjust for the number of multicolored possibilities. This prevents flooding of non-selected
                         //colors if multicolored cards aren't in the selected sets. The more multi-colored cards in the
                         //sets, the more that will be selected.
-                        if (usedMulticolor / 8 < cardPool.stream().filter(predicateCard).count()) {
+                        // iOS compatibility: Replace stream().filter().count() with loop
+                        int multicolorCount = 0;
+                        for (PaperCard card : cardPool) {
+                            if (predicateCard.test(card)) {
+                                multicolorCount++;
+                            }
+                        }
+                        if (usedMulticolor / 8 < multicolorCount) {
                             colorFilters.add(predicateRules);
                             usedMulticolor++;
                         } else {
@@ -484,8 +508,12 @@ public final class BoosterUtils {
 
             PrintSheet ps = new PrintSheet("Quest rewards");
             Predicate<PaperCard> predicate = IterableUtil.and(preds);
-            FModel.getMagicDb().getCommonCards().streamAllCards()
-                    .filter(predicate).forEach(ps::add);
+            // iOS compatibility: Replace streamAllCards().filter().forEach() with loop
+            for (PaperCard card : FModel.getMagicDb().getCommonCards().getAllCards()) {
+                if (predicate.test(card)) {
+                    ps.add(card);
+                }
+            }
             rewards.addAll(ps.random(qty, true));
         } else if (temp.length == 2 && temp[0].equalsIgnoreCase("duplicate") && temp[1].equalsIgnoreCase("card")) {
             // Type 2: a duplicate card of the players choice
@@ -558,9 +586,29 @@ public final class BoosterUtils {
     }
 
     public static void sort(List<PaperCard> cards) {
-        //sort cards alphabetically so colors appear together and rares appear on top
-        cards.sort(Comparator.comparing(PaperCard::getName));
-        cards.sort(Comparator.comparing(c -> c.getRules().getColor().getOrderWeight()));
-        cards.sort(Comparator.comparing(PaperCard::getRarity).reversed());
+        // iOS compatibility: Replace Comparator.comparing() with custom Comparator
+        // Sort by name first
+        Collections.sort(cards, new Comparator<PaperCard>() {
+            @Override
+            public int compare(PaperCard c1, PaperCard c2) {
+                return c1.getName().compareTo(c2.getName());
+            }
+        });
+        // Then by color order weight (stable sort preserves name order within same color)
+        Collections.sort(cards, new Comparator<PaperCard>() {
+            @Override
+            public int compare(PaperCard c1, PaperCard c2) {
+                int w1 = (int) c1.getRules().getColor().getOrderWeight();
+                int w2 = (int) c2.getRules().getColor().getOrderWeight();
+                return Integer.compare(w1, w2);
+            }
+        });
+        // Then by rarity (reversed - higher rarity first)
+        Collections.sort(cards, new Comparator<PaperCard>() {
+            @Override
+            public int compare(PaperCard c1, PaperCard c2) {
+                return c2.getRarity().compareTo(c1.getRarity()); // reversed
+            }
+        });
     }
 }

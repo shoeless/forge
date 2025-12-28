@@ -320,13 +320,19 @@ public class RewardScene extends UIScene {
     public void loadRewards(Array<Reward> newRewards, Type type, ShopActor shopActor) {
         headerLabel.clearListeners();
         // Sort the rewards based on the rarity of the card inside the reward/ lets give items rarity
-        newRewards.sort(Comparator.comparing(reward -> {
-            if (reward.getCard() != null && reward.getCard().getRarity() != null) {
-                return reward.getCard().getRarity().ordinal();
+        // iOS compatibility: Replace Comparator.comparing() with anonymous Comparator
+        newRewards.sort( new Comparator<Reward>() {
+            @Override
+            public int compare(Reward r1, Reward r2) {
+                int rarity1 = (r1.getCard() != null && r1.getCard().getRarity() != null)
+                    ? r1.getCard().getRarity().ordinal()
+                    : Integer.MAX_VALUE;
+                int rarity2 = (r2.getCard() != null && r2.getCard().getRarity() != null)
+                    ? r2.getCard().getRarity().ordinal()
+                    : Integer.MAX_VALUE;
+                return Integer.compare(rarity1, rarity2);
             }
-            // Return a default value or handle the case where rarity is not present
-            return Integer.MAX_VALUE; // Assuming higher values mean less priority in sorting
-        }));
+        });
         clearSelectable();
         this.type = type;
         doneClicked = false;

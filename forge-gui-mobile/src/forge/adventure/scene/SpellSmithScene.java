@@ -22,12 +22,10 @@ import forge.item.PaperCard;
 import forge.model.FModel;
 import forge.util.IterableUtil;
 import forge.util.MyRandom;
-import forge.util.StreamUtil;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 
 public class SpellSmithScene extends UIScene {
@@ -166,26 +164,37 @@ public class SpellSmithScene extends UIScene {
     public void loadEditions() {
         if (editions != null)
             return;
-        editions = StaticData.instance().getSortedEditions().stream().filter(input -> {
-            if (input == null)
-                return false;
-            if (CardEdition.Type.REPRINT_SET_TYPES.contains(input.getType()))
-                return false;
-            if (input.getDate() != null) {
-                // iOS compatibility: Use System.currentTimeMillis() and Date comparison instead of Instant
-                long oneDayAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1);
-                if (input.getDate().after(new Date(oneDayAgo)))
+        // iOS compatibility: Replace stream().filter().sorted().collect() with IterableUtil
+        editions = IterableUtil.filterToList(StaticData.instance().getSortedEditions(), new Predicate<CardEdition>() {
+            @Override
+            public boolean test(CardEdition input) {
+                if (input == null)
                     return false;
+                if (CardEdition.Type.REPRINT_SET_TYPES.contains(input.getType()))
+                    return false;
+                if (input.getDate() != null) {
+                    // iOS compatibility: Use System.currentTimeMillis() and Date comparison instead of Instant
+                    long oneDayAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1);
+                    if (input.getDate().after(new Date(oneDayAgo)))
+                        return false;
+                }
+                String code = input.getCode();
+                Predicate<PaperCard> test = i -> i.getEdition().equals(code);
+                if (!IterableUtil.any(RewardData.getAllCards(), test))
+                    return false;
+                ConfigData configData = Config.instance().getConfigData();
+                if (configData.allowedEditions != null)
+                    return Arrays.asList(configData.allowedEditions).contains(code);
+                return (!Arrays.asList(configData.restrictedEditions).contains(code));
             }
-            String code = input.getCode();
-            Predicate<PaperCard> test = i -> i.getEdition().equals(code);
-            if (!IterableUtil.any(RewardData.getAllCards(), test))
-                return false;
-            ConfigData configData = Config.instance().getConfigData();
-            if (configData.allowedEditions != null)
-                return Arrays.asList(configData.allowedEditions).contains(code);
-            return (!Arrays.asList(configData.restrictedEditions).contains(code));
-        }).sorted(Comparator.comparing(CardEdition::getName)).collect(Collectors.toList());
+        });
+        // iOS compatibility: Replace Comparator.comparing() with anonymous Comparator
+        Collections.sort(editions, new Comparator<CardEdition>() {
+            @Override
+            public int compare(CardEdition e1, CardEdition e2) {
+                return e1.getName().compareTo(e2.getName());
+            }
+        });
     }
 
     public boolean done() {
@@ -365,27 +374,31 @@ public class SpellSmithScene extends UIScene {
                     if (B.getValue().getColor().equals(Color.RED)) colorFilter.add("White");
                     break;
             }
-        P = StreamUtil.stream(P).filter(input -> {
-            //L|Basic Land, C|Common, U|Uncommon, R|Rare, M|Mythic Rare, S|Special, N|None
-            if (input == null) return false;
-            final CardEdition cardEdition = FModel.getMagicDb().getEditions().get(edition);
+        // iOS compatibility: Replace stream().filter().collect() with IterableUtil
+        P = IterableUtil.filterToList(P, new Predicate<PaperCard>() {
+            @Override
+            public boolean test(PaperCard input) {
+                //L|Basic Land, C|Common, U|Uncommon, R|Rare, M|Mythic Rare, S|Special, N|None
+                if (input == null) return false;
+                final CardEdition cardEdition = FModel.getMagicDb().getEditions().get(edition);
 
-            // Use the rarity of the card from the filtered set.
-            CardRarity inputRarity = input.getRarity();
-            if (cardEdition != null)  {
-                List<EditionEntry> cardsInSet = cardEdition.getCardInSet(input.getName());
-            	if (cardsInSet.size() == 0) return false;
-            	inputRarity = cardsInSet.get(0).rarity();
+                // Use the rarity of the card from the filtered set.
+                CardRarity inputRarity = input.getRarity();
+                if (cardEdition != null)  {
+                    List<EditionEntry> cardsInSet = cardEdition.getCardInSet(input.getName());
+                    if (cardsInSet.size() == 0) return false;
+                    inputRarity = cardsInSet.get(0).rarity();
+                }
+                if (!rarity.isEmpty()) if (!inputRarity.toString().equals(rarity)) return false;
+                if (colorFilter.size() > 0)
+                    if (input.getRules().getColor() != ColorSet.fromNames(colorFilter)) return false;
+                if (cost_low > -1) {
+                    if (!(input.getRules().getManaCost().getCMC() >= cost_low && input.getRules().getManaCost().getCMC() <= cost_high))
+                        return false;
+                }
+                return true;
             }
-            if (!rarity.isEmpty()) if (!inputRarity.toString().equals(rarity)) return false;
-            if (colorFilter.size() > 0)
-                if (input.getRules().getColor() != ColorSet.fromNames(colorFilter)) return false;
-            if (cost_low > -1) {
-                if (!(input.getRules().getManaCost().getCMC() >= cost_low && input.getRules().getManaCost().getCMC() <= cost_high))
-                    return false;
-            }
-            return true;
-        }).collect(Collectors.toList());
+        });
         //Stream method is very fast, might not be necessary to precache anything.
         if (!edition.isEmpty())
             totalCost *= 4.0f; //Edition select cost multiplier. This is a huge factor, so it's most expensive.
@@ -411,7 +424,8 @@ public class SpellSmithScene extends UIScene {
         }
         if (cost_low > -1) totalCost *= 2.5f; //And CMC cost multiplier.
 
-        cardPool = StreamUtil.stream(P).collect(Collectors.toList());
+        // iOS compatibility: Replace stream().collect() with IterableUtil
+        cardPool = IterableUtil.toList(P);
         poolSize.setText(((cardPool.size() > 0 ? "[/][FOREST]" : "[/][RED]")) + cardPool.size() + " possible card" + (cardPool.size() > 1 ? "s" : ""));
         currentPrice = (int) totalCost;
         currentShardPrice = (int) (totalCost * 0.2f); //Intentionally rounding up via the cast to int

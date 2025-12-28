@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import forge.util.function.Consumer;
+import forge.util.IterableUtil;
 
 import com.google.common.collect.Iterables;
 import forge.Forge;
@@ -300,7 +301,8 @@ public class GuiChoose {
     // If comparer is NULL, T has to be comparable. Otherwise you'll get an exception from inside the Arrays.sort() routine
     public static <T> void sortedGetChoices(final String message, final int min, final int max, final List<T> choices, Comparator<T> comparer, final Consumer<List<T>> callback) {
         // You may create a copy of source list if callers expect the collection to be unchanged
-        choices.sort(comparer);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+        IterableUtil.sort(choices, comparer);
         getChoices(message, min, max, choices, callback);
     }
 }

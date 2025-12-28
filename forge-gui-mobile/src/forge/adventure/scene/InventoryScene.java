@@ -16,6 +16,7 @@ import forge.adventure.stage.GameHUD;
 import forge.adventure.stage.MapStage;
 import forge.adventure.util.*;
 import forge.deck.Deck;
+import forge.util.IterableUtil;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
@@ -359,7 +360,8 @@ public class InventoryScene extends UIScene {
             items.add(item);
         }
         // sort these by slot type and name
-        items.sort((o1, o2) -> {
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+        IterableUtil.sort(items, (o1, o2) -> {
             if (o1.equipmentSlot == null && o2.equipmentSlot == null) {
                 return o1.name.compareTo(o2.name);
             } else if (o1.equipmentSlot == null) {

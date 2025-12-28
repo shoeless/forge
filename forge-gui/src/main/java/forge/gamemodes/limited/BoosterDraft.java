@@ -22,7 +22,6 @@ import forge.card.CardEdition;
 import forge.card.DraftOptions;
 import forge.deck.CardPool;
 import forge.deck.Deck;
-import forge.deck.DeckBase;
 import forge.deck.DeckSection;
 import forge.gui.util.SGuiChoose;
 import forge.gui.util.SOptionPane;
@@ -185,7 +184,14 @@ public class BoosterDraft implements IBoosterDraft {
                 if (myDrafts.isEmpty()) {
                     SOptionPane.showMessageDialog(Localizer.getInstance().getMessage("lblNotFoundCustomDraftFiles"));
                 } else {
-                    myDrafts.sort(Comparator.comparing(DeckBase::getName));
+                    // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+                    // Also replace Comparator.comparing with anonymous comparator
+                    IterableUtil.sort(myDrafts, new Comparator<CustomLimited>() {
+                        @Override
+                        public int compare(CustomLimited d1, CustomLimited d2) {
+                            return d1.getName().compareTo(d2.getName());
+                        }
+                    });
 
                     final CustomLimited customDraft = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseCustomDraft"), myDrafts);
                     if (customDraft == null) {

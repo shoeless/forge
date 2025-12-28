@@ -37,7 +37,7 @@ public class HeistEffect extends SpellAbilityEffect {
                 "Land"), 3);
             if (choices.isEmpty()) continue; //nothing to heist
             Card chosenCard = player.getController().chooseSingleCardForZoneChange(ZoneType.Exile,
-                List.of(ZoneType.Library), sa, new CardCollection(choices),
+                java.util.Collections.singletonList(ZoneType.Library), sa, new CardCollection(choices),
                 null, Localizer.getInstance().getMessage("lblChooseCardHeist"), false, 
                 player);
             if (!chosenCard.canExiledBy(sa, true)) {

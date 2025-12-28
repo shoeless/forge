@@ -1,5 +1,6 @@
 package forge.adventure.util;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -7,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.badlogic.gdx.utils.ObjectMap;
+import forge.util.FileHandleUtil;
 import forge.CardStorageReader;
 import forge.Forge;
 import forge.ImageKeys;
@@ -58,9 +60,31 @@ public class Config {
         String path = resPath();
         FilenameFilter planesFilter = (file, s) -> (!s.contains(".") && !s.equals(commonDirectoryName));
 
-        adventures = new File(GuiBase.isAndroid() ? ForgeConstants.ADVENTURE_DIR : path + "/res/adventure").list(planesFilter);
+        // iOS-compatible: Use libGDX file API for directory listing when available
+        if (FileHandleUtil.shouldUseInternalFiles() && path.isEmpty()) {
+            // On iOS, adventure resources are bundled at res/adventure/
+            FileHandle adventureDir = FileHandleUtil.getInternal("res/adventure");
+            if (adventureDir.exists() && adventureDir.isDirectory()) {
+                FileHandle[] files = adventureDir.list();
+                java.util.ArrayList<String> planeList = new java.util.ArrayList<>();
+                for (FileHandle f : files) {
+                    String name = f.name();
+                    if (!name.contains(".") && !name.equals(commonDirectoryName)) {
+                        planeList.add(name);
+                    }
+                }
+                adventures = planeList.toArray(new String[0]);
+            } else {
+                adventures = null;
+            }
+        } else {
+            adventures = new File(GuiBase.isAndroid() ? ForgeConstants.ADVENTURE_DIR : path + "/res/adventure").list(planesFilter);
+        }
+
+        // User settings: Use local storage
         try {
-            settingsData = new Json().fromJson(SettingData.class, new FileHandle(ForgeConstants.USER_ADVENTURE_DIR + "settings.json"));
+            FileHandle settingsFile = FileHandleUtil.getLocal(ForgeConstants.USER_ADVENTURE_DIR + "settings.json");
+            settingsData = new Json().fromJson(SettingData.class, settingsFile);
 
         } catch (Exception e) {
             settingsData = new SettingData();
@@ -101,15 +125,26 @@ public class Config {
 
         //prefix = "forge-gui/res/adventure/Shandalar/";
         prefix = getPlanePath(settingsData.plane);
-        commonPrefix = resPath() + "/res/adventure/" + commonDirectoryName + "/";
+        String basePath = resPath();
+        commonPrefix = basePath + (basePath.isEmpty() ? "" : "/") + "res/adventure/" + commonDirectoryName + "/";
 
         currentConfig = this;
         if (FModel.getPreferences() != null)
             Lang = FModel.getPreferences().getPref(ForgePreferences.FPref.UI_LANGUAGE);
-        FileHandle file = new FileHandle(prefix + "config.json");
+
+        // Load config file from bundled resources
+        String configPath = prefix + "config.json";
+        FileHandle file = basePath.isEmpty()
+            ? FileHandleUtil.getInternal(configPath)
+            : new FileHandle(configPath);
+
         //TODO: Plane's config file should be merged with the common config file.
-        if(!file.exists())
-            file = new FileHandle(commonPrefix + "config.json");
+        if(!file.exists()) {
+            String commonConfigPath = commonPrefix + "config.json";
+            file = basePath.isEmpty()
+                ? FileHandleUtil.getInternal(commonConfigPath)
+                : new FileHandle(commonConfigPath);
+        }
         try {
             configData = new Json().fromJson(ConfigData.class, file);
         } catch (Exception e) {
@@ -126,7 +161,13 @@ public class Config {
             return ForgeConstants.ASSETS_DIR;
         }
 
-        // Use FileHandle for platform-independent file existence checks
+        // iOS-compatible: Use libGDX's internal file API to check for bundled resources
+        // On iOS, resources from ../forge-gui/res are bundled at the root as res/
+        if (Gdx.files != null && Gdx.files.internal("res").exists()) {
+            return "";
+        }
+
+        // Desktop: Use FileHandle for platform-independent file existence checks
         if (new FileHandle("./res").exists()) {
             return "./";
         } else if (new FileHandle("./forge-gui/").exists()) {
@@ -137,10 +178,16 @@ public class Config {
     }
 
     public String getPlanePath(String plane) {
+        // iOS-compatible: Handle null plane (when adventures directory doesn't exist)
+        if (plane == null || plane.isEmpty()) {
+            String basePath = resPath();
+            return basePath + (basePath.isEmpty() ? "" : "/") + "res/adventure/" + commonDirectoryName + "/";
+        }
         if (plane.startsWith("<user>")) {
             return ForgeConstants.USER_ADVENTURE_DIR + "/userplanes/" + plane.substring("<user>".length()) + "/";
         } else {
-            return resPath() + "/res/adventure/" + plane + "/";
+            String basePath = resPath();
+            return basePath + (basePath.isEmpty() ? "" : "/") + "res/adventure/" + plane + "/";
         }
     }
 
@@ -196,15 +243,20 @@ public class Config {
         String ext = fullPath.substring(fullPath.lastIndexOf('.'));
         String langFile = fileName + "-" + Lang + ext;
 
-        for (int iter = 1; iter <= 2; iter++) {
+        // Use internal files for bundled resources
+        boolean useInternal = resPath().isEmpty();
 
-            if (new FileHandle(langFile).exists()) {
+        for (int iter = 1; iter <= 2; iter++) {
+            FileHandle langHandle = useInternal ? FileHandleUtil.getInternal(langFile) : new FileHandle(langFile);
+            FileHandle fullHandle = useInternal ? FileHandleUtil.getInternal(fullPath) : new FileHandle(fullPath);
+
+            if (langHandle.exists()) {
                 System.out.println("Found!");
-                Cache.put(path, new FileHandle(langFile));
+                Cache.put(path, langHandle);
                 break;
-            } else if (new FileHandle(fullPath).exists()) {
+            } else if (fullHandle.exists()) {
                 System.out.println("Found!");
-                Cache.put(path, new FileHandle(fullPath));
+                Cache.put(path, fullHandle);
                 break;
             }
             //no local resource, check common resources
@@ -362,7 +414,8 @@ public class Config {
     public void saveSettings() {
 
         Json json = new Json(JsonWriter.OutputType.json);
-        FileHandle handle = new FileHandle(ForgeProfileProperties.getUserDir() + "/adventure/settings.json");
+        // Save to local user storage
+        FileHandle handle = FileHandleUtil.getLocal(ForgeProfileProperties.getUserDir() + "/adventure/settings.json");
         handle.writeString(json.prettyPrint(json.toJson(settingsData, SettingData.class)), false);
 
     }

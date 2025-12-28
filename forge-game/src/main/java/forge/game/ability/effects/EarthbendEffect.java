@@ -1,7 +1,6 @@
 package forge.game.ability.effects;
 
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 
 import forge.card.CardType;
@@ -39,7 +38,10 @@ public class EarthbendEffect extends SpellAbilityEffect {
 
     @Override
     public void buildSpellAbility(final SpellAbility sa) {
-        TargetRestrictions abTgt = new TargetRestrictions(Map.of("ValidTgtsDesc", "land you control", "ValidTgts", "Land.YouCtrl"));
+        Map<String, String> targetParams = new java.util.HashMap<>();
+        targetParams.put("ValidTgtsDesc", "land you control");
+        targetParams.put("ValidTgts", "Land.YouCtrl");
+        TargetRestrictions abTgt = new TargetRestrictions(java.util.Collections.unmodifiableMap(targetParams));
         sa.setTargetRestrictions(abTgt);
     }
 
@@ -59,8 +61,8 @@ public class EarthbendEffect extends SpellAbilityEffect {
         // Earthbend should only target one land
         for (Card c : getTargetCards(sa)) {
             c.addNewPT(0, 0, ts, 0);
-            c.addChangedCardTypes(new CardType(List.of("Creature"), true), null, false, EnumSet.noneOf(RemoveType.class), ts, 0, true, false);
-            c.addChangedCardKeywords(List.of("Haste"), null, false, ts, null);
+            c.addChangedCardTypes(new CardType(java.util.Collections.singletonList("Creature"), true), null, false, EnumSet.noneOf(RemoveType.class), ts, 0, true, false);
+            c.addChangedCardKeywords(java.util.Collections.singletonList("Haste"), null, false, ts, null);
 
             GameEntityCounterTable table = new GameEntityCounterTable();
             c.addCounter(CounterEnumType.P1P1, num, pl, table);

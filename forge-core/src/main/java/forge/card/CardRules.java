@@ -473,11 +473,13 @@ public final class CardRules implements ICardCharacteristics {
         if(supportedFunctionalVariants == null || !supportedFunctionalVariants.contains(variantName))
             return getName();
 
-        ICardFace mainFace = Objects.requireNonNullElse(mainPart.getFunctionalVariant(variantName), mainPart);
+        ICardFace mainVariant = mainPart.getFunctionalVariant(variantName);
+        ICardFace mainFace = mainVariant != null ? mainVariant : mainPart;
         String mainPartName = mainFace.getDisplayName();
 
         if(splitType.getAggregationMethod() == CardSplitType.FaceSelectionMethod.COMBINE) {
-            ICardFace otherFace = Objects.requireNonNullElse(otherPart.getFunctionalVariant(variantName), otherPart);
+            ICardFace otherVariant = otherPart.getFunctionalVariant(variantName);
+            ICardFace otherFace = otherVariant != null ? otherVariant : otherPart;
             String otherPartName = otherFace.getDisplayName();
             return mainPartName + " // " + otherPartName;
         }
@@ -488,7 +490,13 @@ public final class CardRules implements ICardCharacteristics {
     /* package */ String findOrCreateVariantForFlavorName(String flavorName, String suggestedVariantName) {
         Objects.requireNonNull(flavorName);
         String[] nameParts = flavorName.trim().split("\\s*//\\s*");
-        flavorName = String.join(" // ", nameParts); //Normalize this just in case.
+        // Normalize this just in case (iOS-compatible: String.join not available)
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < nameParts.length; i++) {
+            if (i > 0) sb.append(" // ");
+            sb.append(nameParts[i]);
+        }
+        flavorName = sb.toString();
         if(otherPart != null && nameParts.length < 2)
             throw new IllegalArgumentException("Tried to assign a single flavor name to a multi-faced card. Use ' // ' as a separator in the flavorName parameter.");
         if(supportedFunctionalVariants == null)

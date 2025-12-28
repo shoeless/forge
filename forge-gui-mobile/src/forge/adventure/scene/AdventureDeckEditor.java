@@ -1,6 +1,7 @@
 package forge.adventure.scene;
 
 import com.badlogic.gdx.files.FileHandle;
+import forge.util.IterableUtil;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import forge.Forge;
@@ -40,7 +41,6 @@ import forge.util.Utils;
 import java.util.*;
 import forge.util.function.Consumer;
 import forge.util.function.Function;
-import forge.util.function.Predicate;
 
 public class AdventureDeckEditor extends FDeckEditor {
     protected static class AdventureEditorConfig extends DeckEditorConfig {
@@ -216,13 +216,13 @@ public class AdventureDeckEditor extends FDeckEditor {
         public List<CardEdition> getBasicLandSets(Deck currentDeck) {
             if (event.cardBlock != null) {
                 if (event.cardBlock.getLandSet() != null)
-                    return List.of(event.cardBlock.getLandSet());
+                    return java.util.Collections.singletonList(event.cardBlock.getLandSet());
                 List<CardEdition> eventSets = new ArrayList<>(event.cardBlock.getSets());
-                eventSets.removeIf(Predicate.not(CardEdition::hasBasicLands));
+                eventSets.removeIf(ed -> !ed.hasBasicLands());
                 if (!eventSets.isEmpty())
                     return eventSets;
             }
-            return List.of(DeckProxy.getDefaultLandSet(event.registeredDeck));
+            return java.util.Collections.singletonList(DeckProxy.getDefaultLandSet(event.registeredDeck));
         }
 
         @Override
@@ -975,7 +975,7 @@ public class AdventureDeckEditor extends FDeckEditor {
                 String valueText = " [NO VALUE]";
                 if (parentSuffix == null)
                     return valueText;
-                return String.join(" ", valueText, parentSuffix);
+                return IterableUtil.join(" ", valueText, parentSuffix);
             }
             return parentSuffix;
         }

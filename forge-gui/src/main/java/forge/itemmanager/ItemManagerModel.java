@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 
 import forge.item.InventoryItem;
 import forge.itemmanager.ItemColumnConfig.SortState;
+import forge.util.IterableUtil;
 import forge.util.ItemPool;
 import forge.util.ItemPoolSorter;
 
@@ -124,7 +125,8 @@ public final class ItemManagerModel<T extends InventoryItem> {
     public void refreshSort() {
         final List<Entry<T, Integer>> list = getOrderedList();
         if (list.isEmpty()) { return; }
-        try { list.sort(new MyComparator()); }
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available on iOS/RoboVM)
+        try { IterableUtil.sort(list, new MyComparator()); }
         //fix NewDeck editor not loading on Android if a user deleted unwanted sets on edition folder
         catch (IllegalArgumentException ex) {}
     }

@@ -11,6 +11,7 @@ import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 
 import java.util.Collections;
 import java.util.List;
@@ -95,9 +96,7 @@ public class CountersMultiplyAi extends SpellAbilityAi {
             if (list.isEmpty()) {
                 return new AiAbilityDecision(0, AiPlayDecision.TargetingFailed);
             }
-            Card safeMatch = list.stream()
-                    .filter(CardPredicates.hasCounters().negate())
-                    .findFirst().orElse(null);
+            Card safeMatch = IterableUtil.find(list, CardPredicates.hasCounters().negate());
             sa.getTargets().add(safeMatch == null ? list.getFirst() : safeMatch);
             return new AiAbilityDecision(50, AiPlayDecision.MandatoryPlay);
         }

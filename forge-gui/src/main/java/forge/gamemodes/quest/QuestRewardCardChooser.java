@@ -106,11 +106,14 @@ public class QuestRewardCardChooser extends QuestRewardCard {
             }
 
         } else if (type == poolType.predicateFilter) {
+            // iOS compatibility: Replace stream().filter().sorted().forEach() with loop + Collections.sort()
             List<PaperCard> cardChoices = new ArrayList<>();
-
-            FModel.getMagicDb().getCommonCards().streamAllCards().filter(predicates)
-                    .sorted().forEach(cardChoices::add); //TODO: Once java is at 10+, can use Collectors.toUnmodifiableList
-
+            for (PaperCard card : FModel.getMagicDb().getCommonCards().getAllCards()) {
+                if (predicates.test(card)) {
+                    cardChoices.add(card);
+                }
+            }
+            Collections.sort(cardChoices);
             return Collections.unmodifiableList(cardChoices);
         } else {
             throw new RuntimeException("Unknown QuestRewardCardType: " + type);

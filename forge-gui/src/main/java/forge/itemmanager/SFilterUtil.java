@@ -333,7 +333,7 @@ public class SFilterUtil {
         private Predicate<PaperCard> buildPredicateFromToken(String token) {
             List<String> tokenList = new ArrayList<>();
             tokenList.add(token);
-            return buildPredicateFromTokens(String.join(" ", tokenList), inName, inType, inText, inCost);
+            return buildPredicateFromTokens(IterableUtil.join(" ", tokenList), inName, inType, inText, inCost);
         }
     }
 

@@ -38,10 +38,11 @@ import forge.game.trigger.Trigger;
 import forge.game.zone.ZoneType;
 import forge.util.TextUtil;
 import forge.util.collect.FCollection;
+import forge.util.function.Predicate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public final class CardUtil {
     // disable instantiation
@@ -134,9 +135,14 @@ public final class CardUtil {
     }
 
     public static List<SpellAbility> getThisTurnActivated(final String valid, final Card src, final CardTraitBase ctb, final Player controller) {
-        return src.getGame().getStack().getAbilityActivatedThisTurn().stream()
-                .filter(SpellAbilityPredicates.isValid(valid.split(","), controller, src, ctb))
-                .collect(Collectors.toList());
+        List<SpellAbility> result = new ArrayList<>();
+        Predicate<SpellAbility> predicate = SpellAbilityPredicates.isValid(valid.split(","), controller, src, ctb);
+        for (SpellAbility sa : src.getGame().getStack().getAbilityActivatedThisTurn()) {
+            if (predicate.test(sa)) {
+                result.add(sa);
+            }
+        }
+        return result;
     }
 
     public static List<Card> getCastSinceBeginningOfYourLastTurn(final String valid, final Card src, final CardTraitBase ctb, final Player controller) {

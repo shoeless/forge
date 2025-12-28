@@ -27,17 +27,13 @@ import forge.game.spellability.TargetRestrictions;
 import forge.game.staticability.StaticAbilityTapPowerValue;
 import forge.util.IterableUtil;
 import forge.util.MyRandom;
-import forge.util.StreamUtil;
 import forge.util.collect.FCollectionView;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import forge.util.function.Predicate;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -84,44 +80,48 @@ public class CardLists {
      * <p>
      * Sorts a CardCollection from highest converted mana cost to lowest.
      * </p>
-     * 
+     *
      * @param list
      */
     public static void sortByCmcDesc(final List<Card> list) {
-        list.sort(CmcComparatorInv);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(list, CmcComparatorInv);
     }
 
     /**
      * <p>
      * sortByToughnessAsc
      * </p>
-     * 
+     *
      * @param list
      */
     public static void sortByToughnessAsc(final List<Card> list) {
-        list.sort(ToughnessComparator);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(list, ToughnessComparator);
     }
 
     /**
      * <p>
      * sortByToughnessDesc
      * </p>
-     * 
+     *
      * @param list
      */
     public static void sortByToughnessDesc(final List<Card> list) {
-        list.sort(ToughnessComparatorInv);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(list, ToughnessComparatorInv);
     }
 
     /**
      * <p>
      * sortAttackLowFirst.
      * </p>
-     * 
+     *
      * @param list
      */
     public static void sortByPowerAsc(final List<Card> list) {
-        list.sort(PowerComparator);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(list, PowerComparator);
     }
 
     // the higher the attack the better
@@ -129,11 +129,12 @@ public class CardLists {
      * <p>
      * sortAttack.
      * </p>
-     * 
+     *
      * @param list
      */
     public static void sortByPowerDesc(final List<Card> list) {
-        list.sort(Collections.reverseOrder(PowerComparator));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(list, Collections.reverseOrder(PowerComparator));
     }
 
     /**
@@ -475,7 +476,8 @@ public class CardLists {
             else if (num < sum) numList.add(num);
         }
         if (numList.isEmpty()) return false;
-        numList.sort(null);
+        // iOS compatibility: Use Collections.sort() instead of List.sort(null)
+        Collections.sort(numList);
 
         return isSubsetSum(numList, sum);
     }
@@ -499,21 +501,42 @@ public class CardLists {
     }
 
     public static int getDifferentNamesCount(Iterable<Card> cardList) {
-        // first part the ones with SpyKit, and already collect them via
-        Map<Boolean, List<Card>> parted = StreamUtil.stream(cardList).collect(Collectors
-                .partitioningBy(Card::hasNonLegendaryCreatureNames, Collector.of(ArrayList::new, (list, c) -> {
-                    if (!c.hasNoName() && list.stream().noneMatch(c2 -> c.sharesNameWith(c2))) {
-                        list.add(c);
+        // iOS compatibility: Replace Stream API with traditional loop
+        // first partition the ones with SpyKit
+        List<Card> withSpyKit = new ArrayList<>();
+        List<Card> withoutSpyKit = new ArrayList<>();
+
+        for (Card c : cardList) {
+            if (c.hasNonLegendaryCreatureNames()) {
+                withSpyKit.add(c);
+            } else {
+                if (!c.hasNoName()) {
+                    boolean alreadyExists = false;
+                    for (Card c2 : withoutSpyKit) {
+                        if (c.sharesNameWith(c2)) {
+                            alreadyExists = true;
+                            break;
+                        }
                     }
-                }, (l1, l2) -> {
-                    l1.addAll(l2);
-                    return l1;
-                })));
-        List<Card> preList = parted.get(Boolean.FALSE);
+                    if (!alreadyExists) {
+                        withoutSpyKit.add(c);
+                    }
+                }
+            }
+        }
+
+        List<Card> preList = withoutSpyKit;
 
         // then try to apply the SpyKit ones
-        for (Card c : parted.get(Boolean.TRUE)) {
-            if (preList.stream().noneMatch(c2 -> c.sharesNameWith(c2))) {
+        for (Card c : withSpyKit) {
+            boolean alreadyExists = false;
+            for (Card c2 : preList) {
+                if (c.sharesNameWith(c2)) {
+                    alreadyExists = true;
+                    break;
+                }
+            }
+            if (!alreadyExists) {
                 preList.add(c);
             }
         }

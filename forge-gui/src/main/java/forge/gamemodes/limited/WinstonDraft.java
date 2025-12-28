@@ -39,10 +39,13 @@ public class WinstonDraft extends BoosterDraft {
         this.deck = new Stack<>();
         for (final Supplier<List<PaperCard>> supply : this.product) {
             for (int j = 0; j < NUM_PLAYERS; j++) {
+                // iOS compatibility: Replace stream().filter().forEach() with loop
                 // Remove Basic Lands from draft for simplicity
-                supply.get().stream()
-                        .filter(PaperCardPredicates.IS_BASIC_LAND_RARITY.negate())
-                        .forEach(this.deck::add);
+                for (PaperCard card : supply.get()) {
+                    if (!PaperCardPredicates.IS_BASIC_LAND_RARITY.test(card)) {
+                        this.deck.add(card);
+                    }
+                }
             }
         }
         Collections.shuffle(this.deck, MyRandom.getRandom());

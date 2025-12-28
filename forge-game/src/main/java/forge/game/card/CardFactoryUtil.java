@@ -54,8 +54,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.*;
 import java.util.Map.Entry;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import forge.util.IterableUtil;
 
 /**
  * <p>
@@ -913,20 +912,24 @@ public class CardFactoryUtil {
                 throw new RuntimeException("Saga max differ from Ability amount");
             }
 
-            // use steam to group by index
-            Map<String, List<Integer>> result = IntStream.rangeClosed(1, abs.length)
-                    .boxed()
-                    .collect(
-                        Collectors.groupingBy(
-                            i -> abs[i - 1], // i want 1 based index
-                            LinkedHashMap::new, // LinkedHashMap is ordered
-                            Collectors.toList()
-                        )
-                    );
+            // iOS compatibility: Replace IntStream.rangeClosed().collect(groupingBy()) with loop
+            // Group indices by ability string, maintaining order
+            Map<String, List<Integer>> result = new LinkedHashMap<>();
+            for (int i = 1; i <= abs.length; i++) {
+                String key = abs[i - 1]; // i want 1 based index
+                if (!result.containsKey(key)) {
+                    result.put(key, new ArrayList<>());
+                }
+                result.get(key).add(i);
+            }
 
             for (Map.Entry<String, List<Integer>> e : result.entrySet()) {
-                // steam to combine Description
-                String desc = e.getValue().stream().map(TextUtil::toRoman).collect(Collectors.joining(", "));
+                // iOS compatibility: Replace Stream API with IterableUtil
+                List<String> romanNums = new ArrayList<>();
+                for (Integer num : e.getValue()) {
+                    romanNums.add(TextUtil.toRoman(num));
+                }
+                String desc = IterableUtil.join(", ", romanNums);
                 boolean secondary = false;
                 for (Integer i : e.getValue()) {
 
@@ -3355,7 +3358,7 @@ public class CardFactoryUtil {
             final SpellAbility newSA = card.getFirstSpellAbility().copyWithDefinedCost(overloadCost);
 
             TargetRestrictions tgt = newSA.getTargetRestrictions();
-            String defined = String.join(",", tgt.getValidTgts());
+            String defined = IterableUtil.join(",", tgt.getValidTgts());
 
             if (tgt.canTgtPlayer()) {
                 newSA.putParam("Defined", defined);

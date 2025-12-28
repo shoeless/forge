@@ -3,6 +3,7 @@ package forge.gamemodes.tournament.system;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -12,6 +13,7 @@ import forge.LobbyPlayer;
 import forge.deck.DeckGroup;
 import forge.game.player.RegisteredPlayer;
 import forge.player.GamePlayerUtil;
+import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
 
@@ -106,12 +108,28 @@ public abstract class AbstractTournament implements Serializable {
     }
 
     public void sortAllPlayers(String sortType) {
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available on iOS/RoboVM)
         if (sortType.equals("score")) {
-            allPlayers.sort((o1, o2) -> o2.getScore() - o1.getScore());
+            IterableUtil.sort(allPlayers, new Comparator<TournamentPlayer>() {
+                @Override
+                public int compare(TournamentPlayer o1, TournamentPlayer o2) {
+                    return o2.getScore() - o1.getScore();
+                }
+            });
         } else if (sortType.equals("index")) {
-            allPlayers.sort((o1, o2) -> o2.getIndex() - o1.getIndex());
+            IterableUtil.sort(allPlayers, new Comparator<TournamentPlayer>() {
+                @Override
+                public int compare(TournamentPlayer o1, TournamentPlayer o2) {
+                    return o2.getIndex() - o1.getIndex();
+                }
+            });
         } else if (sortType.equals("swiss")) {
-            allPlayers.sort((o1, o2) -> o2.getSwissScore() - o1.getSwissScore());
+            IterableUtil.sort(allPlayers, new Comparator<TournamentPlayer>() {
+                @Override
+                public int compare(TournamentPlayer o1, TournamentPlayer o2) {
+                    return o2.getSwissScore() - o1.getSwissScore();
+                }
+            });
         }
     }
 

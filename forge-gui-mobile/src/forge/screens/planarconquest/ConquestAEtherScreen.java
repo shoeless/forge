@@ -359,7 +359,7 @@ public class ConquestAEtherScreen extends FScreen {
             caption = caption0;
             options = ImmutableList.copyOf(options0);
             setSelectedOption(options.get(0));
-            setCommand(e -> GuiChoose.getChoices(Forge.getLocalizer().getMessage("lblSelectCaptionFilter", caption), 0, 1, options, Set.of(selectedOption), display, result -> {
+            setCommand(e -> GuiChoose.getChoices(Forge.getLocalizer().getMessage("lblSelectCaptionFilter", caption), 0, 1, options, java.util.Collections.singleton(selectedOption), display, result -> {
                 if (!result.isEmpty()) {
                     setSelectedOption(result.get(0));
                     updateFilteredPool();

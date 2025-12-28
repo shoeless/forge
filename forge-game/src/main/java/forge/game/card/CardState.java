@@ -51,11 +51,11 @@ import io.sentry.Sentry;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class CardState implements GameObject, IHasSVars, ITranslatable {
     private String name = "";
@@ -404,16 +404,22 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     public final FCollectionView<SpellAbility> getManaAbilities() {
         FCollection<SpellAbility> newCol = new FCollection<>();
         updateSpellAbilities(newCol, true);
-        // stream().toList() causes crash on Android 8-13, use Collectors.toList()
-        newCol.addAll(abilities.stream().filter(SpellAbility::isManaAbility).collect(Collectors.toList()));
+        for (SpellAbility sa : abilities) {
+            if (sa.isManaAbility()) {
+                newCol.add(sa);
+            }
+        }
         card.updateSpellAbilities(newCol, this, true);
         return newCol;
     }
     public final FCollectionView<SpellAbility> getNonManaAbilities() {
         FCollection<SpellAbility> newCol = new FCollection<>();
         updateSpellAbilities(newCol, false);
-        // stream().toList() causes crash on Android 8-13, use Collectors.toList()
-        newCol.addAll(abilities.stream().filter(Predicate.not(SpellAbility::isManaAbility)).collect(Collectors.toList()));
+        for (SpellAbility sa : abilities) {
+            if (!sa.isManaAbility()) {
+                newCol.add(sa);
+            }
+        }
         card.updateSpellAbilities(newCol, this, false);
         return newCol;
     }
@@ -425,10 +431,13 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
                 CardState leftState = getCard().getState(CardStateName.LeftSplit);
                 Collection<SpellAbility> leftAbilities = leftState.abilities;
                 if (null != mana) {
-                    leftAbilities = leftAbilities.stream()
-                            .filter(mana ? SpellAbility::isManaAbility : Predicate.not(SpellAbility::isManaAbility))
-                            // stream().toList() causes crash on Android 8-13, use Collectors.toList()
-                            .collect(Collectors.toList());
+                    List<SpellAbility> filtered = new ArrayList<>();
+                    for (SpellAbility sa : leftAbilities) {
+                        if (mana ? sa.isManaAbility() : !sa.isManaAbility()) {
+                            filtered.add(sa);
+                        }
+                    }
+                    leftAbilities = filtered;
                 }
                 newCol.addAll(leftAbilities);
                 leftState.updateSpellAbilities(newCol, mana);
@@ -437,10 +446,13 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
                 CardState rightState = getCard().getState(CardStateName.RightSplit);
                 Collection<SpellAbility> rightAbilities = rightState.abilities;
                 if (null != mana) {
-                    rightAbilities = rightAbilities.stream()
-                            .filter(mana ? SpellAbility::isManaAbility : Predicate.not(SpellAbility::isManaAbility))
-                            // stream().toList() causes crash on Android 8-13, use Collectors.toList()
-                            .collect(Collectors.toList());
+                    List<SpellAbility> filtered = new ArrayList<>();
+                    for (SpellAbility sa : rightAbilities) {
+                        if (mana ? sa.isManaAbility() : !sa.isManaAbility()) {
+                            filtered.add(sa);
+                        }
+                    }
+                    rightAbilities = filtered;
                 }
                 newCol.addAll(rightAbilities);
                 rightState.updateSpellAbilities(newCol, mana);

@@ -6,6 +6,8 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.Array;
 import forge.adventure.stage.MapStage;
 
+import forge.util.IterableUtil;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -166,7 +168,17 @@ public class NavigationMap {
             NavigationVertex waypointVertex = navGraph.addVertex(waypointVector);
 
             ArrayList<NavigationVertex> vertices = new ArrayList<>(navGraph.nodes.values());
-            vertices.sort(Comparator.comparingInt(o -> Math.round((o.pos.x - waypointVector.x) * (o.pos.x - waypointVector.x) + (o.pos.y - waypointVector.y) * (o.pos.y - waypointVector.y))));
+            // iOS compatibility: Replace Comparator.comparingInt() with anonymous Comparator
+            final Vector2 waypoint = waypointVector;
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+            IterableUtil.sort(vertices, new Comparator<NavigationVertex>() {
+                @Override
+                public int compare(NavigationVertex v1, NavigationVertex v2) {
+                    int dist1 = Math.round((v1.pos.x - waypoint.x) * (v1.pos.x - waypoint.x) + (v1.pos.y - waypoint.y) * (v1.pos.y - waypoint.y));
+                    int dist2 = Math.round((v2.pos.x - waypoint.x) * (v2.pos.x - waypoint.x) + (v2.pos.y - waypoint.y) * (v2.pos.y - waypoint.y));
+                    return Integer.compare(dist1, dist2);
+                }
+            });
 
             for (int i = 0, j=0; i < vertices.size() && j < 4; i++) {
                 if (waypointVector.epsilonEquals(vertices.get(i).pos))
@@ -200,7 +212,16 @@ public class NavigationMap {
 
             if (!(originPrecalculated && destinationPrecalculated)) {
                 vertices.addAll(navGraph.nodes.values());
-                vertices.sort(Comparator.comparingInt(o -> Math.round((o.pos.x - origin.x) * (o.pos.x - origin.x) + (o.pos.y - origin.y) * (o.pos.y - origin.y))));
+                // iOS compatibility: Replace Comparator.comparingInt() with anonymous Comparator
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+                IterableUtil.sort(vertices, new Comparator<NavigationVertex>() {
+                    @Override
+                    public int compare(NavigationVertex v1, NavigationVertex v2) {
+                        int dist1 = Math.round((v1.pos.x - origin.x) * (v1.pos.x - origin.x) + (v1.pos.y - origin.y) * (v1.pos.y - origin.y));
+                        int dist2 = Math.round((v2.pos.x - origin.x) * (v2.pos.x - origin.x) + (v2.pos.y - origin.y) * (v2.pos.y - origin.y));
+                        return Integer.compare(dist1, dist2);
+                    }
+                });
             }
 
             if (!originPrecalculated) {

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 
 import forge.game.Game;
 import forge.game.GameEntity;
+import forge.game.GameObject;
 import forge.game.ability.AbilityKey;
 import forge.game.card.Card;
 import forge.game.card.CardCollection;
@@ -11,6 +12,7 @@ import forge.game.card.CardCollectionView;
 import forge.game.card.CardDamageMap;
 import forge.game.GameObjectPredicates;
 import forge.game.card.CardZoneTable;
+import forge.util.function.Predicate;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
@@ -188,10 +190,9 @@ public class StaticAbilityPanharmonicon {
                 Map<Card, Integer> dmgMap = (Map<Card, Integer>) runParams.get(AbilityKey.DamageMap);
                 // 1. check it's valid cause for static
                 // 2. and it must also be valid for trigger event
-                if (dmgMap.keySet().stream().noneMatch(
-                        GameObjectPredicates.matchesValidParam(stAb, "ValidSource")
-                                .and(GameObjectPredicates.matchesValidParam(trigger, "ValidSource"))
-                )) {
+                Predicate<GameObject> validSourcePred = GameObjectPredicates.matchesValidParam(stAb, "ValidSource")
+                        .and(GameObjectPredicates.matchesValidParam(trigger, "ValidSource"));
+                if (!forge.util.IterableUtil.any(dmgMap.keySet(), validSourcePred)) {
                     return false;
                 }
                 // DamageAmount$ can be ignored for now (its usage doesn't interact with ValidSource from either)
@@ -202,10 +203,9 @@ public class StaticAbilityPanharmonicon {
                 }
                 @SuppressWarnings("unchecked")
                 Map<GameEntity, Integer> dmgMap = (Map<GameEntity, Integer>) runParams.get(AbilityKey.DamageMap);
-                if (dmgMap.keySet().stream().noneMatch(
-                        GameObjectPredicates.matchesValidParam(stAb, "ValidTarget")
-                                .and(GameObjectPredicates.matchesValidParam(trigger, "ValidTarget"))
-                )) {
+                Predicate<GameObject> validTargetPred = GameObjectPredicates.matchesValidParam(stAb, "ValidTarget")
+                        .and(GameObjectPredicates.matchesValidParam(trigger, "ValidTarget"));
+                if (!forge.util.IterableUtil.any(dmgMap.keySet(), validTargetPred)) {
                     return false;
                 }
             }

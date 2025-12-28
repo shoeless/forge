@@ -3,7 +3,6 @@ package forge.gamemodes.planarconquest;
 import java.util.*;
 import java.util.Map.Entry;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -147,13 +146,24 @@ public class ConquestUtil {
         }
         //Move editions of cards already in the deck to the front.
         Map<CardEdition, Integer> editionStats = currentDeck.getAllCardsInASinglePool().getCardEditionStatistics(true);
-        // use flatMap instead of mapMulti for Android 13 and below
-        //https://developer.android.com/reference/java/util/stream/Stream#mapMulti
-        List<CardEdition> out = planes.stream()
-            .flatMap(p -> p.getEditions().stream())
-            .filter(CardEdition::hasBasicLands)
-            .sorted(Comparator.comparing(e -> editionStats.getOrDefault(e, 0)))
-            .collect(Collectors.toList());
+        // iOS compatibility: Replace stream().flatMap().filter().sorted().collect() with loops
+        List<CardEdition> out = new ArrayList<>();
+        for (ConquestPlane p : planes) {
+            for (CardEdition edition : p.getEditions()) {
+                if (edition.hasBasicLands()) {
+                    out.add(edition);
+                }
+            }
+        }
+        // Sort by edition stats
+        Collections.sort(out, new Comparator<CardEdition>() {
+            @Override
+            public int compare(CardEdition e1, CardEdition e2) {
+                int stat1 = editionStats.getOrDefault(e1, 0);
+                int stat2 = editionStats.getOrDefault(e2, 0);
+                return Integer.compare(stat1, stat2);
+            }
+        });
         return out;
     }
 

@@ -13,7 +13,6 @@ import forge.card.mana.ManaAtom;
 import forge.card.mana.ManaCost;
 import forge.card.mana.ManaCostParser;
 import forge.card.mana.ManaCostShard;
-import forge.game.CardTraitPredicates;
 import forge.game.Game;
 import forge.game.GameActionUtil;
 import forge.game.ability.AbilityKey;
@@ -41,6 +40,7 @@ import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -677,7 +677,13 @@ public class ComputerUtilMana {
             payMultipleMana(cost, manaProduced, ai);
 
             // remove from available lists
-            sourcesForShards.values().removeIf(CardTraitPredicates.isHostCard(saPayment.getHostCard()));
+            Card hostCard = saPayment.getHostCard();
+            java.util.Iterator<SpellAbility> iter = sourcesForShards.values().iterator();
+            while (iter.hasNext()) {
+                if (hostCard.equals(iter.next().getHostCard())) {
+                    iter.remove();
+                }
+            }
         }
 
         CostPayment.handleOfferings(sa, true, cost.isPaid());
@@ -815,7 +821,7 @@ public class ComputerUtilMana {
                         break; // unwise to pay
                     } else if (sa.getParam("AIPhyrexianPayment").startsWith("OnFatalDamage.")) {
                         int dmg = Integer.parseInt(sa.getParam("AIPhyrexianPayment").substring(14));
-                        if (ai.getOpponents().stream().noneMatch(PlayerPredicates.lifeLessOrEqualTo(dmg))) {
+                        if (!IterableUtil.any(ai.getOpponents(), PlayerPredicates.lifeLessOrEqualTo(dmg))) {
                             break; // no one to finish with the gut shot
                         }
                     }
@@ -858,7 +864,13 @@ public class ComputerUtilMana {
                 payMultipleMana(cost, manaProduced, ai);
 
                 // remove to prevent re-usage since resources don't get consumed
-                sourcesForShards.values().removeIf(CardTraitPredicates.isHostCard(saPayment.getHostCard()));
+                Card hostCard2 = saPayment.getHostCard();
+                java.util.Iterator<SpellAbility> iter2 = sourcesForShards.values().iterator();
+                while (iter2.hasNext()) {
+                    if (hostCard2.equals(iter2.next().getHostCard())) {
+                        iter2.remove();
+                    }
+                }
             } else {
                 final CostPayment pay = new CostPayment(saPayment.getPayCosts(), saPayment);
                 if (!pay.payComputerCosts(new AiCostDecision(ai, saPayment, effect, true))) {
@@ -872,12 +884,23 @@ public class ComputerUtilMana {
 
                 // need to consider if another use is now prevented
                 if (!cost.isPaid() && saPayment.isActivatedAbility() && !saPayment.getRestrictions().canPlay(saPayment.getHostCard(), saPayment)) {
-                    sourcesForShards.values().removeIf(s -> s == saPayment);
+                    java.util.Iterator<SpellAbility> iter3 = sourcesForShards.values().iterator();
+                    while (iter3.hasNext()) {
+                        if (iter3.next() == saPayment) {
+                            iter3.remove();
+                        }
+                    }
                 }
 
                 if (hasConverge) {
                     // hack to prevent converge re-using sources
-                    sourcesForShards.values().removeIf(CardTraitPredicates.isHostCard(saPayment.getHostCard()));
+                    Card hostCard4 = saPayment.getHostCard();
+                    java.util.Iterator<SpellAbility> iter4 = sourcesForShards.values().iterator();
+                    while (iter4.hasNext()) {
+                        if (hostCard4.equals(iter4.next().getHostCard())) {
+                            iter4.remove();
+                        }
+                    }
                 }
             }
         }

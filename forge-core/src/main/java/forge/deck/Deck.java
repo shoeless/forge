@@ -25,6 +25,7 @@ import forge.card.CardRules;
 import forge.card.CardType;
 import forge.item.IPaperCard;
 import forge.item.PaperCard;
+import forge.util.IterableUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -139,8 +140,8 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
             result.add(c.getKey());
         }
         if (result.size() > 1) { //sort by type so signature spell comes after oathbreaker
-            // iOS compatibility: Use anonymous inner class Comparator instead of Comparator.comparing() which requires Function
-            result.sort(new Comparator<PaperCard>() {
+            // iOS compatibility: Use IterableUtil.sort() with anonymous Comparator
+            IterableUtil.sort(result, new Comparator<PaperCard>() {
                 @Override
                 public int compare(PaperCard c1, PaperCard c2) {
                     return Boolean.compare(c1.getRules().canBeSignatureSpell(), c2.getRules().canBeSignatureSpell());

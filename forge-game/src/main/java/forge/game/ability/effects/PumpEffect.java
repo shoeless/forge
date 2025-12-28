@@ -2,7 +2,6 @@ package forge.game.ability.effects;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import forge.util.*;
 import org.apache.commons.lang3.StringUtils;
@@ -458,7 +457,8 @@ public class PumpEffect extends SpellAbilityEffect {
             List<String> affectedKeywords = Lists.newArrayList(keywords);
 
             if (!affectedKeywords.isEmpty()) {
-                affectedKeywords = affectedKeywords.stream().map(input -> {
+                // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+                affectedKeywords = IterableUtil.mapToList(affectedKeywords, input -> {
                     if (input.contains("CardManaCost")) {
                         input = input.replace("CardManaCost", tgtC.getManaCost().getShortString());
                     } else if (input.contains("ConvertedManaCost")) {
@@ -466,7 +466,7 @@ public class PumpEffect extends SpellAbilityEffect {
                         input = input.replace("ConvertedManaCost", costcmc);
                     }
                     return input;
-                }).collect(Collectors.toList());
+                });
             }
 
             if (sa.hasParam("NumAtt") && sa.getParam("NumAtt").equals("Double")) {

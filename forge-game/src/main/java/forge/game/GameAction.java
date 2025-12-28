@@ -274,7 +274,7 @@ public class GameAction {
         // need to check before it enters
         if (copied.isAura() && !copied.isAttachedToEntity() && toBattlefield && (zoneFrom == null || !zoneFrom.is(ZoneType.Stack))) {
             boolean found = false;
-            if (game.getPlayers().stream().anyMatch(PlayerPredicates.canBeAttached(copied, null))) {
+            if (forge.util.IterableUtil.any(game.getPlayers(), PlayerPredicates.canBeAttached(copied, null))) {
                 found = true;
             }
 
@@ -373,7 +373,7 @@ public class GameAction {
         if (copied.isAura() && !copied.isAttachedToEntity() && toBattlefield) {
             if (zoneFrom != null && zoneFrom.is(ZoneType.Stack) && game.getStack().isResolving(c)) {
                 boolean found = false;
-                if (game.getPlayers().stream().anyMatch(PlayerPredicates.canBeAttached(copied, null))) {
+                if (forge.util.IterableUtil.any(game.getPlayers(), PlayerPredicates.canBeAttached(copied, null))) {
                     found = true;
                 }
                 if (lastBattlefield.anyMatch(CardPredicates.canBeAttached(copied, null))) {
@@ -682,11 +682,9 @@ public class GameAction {
         }
         String name = "Static Effect #" + cause.getId();
         // check if this isn't the first card being moved
-        Optional<Card> opt = IterableUtil.tryFind(cause.getActivatingPlayer().getZone(ZoneType.Command).getCards(), CardPredicates.nameEquals(name));
+        Card eff = IterableUtil.tryFind(cause.getActivatingPlayer().getZone(ZoneType.Command).getCards(), CardPredicates.nameEquals(name));
 
-        Card eff;
-        if (opt.isPresent()) {
-            eff = opt.get();
+        if (eff != null) {
             // update in case player manually ordered
             eff.setLayerTimestamp(timestamp);
         } else {
@@ -1118,7 +1116,8 @@ public class GameAction {
             }
         }, true);
 
-        staticAbilities.sort(effectOrder);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(staticAbilities, effectOrder);
 
         final Map<StaticAbility, CardCollectionView> affectedPerAbility = Maps.newHashMap();
         for (final StaticAbilityLayer layer : StaticAbilityLayer.CONTINUOUS_LAYERS) {
@@ -1384,7 +1383,13 @@ public class GameAction {
 
         // now the earliest one left is the correct choice
         List<StaticAbility> statics = Lists.newArrayList(dependencyGraph.vertexSet());
-        statics.sort(Comparator.comparing(StaticAbility::getTimestamp));
+        // iOS compatibility: Use anonymous Comparator instead of Comparator.comparing()
+        IterableUtil.sort(statics, new Comparator<StaticAbility>() {
+            @Override
+            public int compare(StaticAbility o1, StaticAbility o2) {
+                return Long.compare(o1.getTimestamp(), o2.getTimestamp());
+            }
+        });
 
         return statics.get(0);
     }
@@ -1737,7 +1742,8 @@ public class GameAction {
             if (rolesByPlayer.size() <= 1) {
                 continue;
             }
-            rolesByPlayer.sort(CardPredicates.compareByGameTimestamp());
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(rolesByPlayer, CardPredicates.compareByGameTimestamp());
             removeList.addAll(rolesByPlayer.subList(0, rolesByPlayer.size() - 1));
             checkAgain = true;
         }

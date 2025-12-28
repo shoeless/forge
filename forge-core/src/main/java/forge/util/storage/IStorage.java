@@ -21,7 +21,6 @@ import forge.util.IHasName;
 
 import java.util.Collection;
 import forge.util.function.Predicate;
-import java.util.stream.Stream;
 
 public interface IStorage<T> extends Iterable<T>, IHasName {
     String getFullPath();
@@ -36,5 +35,4 @@ public interface IStorage<T> extends Iterable<T>, IHasName {
     IStorage<IStorage<T>> getFolders();
     IStorage<T> tryGetFolder(String path);
     IStorage<T> getFolderOrCreate(String path);
-    Stream<T> stream();
 }

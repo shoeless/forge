@@ -95,7 +95,11 @@ public class TriggerHandler {
 
     public final void handlePlayerDefinedDelTriggers(final Player player) {
         final List<Trigger> playerTriggers = playerDefinedDelayedTriggers.removeAll(player);
-        playerTriggers.stream().filter(CardTraitPredicates.hasParam("ThisTurn")).forEach(thisTurnDelayedTriggers::add);
+        for (Trigger trigger : playerTriggers) {
+            if (CardTraitPredicates.hasParam("ThisTurn").test(trigger)) {
+                thisTurnDelayedTriggers.add(trigger);
+            }
+        }
         delayedTriggers.addAll(playerTriggers);
     }
 

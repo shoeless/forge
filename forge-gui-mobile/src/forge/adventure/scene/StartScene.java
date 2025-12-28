@@ -1,6 +1,5 @@
 package forge.adventure.scene;
 
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.utils.Timer;
 import com.github.tommyettinger.textra.TextraButton;
@@ -17,6 +16,7 @@ import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeProfileProperties;
 import forge.screens.TransitionScreen;
 import forge.sound.SoundSystem;
+import forge.util.FileHandleUtil;
 import forge.util.ZipUtil;
 
 import java.io.File;
@@ -160,8 +160,8 @@ public class StartScene extends UIScene {
     }
     public boolean generateBackup() {
         try {
-            File source = new FileHandle(ForgeProfileProperties.getUserDir() + "/adventure/Shandalar").file();
-            File target = new FileHandle(Forge.getDeviceAdapter().getDownloadsDir()).file();
+            File source = FileHandleUtil.getLocal(ForgeProfileProperties.getUserDir() + "/adventure/Shandalar").file();
+            File target = FileHandleUtil.getLocal(Forge.getDeviceAdapter().getDownloadsDir()).file();
             ZipUtil.zip(source, target, ZipUtil.backupAdvFile);
             zipDialog = createGenericDialog("",
                     Forge.getLocalizer().getMessage("lblSaveLocation") + "\n" + target.getAbsolutePath() + File.separator + ZipUtil.backupAdvFile,
@@ -176,8 +176,8 @@ public class StartScene extends UIScene {
         return true;
     }
     public boolean restoreBackup() {
-        File source = new FileHandle(Forge.getDeviceAdapter().getDownloadsDir() + ZipUtil.backupAdvFile).file();
-        File target = new FileHandle(ForgeProfileProperties.getUserDir() + "/adventure/Shandalar").file().getParentFile();
+        File source = FileHandleUtil.getLocal(Forge.getDeviceAdapter().getDownloadsDir() + ZipUtil.backupAdvFile).file();
+        File target = FileHandleUtil.getLocal(ForgeProfileProperties.getUserDir() + "/adventure/Shandalar").file().getParentFile();
         if (unzipDialog == null) {
             unzipDialog = createGenericDialog("",
                     Forge.getLocalizer().getMessage("lblDoYouWantToRestoreBackup"),

@@ -1,8 +1,7 @@
 package forge.game.ability.effects;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.google.common.collect.Lists;
 
@@ -27,9 +26,10 @@ public class PlayLandVariantEffect extends SpellAbilityEffect {
         final Player activator = sa.getActivatingPlayer();
         final Game game = source.getGame();
         final String landType = sa.getParam("Clone");
-        Stream<PaperCard> cardStream = StaticData.instance().getCommonCards().streamUniqueCards();
+        // iOS compatibility: Use getUniqueCards() instead of streamUniqueCards()
+        Iterable<PaperCard> cardIterable = StaticData.instance().getCommonCards().getUniqueCards();
         if ("BasicLand".equals(landType)) {
-            cardStream = cardStream.filter(PaperCardPredicates.IS_BASIC_LAND);
+            cardIterable = forge.util.IterableUtil.filter(cardIterable, PaperCardPredicates.IS_BASIC_LAND);
         }
         // current color of source card
         final ColorSet color = source.getColor();
@@ -45,8 +45,11 @@ public class PlayLandVariantEffect extends SpellAbilityEffect {
             }
         }
 
-        cardStream = cardStream.filter(x -> landNames.contains(x.getName()));
-        List<PaperCard> cards = cardStream.collect(Collectors.toList());
+        cardIterable = forge.util.IterableUtil.filter(cardIterable, x -> landNames.contains(x.getName()));
+        List<PaperCard> cards = new ArrayList<>();
+        for (PaperCard card : cardIterable) {
+            cards.add(card);
+        }
         // get a random basic land
         Card random;
         // if activator cannot play the random land, loop

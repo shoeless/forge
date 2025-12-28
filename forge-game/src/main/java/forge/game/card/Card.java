@@ -67,7 +67,6 @@ import org.apache.commons.lang3.tuple.Triple;
 
 import java.util.*;
 import java.util.Map.Entry;
-import forge.util.function.Predicate;
 
 import static java.lang.Math.max;
 
@@ -982,7 +981,13 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
 
     public final boolean hasNameOverwrite() {
-        return changedCardNames.values().stream().anyMatch(CardChangedName::isOverwrite);
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (CardChangedName ccn : changedCardNames.values()) {
+            if (ccn.isOverwrite()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public final boolean hasNonLegendaryCreatureNames() {
@@ -1631,7 +1636,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             storedRolls = Lists.newArrayList();
         }
         storedRolls.addAll(results);
-        storedRolls.sort(null);
+        // iOS compatibility: Use Collections.sort() instead of List.sort(null)
+        Collections.sort(storedRolls);
         view.updateStoredRolls(this);
     }
     public final void replaceStoredRoll(final Map<Integer, Integer> replaceMap) {
@@ -1639,7 +1645,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             storedRolls.remove(oldValue);
             storedRolls.add(replaceMap.get(oldValue));
         }
-        storedRolls.sort(null);
+        // iOS compatibility: Use Collections.sort() instead of List.sort(null)
+        Collections.sort(storedRolls);
         view.updateStoredRolls(this);
     }
 
@@ -1972,7 +1979,15 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
     @Override
     public final void setCounters(final Map<CounterType, Integer> allCounters) {
-        boolean changed = counters.containsKey(CounterEnumType.MANABOND) || counters.keySet().stream().allMatch(CounterType::isKeywordCounter);
+        // iOS compatibility: Replace Stream API with traditional loop
+        boolean allAreKeyword = true;
+        for (CounterType ct : counters.keySet()) {
+            if (!ct.isKeywordCounter()) {
+                allAreKeyword = false;
+                break;
+            }
+        }
+        boolean changed = counters.containsKey(CounterEnumType.MANABOND) || allAreKeyword;
         counters = allCounters;
         view.updateCounters(this);
 
@@ -1991,7 +2006,15 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     @Override
     public final void clearCounters() {
         if (counters.isEmpty()) { return; }
-        boolean changed = counters.containsKey(CounterEnumType.MANABOND) || counters.keySet().stream().allMatch(CounterType::isKeywordCounter);
+        // iOS compatibility: Replace Stream API with traditional loop
+        boolean allAreKeyword = true;
+        for (CounterType ct : counters.keySet()) {
+            if (!ct.isKeywordCounter()) {
+                allAreKeyword = false;
+                break;
+            }
+        }
+        boolean changed = counters.containsKey(CounterEnumType.MANABOND) || allAreKeyword;
 
         counters.clear();
         view.updateCounters(this);
@@ -2698,7 +2721,12 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                     sbLong.append(" (").append(inst.getReminderText()).append(")");
                 } else if (keyword.equals("Gift")) {
                     sbLong.append(keyword);
-                    Trigger trig = inst.getTriggers().stream().findFirst().orElse(null);
+                    // iOS compatibility: Replace Stream API with traditional loop
+                    Trigger trig = null;
+                    for (Trigger t : inst.getTriggers()) {
+                        trig = t;
+                        break;
+                    }
                     if (trig != null && trig.getCardState().getFirstSpellAbility().hasAdditionalAbility("GiftAbility")) {
                         sbLong.append(" ").append(trig.getCardState().getFirstSpellAbility().getAdditionalAbility("GiftAbility").getParam("GiftDescription"));
                     }
@@ -3540,7 +3568,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             if (ck.isRemoveNonMana()) {
                 // List only has nonMana
                 if (null == mana) {
-                    list.removeIf(Predicate.not(SpellAbility::isManaAbility));
+                    list.removeIf(sa -> !sa.isManaAbility());
                 } else if (false == mana) {
                     list.clear();
                 }

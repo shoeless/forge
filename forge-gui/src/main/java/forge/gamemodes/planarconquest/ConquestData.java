@@ -21,8 +21,6 @@ import java.io.File;
 import java.util.*;
 import java.util.Map.Entry;
 import forge.util.function.Function;
-import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import forge.card.CardDb;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
@@ -195,11 +193,23 @@ public final class ConquestData {
     }
 
     public int getAccessiblePlaneCount() {
-        return (int) FModel.getPlanes().stream().filter(Predicate.not(ConquestPlane::isUnreachable)).count();
+        // iOS compatibility: Replace stream().filter().count() with loop
+        int count = 0;
+        for (ConquestPlane plane : FModel.getPlanes()) {
+            if (!plane.isUnreachable()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public Set<ConquestPlane> getUnlockedPlanes() {
-        return planeDataMap.values().stream().map(ConquestPlaneData::getLocation).map(ConquestLocation::getPlane).collect(Collectors.toSet());
+        // iOS compatibility: Replace stream().map().map().collect(toSet()) with loop
+        Set<ConquestPlane> result = new HashSet<>();
+        for (ConquestPlaneData data : planeDataMap.values()) {
+            result.add(data.getLocation().getPlane());
+        }
+        return result;
     }
 
     public void unlockPlane(ConquestPlane plane) {

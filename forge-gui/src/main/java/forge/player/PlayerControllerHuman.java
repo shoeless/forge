@@ -65,6 +65,7 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.trackable.TrackableCollection;
 import forge.util.*;
+import forge.util.IterableUtil;
 import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
 import io.sentry.Sentry;
@@ -1378,7 +1379,14 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
         // create sorted list from map from least to most frequent
         List<Entry<String, Integer>> sortedList = Lists.newArrayList(typesInDeck.entrySet());
-        sortedList.sort(Entry.comparingByValue());
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort() (Java 8 method not available)
+        // Also replace Entry.comparingByValue with anonymous comparator
+        IterableUtil.sort(sortedList, new Comparator<Entry<String, Integer>>() {
+            @Override
+            public int compare(Entry<String, Integer> e1, Entry<String, Integer> e2) {
+                return e1.getValue().compareTo(e2.getValue());
+            }
+        });
 
         // loop through sorted list and move each type to the front of the
         // validTypes collection
@@ -1867,11 +1875,14 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
     @Override
     public ICardFace chooseSingleCardFace(final SpellAbility sa, final String message, final Predicate<ICardFace> cpp,
                                           final String name) {
-        List<CardFaceView> choices = FModel.getMagicDb().getCommonCards().streamAllFaces()
-                .filter(cpp)
-                .map(CardFaceView::new)
-                .sorted()
-                .collect(Collectors.toList());
+        // iOS compatibility: Replace Stream API with manual iteration
+        List<CardFaceView> choices = new ArrayList<>();
+        for (ICardFace cardFace : FModel.getMagicDb().getCommonCards().getAllFaces()) {
+            if (cpp.test(cardFace)) {
+                choices.add(new CardFaceView(CardTranslation.getTranslatedName(cardFace.getDisplayName()), cardFace.getName()));
+            }
+        }
+        Collections.sort(choices);
         CardFaceView cardFaceView = getGui().one(message, choices);
         return StaticData.instance().getCommonCards().getFaceByName(cardFaceView.getName());
     }

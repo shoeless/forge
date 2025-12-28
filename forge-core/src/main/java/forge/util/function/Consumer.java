@@ -14,13 +14,17 @@ public interface Consumer<T> {
      * Returns a composed {@code Consumer} that performs, in sequence, this
      * operation followed by the {@code after} operation.
      */
-    default Consumer<T> andThen(Consumer<? super T> after) {
+    default Consumer<T> andThen(final Consumer<? super T> after) {
         if (after == null) {
             throw new NullPointerException();
         }
-        return t -> {
-            accept(t);
-            after.accept(t);
+        final Consumer<T> self = this;
+        return new Consumer<T>() {
+            @Override
+            public void accept(T t) {
+                self.accept(t);
+                after.accept(t);
+            }
         };
     }
 }

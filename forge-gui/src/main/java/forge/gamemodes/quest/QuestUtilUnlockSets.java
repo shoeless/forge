@@ -28,11 +28,13 @@ import forge.item.PaperCard;
 import forge.item.SealedTemplate;
 import forge.item.generation.UnOpenedProduct;
 import forge.model.FModel;
+import forge.util.IterableUtil;
 import forge.util.TextUtil;
 import forge.util.storage.IStorage;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.*;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 
 /** 
@@ -163,9 +165,13 @@ public class QuestUtilUnlockSets {
         }
 
         // sort by distance, then by code desc
-        excludedWithDistances.sort((o1, o2) -> {
-            long delta = o2.right - o1.right;
-            return delta < 0 ? -1 : delta == 0 ? 0 : 1;
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(excludedWithDistances, new Comparator<ImmutablePair<CardEdition, Long>>() {
+            @Override
+            public int compare(ImmutablePair<CardEdition, Long> o1, ImmutablePair<CardEdition, Long> o2) {
+                long delta = o2.right - o1.right;
+                return delta < 0 ? -1 : delta == 0 ? 0 : 1;
+            }
         });
 
         for (ImmutablePair<CardEdition, Long> set : excludedWithDistances) {

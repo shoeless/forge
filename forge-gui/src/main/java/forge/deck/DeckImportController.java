@@ -15,14 +15,12 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.util.ItemPool;
 import forge.util.Localizer;
-import forge.util.StreamUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.text.DateFormatSymbols;
 import java.util.*;
 import forge.util.function.Function;
-import java.util.stream.Collectors;
 
 public class DeckImportController {
     public enum ImportBehavior {
@@ -517,9 +515,17 @@ public class DeckImportController {
             PaperCard card = token.getCard();
             String cardName = card.getName();
             CardPool substitutes = availableInventory.getFilteredPool(c -> c.getName().equals(cardName));
-            // stream().toList() causes crash on Android 8-13, use Collectors.toList()
-            // ref: https://developer.android.com/reference/java/util/stream/Stream#toList()
-            List<Map.Entry<PaperCard, Integer>> sortedSubstitutes = StreamUtil.stream(substitutes).sorted(Comparator.comparingInt(Map.Entry::getValue)).collect(Collectors.toList());
+            // iOS compatibility: Replace stream().sorted().collect() with ArrayList + Collections.sort()
+            List<Map.Entry<PaperCard, Integer>> sortedSubstitutes = new ArrayList<>();
+            for (Map.Entry<PaperCard, Integer> entry : substitutes) {
+                sortedSubstitutes.add(entry);
+            }
+            Collections.sort(sortedSubstitutes, new Comparator<Map.Entry<PaperCard, Integer>>() {
+                @Override
+                public int compare(Map.Entry<PaperCard, Integer> e1, Map.Entry<PaperCard, Integer> e2) {
+                    return Integer.compare(e1.getValue(), e2.getValue());
+                }
+            });
             int neededQuantity = token.getQuantity();
             for(Token found : replacementList) {
                 //If there's an item in the replacement list already it means we've already found some of the needed copies.

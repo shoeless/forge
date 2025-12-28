@@ -69,7 +69,6 @@ import java.util.*;
 import java.util.concurrent.FutureTask;
 import forge.util.function.Function;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -467,7 +466,7 @@ public class AiController {
                     return false;
                 }
             }
-            return c.getAllPossibleAbilities(player, true).stream().anyMatch(
+            return IterableUtil.any(c.getAllPossibleAbilities(player, true),
                     la -> la.isLandAbility() && canPlaySpellOrLandBasic(c, la) == AiPlayDecision.WillPlay
             );
         });
@@ -1576,7 +1575,12 @@ public class AiController {
             return spellAbility.isLandAbility() || (spellAbility.getHostCard() != null && ComputerUtilCard.isCardRemAIDeck(spellAbility.getHostCard()));
         });
         //removed skipped SA
-        skipped = saList.stream().filter(SpellAbility::isSkip).collect(Collectors.toList());
+        skipped = new ArrayList<>();
+        for (SpellAbility sa : saList) {
+            if (sa.isSkip()) {
+                skipped.add(sa);
+            }
+        }
         if (!skipped.isEmpty())
             saList.removeAll(skipped);
         //update LivingEndPlayer
@@ -2267,7 +2271,12 @@ public class AiController {
 
     // TODO move to more common place
     private static <T> List<T> filterList(List<T> input, Predicate<? super T> pred) {
-        List<T> filtered = input.stream().filter(pred).collect(Collectors.toList());
+        List<T> filtered = new ArrayList<>();
+        for (T item : input) {
+            if (pred.test(item)) {
+                filtered.add(item);
+            }
+        }
         input.removeAll(filtered);
         return filtered;
     }

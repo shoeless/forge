@@ -28,6 +28,7 @@ import forge.game.staticability.StaticAbilityMustTarget;
 import forge.game.zone.ZoneType;
 import forge.util.MyRandom;
 import forge.util.collect.FCollectionView;
+import forge.util.function.Predicate;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -171,10 +172,13 @@ public class DamageDealAi extends DamageAiBase {
             }
         } else if ("WildHunt".equals(logic)) {
             // This dummy ability will just deal 0 damage, but holds the logic for the AI for Master of Wild Hunt
-            dmg = ai.getCardsIn(ZoneType.Battlefield).stream()
-                    .filter(CardPredicates.restriction("Creature.Wolf+untapped+YouCtrl+Other", ai, source, sa))
-                    .mapToInt(Card::getNetPower)
-                    .sum();
+            dmg = 0;
+            Predicate<Card> wolfPred = CardPredicates.restriction("Creature.Wolf+untapped+YouCtrl+Other", ai, source, sa);
+            for (Card c : ai.getCardsIn(ZoneType.Battlefield)) {
+                if (wolfPred.test(c)) {
+                    dmg += c.getNetPower();
+                }
+            }
         } else if ("Triskelion".equals(logic)) {
             final int n = source.getCounters(CounterEnumType.P1P1);
             if (n > 0) {

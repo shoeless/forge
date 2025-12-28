@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import forge.util.IterableUtil;
 import forge.util.function.Predicate;
 
 public final class CardScriptParser {
@@ -390,7 +391,8 @@ public final class CardScriptParser {
         if (DEFINED_CARDS.contains(defined)) {
             return true;
         }
-        return DEFINED_CARDS_STARTSWITH.stream().anyMatch(startsWith(defined));
+        // iOS compatibility: Replace stream().anyMatch() with IterableUtil.any()
+        return IterableUtil.any(DEFINED_CARDS_STARTSWITH, startsWith(defined));
     }
     private static boolean isDefinedPlayerLegal(final String defined) {
         final boolean non = defined.startsWith("Non"), flipped = defined.startsWith("Flipped");
@@ -406,7 +408,8 @@ public final class CardScriptParser {
         if (DEFINED_PLAYERS.contains(defined)) {
             return true;
         }
-        return DEFINED_PLAYERS_STARTSWITH.stream().anyMatch(startsWith(defined));
+        // iOS compatibility: Replace stream().anyMatch() with IterableUtil.any()
+        return IterableUtil.any(DEFINED_PLAYERS_STARTSWITH, startsWith(defined));
     }
 
     private static final Set<String> VALID_INCLUSIVE = ImmutableSortedSet.of(
@@ -505,7 +508,8 @@ public final class CardScriptParser {
         if (VALID_EXCLUSIVE.contains(valid)) {
             return true;
         }
-        return VALID_EXCLUSIVE_STARTSWITH.stream().anyMatch(startsWith(valid));
+        // iOS compatibility: Replace stream().anyMatch() with IterableUtil.any()
+        return IterableUtil.any(VALID_EXCLUSIVE_STARTSWITH, startsWith(valid));
     }
 
     private static final class KeyValuePair {

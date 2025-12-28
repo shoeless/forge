@@ -335,7 +335,12 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
             creatureTypes.addAll(getAllCreatureTypes());
             creatureTypes.removeAll(this.excludedCreatureSubtypes);
         } else {
-            subtypes.stream().filter(CardType::isACreatureType).forEach(creatureTypes::add);
+            // iOS compatibility: Replace Stream API with traditional loop
+            for (String subtype : subtypes) {
+                if (CardType.isACreatureType(subtype)) {
+                    creatureTypes.add(subtype);
+                }
+            }
         }
         return creatureTypes;
     }
@@ -445,7 +450,13 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
 
     @Override
     public boolean hasABasicLandType() {
-        return this.subtypes.stream().anyMatch(CardType::isABasicLandType);
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (String subtype : this.subtypes) {
+            if (CardType.isABasicLandType(subtype)) {
+                return true;
+            }
+        }
+        return false;
     }
     @Override
     public boolean hasANonBasicLandType() {
@@ -591,14 +602,26 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
         if (!isCreature() && !isKindred()) {
             return false;
         }
-        return Constant.OUTLAW_TYPES.stream().anyMatch(s -> hasCreatureType(s));
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (String s : Constant.OUTLAW_TYPES) {
+            if (hasCreatureType(s)) {
+                return true;
+            }
+        }
+        return false;
     }
     @Override
     public boolean isParty() {
         if (!isCreature() && !isKindred()) {
             return false;
         }
-        return Constant.PARTY_TYPES.stream().anyMatch(s -> hasCreatureType(s));
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (String s : Constant.PARTY_TYPES) {
+            if (hasCreatureType(s)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

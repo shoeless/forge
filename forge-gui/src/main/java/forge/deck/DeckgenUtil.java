@@ -469,7 +469,10 @@ public class DeckgenUtil {
                 if (!selection.isEmpty() && selection.size() < 4)
                     predicate = predicate.and(deckProxy -> deckProxy.getColorIdentity().hasAllColors(ColorSet.fromNames(colors.toCharArray()).getColor()));
                 List<DeckProxy> source = isTheme ? advThemes : advPrecons;
-                deck = source.stream().filter(predicate).collect(StreamUtil.random()).get().getDeck();
+                // iOS compatibility: Replace stream().filter().collect(random()).get() with IterableUtil helpers
+                List<DeckProxy> filtered = IterableUtil.filterToList(source, predicate);
+                DeckProxy randomProxy = IterableUtil.random(filtered);
+                deck = randomProxy != null ? randomProxy.getDeck() : null;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -650,11 +653,19 @@ public class DeckgenUtil {
         final DeckFormat format = gameType.getDeckFormat();
         Predicate<CardRules> canPlay = forAi ? DeckGeneratorBase.AI_CAN_PLAY : CardRulesPredicates.IS_KEPT_IN_RANDOM_DECKS;
 
-        PaperCard commander = FModel.getMagicDb().getCommonCards().streamAllCards()
-                .filter(format.isLegalCardPredicate())
-                .filter(format.isLegalCommanderPredicate())
-                .filter(PaperCardPredicates.fromRules(canPlay))
-                .collect(StreamUtil.random()).get();
+        // iOS compatibility: Replace stream().filter().collect(StreamUtil.random()) with loop + random selection
+        List<PaperCard> filteredCards = new ArrayList<>();
+        Predicate<PaperCard> legalCardPredicate = format.isLegalCardPredicate();
+        Predicate<PaperCard> legalCommanderPredicate = format.isLegalCommanderPredicate();
+        Predicate<PaperCard> canPlayPredicate = PaperCardPredicates.fromRules(canPlay);
+
+        for (PaperCard card : FModel.getMagicDb().getCommonCards().getAllCards()) {
+            if (legalCardPredicate.test(card) && legalCommanderPredicate.test(card) && canPlayPredicate.test(card)) {
+                filteredCards.add(card);
+            }
+        }
+
+        PaperCard commander = filteredCards.get(MyRandom.getRandom().nextInt(filteredCards.size()));
         return generateRandomCommanderDeck(commander, format, forAi, false);
     }
 
@@ -826,7 +837,8 @@ public class DeckgenUtil {
 
         // determine how many additional lands we need, but don't take lands already in deck into consideration,
         // or we risk incorrectly determining the target deck size
-        int numLands = (int) cards.stream().filter(PaperCardPredicates.IS_LAND).count();
+        // iOS compatibility: Replace stream().filter().count() with IterableUtil.count()
+        int numLands = IterableUtil.count(cards, PaperCardPredicates.IS_LAND);
         int sizeNoLands = cards.size() - numLands;
 
         // attempt to determine if building for sealed, constructed or EDH

@@ -25,7 +25,13 @@ public class SpriteGroup extends Group {
     protected void drawChildren(Batch batch, float parentAlpha) {
 
         Actor[] actors = getChildren().toArray();
-        Arrays.sort(actors, Comparator.comparingInt(o -> (int) -o.getY()));
+        // iOS compatibility: Replace Comparator.comparingInt() with anonymous Comparator
+        Arrays.sort(actors, new Comparator<Actor>() {
+            @Override
+            public int compare(Actor a1, Actor a2) {
+                return Integer.compare((int) -a1.getY(), (int) -a2.getY());
+            }
+        });
 
         for(int i=0;i<actors.length;i++)
         {

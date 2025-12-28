@@ -202,7 +202,13 @@ public abstract class ItemManager<T extends InventoryItem> extends FContainer im
                 cols.add(colOverrides.get(colConfig.getDef()));
             }
         }
-        cols.sort(Comparator.comparingInt(arg0 -> arg0.getConfig().getIndex()));
+        // iOS compatibility: Replace Comparator.comparingInt() with anonymous Comparator
+        Collections.sort(cols, new Comparator<ItemColumn>() {
+            @Override
+            public int compare(ItemColumn c1, ItemColumn c2) {
+                return Integer.compare(c1.getConfig().getIndex(), c2.getConfig().getIndex());
+            }
+        });
 
         sortCols.get().clear();
         if (cbxSortOptions != null) {

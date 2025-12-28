@@ -21,7 +21,6 @@ import forge.util.MyRandom;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class PlayAi extends SpellAbilityAi {
 
@@ -232,7 +231,10 @@ public class PlayAi extends SpellAbilityAi {
 
         if (cards != null & sa.hasParam("ValidSA")) {
             final String valid[] = sa.getParam("ValidSA").split(",");
-            final List<Card> invalid = cards.stream().filter(c -> !IterableUtil.any(AbilityUtils.getBasicSpellsFromPlayEffect(c, ai), SpellAbilityPredicates.isValid(valid, ai, source, sa))).collect(Collectors.toList());
+            // iOS compatibility: Replace stream().filter().collect() with IterableUtil.filterToList()
+            final List<Card> invalid = IterableUtil.filterToList(cards, c ->
+                !IterableUtil.any(AbilityUtils.getBasicSpellsFromPlayEffect(c, ai),
+                    SpellAbilityPredicates.isValid(valid, ai, source, sa)));
             if (!invalid.isEmpty())
                 cards.removeAll(invalid);
         }

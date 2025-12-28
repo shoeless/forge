@@ -19,7 +19,6 @@ package forge.gamemodes.quest;
 
 import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import com.google.common.eventbus.Subscribe;
@@ -630,10 +629,15 @@ public class QuestController {
     public List<CardEdition> getAvailableLandSets() {
         List<String> availableEditionCodes = questFormat != null ? questFormat.getAllowedSetCodes() : Lists.newArrayList(FModel.getMagicDb().getEditions().getItemNames());
         CardEdition.Collection editions = FModel.getMagicDb().getEditions();
-        return availableEditionCodes.stream()
-                .map(editions::get)
-                .filter(CardEdition::hasBasicLands)
-                .collect(Collectors.toList());
+        // iOS compatibility: Replace stream().map().filter().collect() with loop
+        List<CardEdition> result = new ArrayList<>();
+        for (String code : availableEditionCodes) {
+            CardEdition edition = editions.get(code);
+            if (edition != null && edition.hasBasicLands()) {
+                result.add(edition);
+            }
+        }
+        return result;
     }
 
     public String getCurrentDeck() {

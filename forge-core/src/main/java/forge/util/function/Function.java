@@ -14,22 +14,34 @@ public interface Function<T, R> {
      * Returns a composed function that first applies the {@code before}
      * function to its input, and then applies this function to the result.
      */
-    default <V> Function<V, R> compose(Function<? super V, ? extends T> before) {
+    default <V> Function<V, R> compose(final Function<? super V, ? extends T> before) {
         if (before == null) {
             throw new NullPointerException();
         }
-        return v -> apply(before.apply(v));
+        final Function<T, R> self = this;
+        return new Function<V, R>() {
+            @Override
+            public R apply(V v) {
+                return self.apply(before.apply(v));
+            }
+        };
     }
 
     /**
      * Returns a composed function that first applies this function to
      * its input, and then applies the {@code after} function to the result.
      */
-    default <V> Function<T, V> andThen(Function<? super R, ? extends V> after) {
+    default <V> Function<T, V> andThen(final Function<? super R, ? extends V> after) {
         if (after == null) {
             throw new NullPointerException();
         }
-        return t -> after.apply(apply(t));
+        final Function<T, R> self = this;
+        return new Function<T, V>() {
+            @Override
+            public V apply(T t) {
+                return after.apply(self.apply(t));
+            }
+        };
     }
 
     /**

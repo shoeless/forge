@@ -42,13 +42,13 @@ import forge.game.trigger.TriggerHandler;
 import forge.game.trigger.WrappedAbility;
 import forge.item.IPaperCard;
 import forge.util.CardTranslation;
+import forge.util.IterableUtil;
 import forge.util.TextUtil;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -278,7 +278,8 @@ public class CardFactory {
         }
         else if (card.getType().getBattleTypes().isEmpty()) {
             //Probably a custom card? Check if it already has an RE for designating a protector.
-            if(card.getReplacementEffects().stream().anyMatch((re) -> re.hasParam("BattleProtector")))
+            // iOS compatibility: Replace Stream API with IterableUtil
+            if(IterableUtil.any(card.getReplacementEffects(), (re) -> re.hasParam("BattleProtector")))
                 return;
             //Battles with no battle type enter protected by their controller.
             String abProtector = "DB$ ChoosePlayer | Choices$ You | Protect$ True | DontNotify$ True";
@@ -436,7 +437,8 @@ public class CardFactory {
             to.setAdditionalAbility(e.getKey(), e.getValue().copy(host, p, lki, keepTextChanges));
         }
         for (Map.Entry<String, List<AbilitySub>> e : from.getAdditionalAbilityLists().entrySet()) {
-            to.setAdditionalAbilityList(e.getKey(), e.getValue().stream().map(input -> (AbilitySub) input.copy(host, p, lki, keepTextChanges)).collect(Collectors.toList()));
+            // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+            to.setAdditionalAbilityList(e.getKey(), IterableUtil.mapToList(e.getValue(), input -> (AbilitySub) input.copy(host, p, lki, keepTextChanges)));
         }
         if (from.getRestrictions() != null) {
             to.setRestrictions((SpellAbilityRestriction) from.getRestrictions().copy());
@@ -591,7 +593,8 @@ public class CardFactory {
 
             List<String> finalizedKWs = keywords;
             if (KWifNew) {
-                finalizedKWs = keywords.stream().filter(k -> !state.hasIntrinsicKeyword(Keyword.getInstance(k).getKeyword())).collect(Collectors.toList());
+                // iOS compatibility: Replace stream().filter().collect() with IterableUtil.filterToList()
+                finalizedKWs = IterableUtil.filterToList(keywords, k -> !state.hasIntrinsicKeyword(Keyword.getInstance(k).getKeyword()));
             }
             state.addIntrinsicKeywords(finalizedKWs);
             for (String kw : removeKeywords) {

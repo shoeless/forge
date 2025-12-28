@@ -3,7 +3,7 @@ package forge.util.collect;
 import java.io.Serializable;
 import java.util.*;
 import forge.util.function.Predicate;
-import java.util.stream.Stream;
+import forge.util.IterableUtil;
 
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -269,10 +269,8 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         return false;
     }
 
-    // Convenience method for forge.util.function.Predicate
-    public boolean removeIf(Predicate<? super T> filter) {
-        return removeIf((java.util.function.Predicate<? super T>) t -> filter.test(t));
-    }
+    // Note: For forge.util.function.Predicate, convert at call site:
+    // collection.removeIf(t -> forgePredicate.test(t))
 
     /**
      * {@inheritDoc}
@@ -522,9 +520,12 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     public void sort(final Comparator<? super T> comparator) {
         try {
-            list.sort(comparator);
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            // Need to cast comparator to exact type to satisfy compiler
+            IterableUtil.sort(list, (Comparator<T>) comparator);
         } catch (Exception e) {
             System.err.println("FCollection failed to sort: \n" + comparator + "\n" + e.getMessage());
         }
@@ -552,19 +553,28 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         return obj;
     }
 
-    @Override
-    public Stream<T> stream() {
-        return list.stream();
-    }
+    // iOS compatibility: stream() method removed - use iterator() or list access instead
 
     @Override
     public boolean anyMatch(Predicate<? super T> test) {
-        return set.stream().anyMatch(t -> test.test(t));
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (T t : set) {
+            if (test.test(t)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public boolean allMatch(Predicate<? super T> test) {
-        return set.stream().allMatch(t -> test.test(t));
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (T t : set) {
+            if (!test.test(t)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -673,7 +683,6 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             return a;
         }
 
-        @Override public Stream<T> stream() {return Stream.empty();}
         @Override public boolean anyMatch(Predicate<? super T> test) {return false;}
         @Override public boolean allMatch(Predicate<? super T> test) {return true;}
 

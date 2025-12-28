@@ -13,11 +13,11 @@ import forge.game.spellability.AbilitySub;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
 import forge.util.Aggregates;
+import forge.util.IterableUtil;
 import forge.util.collect.FCollection;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ChooseGenericAi extends SpellAbilityAi {
 
@@ -90,9 +90,9 @@ public class ChooseGenericAi extends SpellAbilityAi {
         } else if ("Random".equals(logic)) {
             return Aggregates.random(spells);
         } else if ("Phasing".equals(logic)) { // Teferi's Realm : keep aggressive
-            List<SpellAbility> filtered = spells.stream()
-                    .filter(sp -> !sp.getDescription().contains("Creature") && !sp.getDescription().contains("Land"))
-                    .collect(Collectors.toList());
+            // iOS compatibility: Replace stream().filter().collect() with IterableUtil.filterToList()
+            List<SpellAbility> filtered = IterableUtil.filterToList(spells,
+                sp -> !sp.getDescription().contains("Creature") && !sp.getDescription().contains("Land"));
             return Aggregates.random(filtered);
         } else if ("PayUnlessCost".equals(logic)) {
             for (final SpellAbility sp : spells) {

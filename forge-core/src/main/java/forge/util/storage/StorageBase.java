@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.util.*;
 import forge.util.function.Predicate;
-import java.util.stream.Stream;
 
 /**
  * <p>
@@ -66,10 +65,7 @@ public class StorageBase<T> implements IStorage<T> {
         return map.values().iterator();
     }
 
-    @Override
-    public Stream<T> stream() {
-        return map.values().stream();
-    }
+    // iOS compatibility: stream() method removed - use iterator() or getAll() instead
 
     @Override
     public boolean contains(String name) {

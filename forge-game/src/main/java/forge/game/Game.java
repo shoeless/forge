@@ -1296,8 +1296,16 @@ public class Game {
     }
 
     public int getSingleMaxDamageDoneThisTurn() {
-        return globalDamageHistory.stream().flatMap(cdh -> cdh.getAllDmgInstances().stream()).
-                mapToInt(dmg -> dmg.getLeft()).max().orElse(0);
+        // iOS compatibility: Replace Stream API with traditional loop
+        int max = 0;
+        for (CardDamageHistory cdh : globalDamageHistory) {
+            for (Pair<Integer, Boolean> dmg : cdh.getAllDmgInstances()) {
+                if (dmg.getLeft() > max) {
+                    max = dmg.getLeft();
+                }
+            }
+        }
+        return max;
     }
 
     public void addGlobalDamageHistory(CardDamageHistory cdh, Pair<Integer, Boolean> dmg, Card source, GameEntity target) {
@@ -1376,8 +1384,9 @@ public class Game {
     }
 
     public boolean isVoid() {
-        return getLeftBattlefieldThisTurn().stream().anyMatch(c -> !c.isLand()) ||
-                getStack().getSpellsCastThisTurn().stream().anyMatch(s -> s.getCastSA().isWarp());
+        // iOS compatibility: Replace Stream API with IterableUtil
+        return IterableUtil.any(getLeftBattlefieldThisTurn(), c -> !c.isLand()) ||
+                IterableUtil.any(getStack().getSpellsCastThisTurn(), s -> s.getCastSA().isWarp());
     }
 
     public int getAITimeout() {

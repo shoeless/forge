@@ -40,12 +40,12 @@ import forge.game.spellability.AbilityStatic;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.Trigger;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 
 /**
  * The Class StaticAbility_Continuous.
@@ -258,7 +258,8 @@ public final class StaticAbilityContinuous {
 
                 addKeywords.addAll(newKeywords);
 
-                addKeywords = addKeywords.stream().map(input -> {
+                // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+                addKeywords = IterableUtil.mapToList(addKeywords, input -> {
                     if (hostCard.hasChosenColor()) {
                         input = input.replaceAll("ChosenColor", StringUtils.capitalize(hostCard.getChosenColor()));
                         input = input.replaceAll("chosenColor", hostCard.getChosenColor().toLowerCase());
@@ -288,7 +289,7 @@ public final class StaticAbilityContinuous {
                         input = input.replace("N", String.valueOf(AbilityUtils.calculateAmount(hostCard, params.get("CalcKeywordN"), stAb)));
                     }
                     return input;
-                }).collect(Collectors.toList());
+                });
 
                 if (params.containsKey("SharedKeywordsZone")) {
                     List<ZoneType> zones = ZoneType.listValueOf(params.get("SharedKeywordsZone"));
@@ -398,7 +399,8 @@ public final class StaticAbilityContinuous {
                 });
                 addTypes.addAll(newTypes);
 
-                addTypes = addTypes.stream().map(input -> {
+                // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+                addTypes = IterableUtil.mapToList(addTypes, input -> {
                     if (hostCard.hasChosenType2()) {
                         input = input.replaceAll("ChosenType2", hostCard.getChosenType2());
                     }
@@ -406,7 +408,7 @@ public final class StaticAbilityContinuous {
                         input = input.replaceAll("ChosenType", hostCard.getChosenType());
                     }
                     return input;
-                }).collect(Collectors.toList());
+                });
             }
 
             if (params.containsKey("RemoveType")) {
@@ -726,7 +728,8 @@ public final class StaticAbilityContinuous {
                     });
                     newKeywords.addAll(extraKeywords);
 
-                    newKeywords = newKeywords.stream().map(input -> {
+                    // iOS compatibility: Replace stream().map().collect() with IterableUtil.mapToList()
+                    newKeywords = IterableUtil.mapToList(newKeywords, input -> {
                         if (input.contains("CardManaCost")) {
                             input = input.replace("CardManaCost", affectedCard.getManaCost().getShortString());
                         } else if (input.contains("ConvertedManaCost")) {
@@ -734,11 +737,19 @@ public final class StaticAbilityContinuous {
                             input = input.replace("ConvertedManaCost", costcmc);
                         }
                         return input;
-                    }).collect(Collectors.toList());
+                    });
                 }
 
                 if (newKeywords != null && !newKeywords.isEmpty() && params.containsKey("KeywordMultiplier")) {
-                    newKeywords = newKeywords.stream().flatMap(s -> Collections.nCopies(Integer.valueOf(params.get("KeywordMultiplier")), s).stream()).collect(Collectors.toList());
+                    // iOS compatibility: Replace stream().flatMap() with manual loop
+                    int multiplier = Integer.valueOf(params.get("KeywordMultiplier"));
+                    List<String> multiplied = new ArrayList<>();
+                    for (String s : newKeywords) {
+                        for (int i = 0; i < multiplier; i++) {
+                            multiplied.add(s);
+                        }
+                    }
+                    newKeywords = multiplied;
                 }
 
                 affectedCard.addChangedCardKeywords(newKeywords, removeKeywords,

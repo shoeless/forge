@@ -28,6 +28,7 @@ import java.util.Set;
 
 import forge.game.GameType;
 import forge.util.FileUtil;
+import forge.util.IterableUtil;
 import forge.util.TextUtil;
 
 /**
@@ -133,7 +134,7 @@ public abstract class PreferencesStore<T extends Enum<T> & PreferencesStore.IPre
         for (GameType g : gameTypes)
             e.add(g.getEnglishName());
         if (!e.isEmpty())
-            s0 += String.join(",", e);
+            s0 += IterableUtil.join(",", e);
         setPref(q0, s0);
     }
     public final Set<GameType> getGameType(final T fp0) {

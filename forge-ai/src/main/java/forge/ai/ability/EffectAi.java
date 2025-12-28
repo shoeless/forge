@@ -25,6 +25,7 @@ import forge.game.spellability.SpellAbilityStackInstance;
 import forge.game.spellability.TargetRestrictions;
 import forge.game.zone.MagicStack;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
 import forge.util.collect.FCollectionView;
@@ -337,7 +338,7 @@ public class EffectAi extends SpellAbilityAi {
                         runParams.put(AbilityKey.Regeneration, true);
                         List<ReplacementEffect> repDestroyList = game.getReplacementHandler().getReplacementList(ReplacementType.Destroy, runParams, ReplacementLayer.Other);
                         // no Destroy Replacement, or one non-Regeneration one like Totem-Armor
-                        if (repDestroyList.isEmpty() || repDestroyList.stream().anyMatch(CardTraitPredicates.hasParam("Regeneration").negate())) {
+                        if (repDestroyList.isEmpty() || IterableUtil.any(repDestroyList, CardTraitPredicates.hasParam("Regeneration").negate())) {
                             return false;
                         }
 
@@ -368,7 +369,7 @@ public class EffectAi extends SpellAbilityAi {
                     runParams.put(AbilityKey.Regeneration, true);
                     List<ReplacementEffect> repDestroyList = game.getReplacementHandler().getReplacementList(ReplacementType.Destroy, runParams, ReplacementLayer.Other);
                     // no Destroy Replacement, or one non-Regeneration one like Totem-Armor
-                    if (repDestroyList.isEmpty() || repDestroyList.stream().anyMatch(CardTraitPredicates.hasParam("Regeneration").negate())) {
+                    if (repDestroyList.isEmpty() || IterableUtil.any(repDestroyList, CardTraitPredicates.hasParam("Regeneration").negate())) {
                         return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
                     }
 

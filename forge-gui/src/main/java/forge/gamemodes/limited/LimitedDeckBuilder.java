@@ -2,7 +2,6 @@ package forge.gamemodes.limited;
 
 import java.util.*;
 import forge.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 
@@ -76,16 +75,25 @@ public class LimitedDeckBuilder extends DeckGeneratorBase {
         this.deckColors = pClrs;
         this.colors = pClrs.getChosenColors();
 
+        // iOS compatibility: Replace stream().filter().collect() with loop
         // remove Unplayables
-        this.aiPlayables = availableList.stream()
-                .filter(PaperCardPredicates.fromRules(CardRulesPredicates.IS_KEPT_IN_AI_LIMITED_DECKS))
-                .collect(Collectors.toList());
+        this.aiPlayables = new ArrayList<>();
+        Predicate<PaperCard> keptPredicate = PaperCardPredicates.fromRules(CardRulesPredicates.IS_KEPT_IN_AI_LIMITED_DECKS);
+        for (PaperCard card : availableList) {
+            if (keptPredicate.test(card)) {
+                this.aiPlayables.add(card);
+            }
+        }
         this.availableList.removeAll(aiPlayables);
 
         // keep Conspiracies in a separate list
-        this.draftedConspiracies = aiPlayables.stream()
-                .filter(PaperCardPredicates.fromRules(CardRulesPredicates.IS_CONSPIRACY))
-                .collect(Collectors.toList());
+        this.draftedConspiracies = new ArrayList<>();
+        Predicate<PaperCard> conspiracyPredicate = PaperCardPredicates.fromRules(CardRulesPredicates.IS_CONSPIRACY);
+        for (PaperCard card : aiPlayables) {
+            if (conspiracyPredicate.test(card)) {
+                this.draftedConspiracies.add(card);
+            }
+        }
         this.aiPlayables.removeAll(draftedConspiracies);
 
         findBasicLandSets();
@@ -164,9 +172,14 @@ public class LimitedDeckBuilder extends DeckGeneratorBase {
         // 6. If there are still on-color cards, and the average cmc is low, add
         // an extra.
         if (deckList.size() == numSpellsNeeded && getAverageCMC(deckList) < 4) {
-            final PaperCard card = rankedColorList.stream()
-                    .filter(PaperCardPredicates.IS_NON_LAND)
-                    .findFirst().orElse(null);
+            // iOS compatibility: Replace stream().filter().findFirst().orElse() with loop
+            PaperCard card = null;
+            for (PaperCard c : rankedColorList) {
+                if (PaperCardPredicates.IS_NON_LAND.test(c)) {
+                    card = c;
+                    break;
+                }
+            }
             if (card != null) {
                 deckList.add(card);
                 aiPlayables.remove(card);
@@ -660,10 +673,14 @@ public class LimitedDeckBuilder extends DeckGeneratorBase {
         for (int i = 1; i < 7; i++) {
             creatureCosts.put(i, 0);
         }
-        deckList.stream().filter(PaperCardPredicates.IS_CREATURE)
-                .mapToInt(creature -> creature.getRules().getManaCost().getCMC())
-                .map(cmc -> Math.max(1, Math.min(cmc, 6)))
-                .forEach(cmc -> creatureCosts.put(cmc, creatureCosts.get(cmc) + 1));
+        // iOS compatibility: Replace stream().filter().mapToInt().map().forEach() with loop
+        for (PaperCard creature : deckList) {
+            if (PaperCardPredicates.IS_CREATURE.test(creature)) {
+                int cmc = creature.getRules().getManaCost().getCMC();
+                int clampedCmc = Math.max(1, Math.min(cmc, 6));
+                creatureCosts.put(clampedCmc, creatureCosts.get(clampedCmc) + 1);
+            }
+        }
 
         List<PaperCard> creaturesToAdd = new ArrayList<>();
         for (final PaperCard card : creatures) {

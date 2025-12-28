@@ -26,6 +26,7 @@ import forge.game.spellability.TargetRestrictions;
 import forge.game.staticability.StaticAbilityMustTarget;
 import forge.game.zone.ZoneType;
 import forge.util.Aggregates;
+import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.collect.FCollectionView;
 
@@ -589,7 +590,7 @@ public class ChangeZoneAi extends SpellAbilityAi {
         }
 
         // pick dual lands if available
-        if (result.stream().anyMatch(CardPredicates.NONBASIC_LANDS)) {
+        if (IterableUtil.any(result, CardPredicates.NONBASIC_LANDS)) {
             result = CardLists.filter(result, CardPredicates.NONBASIC_LANDS);
         }
 

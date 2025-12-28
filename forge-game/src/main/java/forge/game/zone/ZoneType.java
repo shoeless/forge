@@ -62,7 +62,15 @@ public enum ZoneType {
 
     public static List<ZoneType> listValueOf(final String values) {
         if ("All".equals(values)) {
-            return List.of(Battlefield, Hand, Graveyard, Exile, Stack, Library, Command);
+            List<ZoneType> all = new java.util.ArrayList<>();
+            all.add(Battlefield);
+            all.add(Hand);
+            all.add(Graveyard);
+            all.add(Exile);
+            all.add(Stack);
+            all.add(Library);
+            all.add(Command);
+            return all;
         }
         final List<ZoneType> result = new ArrayList<>();
         for (final String s : values.split("[, ]+")) {

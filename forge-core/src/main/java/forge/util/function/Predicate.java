@@ -16,29 +16,47 @@ public interface Predicate<T> {
      * Returns a composed predicate that represents a short-circuiting logical
      * AND of this predicate and another.
      */
-    default Predicate<T> and(Predicate<? super T> other) {
+    default Predicate<T> and(final Predicate<? super T> other) {
         if (other == null) {
             throw new NullPointerException();
         }
-        return t -> test(t) && other.test(t);
+        final Predicate<T> self = this;
+        return new Predicate<T>() {
+            @Override
+            public boolean test(T t) {
+                return self.test(t) && other.test(t);
+            }
+        };
     }
 
     /**
      * Returns a predicate that represents the logical negation of this predicate.
      */
     default Predicate<T> negate() {
-        return t -> !test(t);
+        final Predicate<T> self = this;
+        return new Predicate<T>() {
+            @Override
+            public boolean test(T t) {
+                return !self.test(t);
+            }
+        };
     }
 
     /**
      * Returns a composed predicate that represents a short-circuiting logical
      * OR of this predicate and another.
      */
-    default Predicate<T> or(Predicate<? super T> other) {
+    default Predicate<T> or(final Predicate<? super T> other) {
         if (other == null) {
             throw new NullPointerException();
         }
-        return t -> test(t) || other.test(t);
+        final Predicate<T> self = this;
+        return new Predicate<T>() {
+            @Override
+            public boolean test(T t) {
+                return self.test(t) || other.test(t);
+            }
+        };
     }
 
     /**

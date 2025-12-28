@@ -48,7 +48,7 @@ public class LibGDXImageFetcher extends ImageFetcher {
             InputStream is = c.getInputStream();
             // First, save to a temporary file so that nothing tries to read
             // a partial download.
-            FileHandle destFile = new FileHandle(newdespath + ".tmp");
+            FileHandle destFile = FileHandleUtil.getLocal(newdespath + ".tmp");
             System.out.println(newdespath);
             destFile.parent().mkdirs();
             try(OutputStream out = Files.newOutputStream(destFile.file().toPath())) {
@@ -56,7 +56,7 @@ public class LibGDXImageFetcher extends ImageFetcher {
                 Forge.getDeviceAdapter().convertToJPEG(is, out);
                 is.close();
             }
-            destFile.moveTo(new FileHandle(newdespath));
+            destFile.moveTo(FileHandleUtil.getLocal(newdespath));
 
             System.out.println("Saved image to " + newdespath);
             GuiBase.getInterface().invokeInEdtLater(notifyObservers);
