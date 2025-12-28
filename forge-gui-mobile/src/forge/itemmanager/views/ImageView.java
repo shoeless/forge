@@ -30,6 +30,7 @@ import forge.model.FModel;
 import forge.toolbox.*;
 import forge.util.ImageFetcher;
 import forge.util.ImageUtil;
+import forge.util.MapUtil;
 import forge.util.TextUtil;
 import forge.util.Utils;
 
@@ -524,7 +525,8 @@ public class ImageView<T extends InventoryItem> extends ItemView<T> {
                     if (key != null && !piles.containsKey(key)) {
                         piles.put(key, new Pile());
                     }
-                    Pile p = key == null ? null : piles.getOrDefault(key, null);
+                    // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                    Pile p = key == null ? null : MapUtil.getOrDefault(piles, key, null);
                     if (p != null)
                         p.items.add(itemInfo);
                 }

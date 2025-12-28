@@ -31,6 +31,7 @@ import forge.game.trigger.Trigger;
 import forge.game.zone.ZoneType;
 import forge.util.Expressions;
 import forge.util.ITranslatable;
+import forge.util.MapUtil;
 
 /**
  * Base class for Triggers,ReplacementEffects and StaticAbilities.
@@ -678,7 +679,8 @@ public abstract class CardTraitBase implements GameObject, IHasCardView, IHasSVa
         Map<String, String> result = Maps.newHashMap(output);
         for (Map.Entry<String, String> e : input.entrySet()) {
             String value = e.getValue();
-            result.put(e.getKey(), output.getOrDefault(value, value));
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            result.put(e.getKey(), MapUtil.getOrDefault(output, value, value));
         }
         return result;
     }

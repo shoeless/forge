@@ -71,7 +71,13 @@ public class AiCardMemory {
     }
 
     private Set<Card> getMemorySet(MemorySet set) {
-        return memoryMap.get().computeIfAbsent(set, value -> Sets.newConcurrentHashSet());
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        Set<Card> memSet = memoryMap.get().get(set);
+        if (memSet == null) {
+            memSet = Sets.newConcurrentHashSet();
+            memoryMap.get().put(set, memSet);
+        }
+        return memSet;
     }
 
     /**

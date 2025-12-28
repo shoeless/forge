@@ -45,7 +45,13 @@ public class UntapAllEffect extends SpellAbilityEffect {
                 untapper = c.getController();
             }
             if (c.untap())  {
-                untapMap.computeIfAbsent(untapper, i -> new CardCollection()).add(c);
+                // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                CardCollection cards = untapMap.get(untapper);
+                if (cards == null) {
+                    cards = new CardCollection();
+                    untapMap.put(untapper, cards);
+                }
+                cards.add(c);
                 if (sa.hasParam("RememberUntapped")) card.addRemembered(c);
 
             }

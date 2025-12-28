@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Color;
 import java.util.*;
 import forge.util.function.BiFunction;
 import forge.util.function.Function;
+import forge.util.MapUtil;
 import java.util.stream.IntStream;
 
 public class SimpleTiledModel extends Model {
@@ -86,7 +87,8 @@ public class SimpleTiledModel extends Model {
       Function<Integer, Integer> a, b;
       int cardinality;
 
-      String sym = xtile.getOrDefault("symmetry", "X");
+      // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+      String sym = MapUtil.getOrDefault(xtile, "symmetry", "X");
 
       if (subset != null && !subset.contains(tilename)) continue;
       
@@ -161,9 +163,12 @@ public class SimpleTiledModel extends Model {
         }
       }
 
-      for (int t = 0; t < cardinality; t++) tempStationary.add(
-        Double.valueOf(xtile.getOrDefault("weight", "1.0"))
-      );
+      for (int t = 0; t < cardinality; t++) {
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        tempStationary.add(
+          Double.valueOf(MapUtil.getOrDefault(xtile, "weight", "1.0"))
+        );
+      }
     }
 
     this.T = action.size();

@@ -15,6 +15,7 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.util.ItemPool;
 import forge.util.Localizer;
+import forge.util.MapUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -365,7 +366,12 @@ public class DeckImportController {
             else
                 refTokenMap = tokensPerSectionWithSet;
 
-            List<Token> tokensInSection = refTokenMap.computeIfAbsent(tokenSection, e -> new ArrayList<>());
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            List<Token> tokensInSection = refTokenMap.get(tokenSection);
+            if (tokensInSection == null) {
+                tokensInSection = new ArrayList<>();
+                refTokenMap.put(tokenSection, tokensInSection);
+            }
             tokensInSection.add(token);
         }
 
@@ -398,11 +404,11 @@ public class DeckImportController {
         // Now check tokens with set wrt. tokens with no set
         for (DeckSection section: tokensPerSectionWithNoSet.keySet()){
             List<Token> sectionTokensNoSet = tokensPerSectionWithNoSet.get(section);
-            List<Token> sectionTokenWithSet = tokensPerSectionWithSet.getOrDefault(section, null);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            List<Token> sectionTokenWithSet = tokensPerSectionWithSet.get(section);
 
-            CardPool sectionCardPool = referencePoolPerSection.getOrDefault(section, null);
-            if (sectionCardPool == null)  // No current deck, or deck has that section empty
-                sectionCardPool = new CardPool();
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            CardPool sectionCardPool = MapUtil.getOrDefault(referencePoolPerSection, section, new CardPool());
 
             int tokensWithSetCount = countTokens(sectionTokenWithSet);
             int cardsInPoolCount = sectionCardPool.countAll();
@@ -607,7 +613,8 @@ public class DeckImportController {
     }
 
     public Token getTokenFromCardInDecklist(PaperCard cardKey){
-        return this.cardsInTokens.getOrDefault(cardKey, null);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        return MapUtil.getOrDefault(this.cardsInTokens, cardKey, null);
     }
 
     public Deck accept(){

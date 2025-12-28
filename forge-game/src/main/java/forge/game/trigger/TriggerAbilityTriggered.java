@@ -26,6 +26,7 @@ import forge.game.card.CardLists;
 import forge.game.card.CardZoneTable;
 import forge.game.spellability.SpellAbility;
 import forge.util.Localizer;
+import forge.util.MapUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -114,7 +115,8 @@ public class TriggerAbilityTriggered extends Trigger {
         Map<AbilityKey, Object> newRunParams = AbilityKey.newMap();
         newRunParams.put(AbilityKey.Mode, regtrig.getMode().toString());
         if (regtrig.getMode() == TriggerType.ChangesZone) {
-            newRunParams.put(AbilityKey.Destination, runParams.getOrDefault(AbilityKey.Destination, ""));
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            newRunParams.put(AbilityKey.Destination, MapUtil.getOrDefault(runParams, AbilityKey.Destination, ""));
             newRunParams.put(AbilityKey.Cause, ImmutableList.of(runParams.get(AbilityKey.Card)));
         } else if (regtrig.getMode() == TriggerType.ChangesZoneAll) {
             final CardZoneTable table = (CardZoneTable) runParams.get(AbilityKey.Cards);

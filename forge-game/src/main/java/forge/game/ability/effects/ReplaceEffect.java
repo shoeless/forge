@@ -13,6 +13,7 @@ import forge.game.card.Card;
 import forge.game.player.Player;
 import forge.game.replacement.ReplacementResult;
 import forge.game.spellability.SpellAbility;
+import forge.util.MapUtil;
 
 public class ReplaceEffect extends SpellAbilityEffect {
 
@@ -47,7 +48,8 @@ public class ReplaceEffect extends SpellAbilityEffect {
         } else if ("Map".equals(type)) {
             Map<Player, Integer> m = (Map<Player, Integer>) sa.getReplacingObject(varName);
             for (Player key : AbilityUtils.getDefinedPlayers(card, sa.getParam("VarKey"), sa)) {
-                m.put(key, m.getOrDefault(key, 0) + AbilityUtils.calculateAmount(card, varValue, sa));
+                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                m.put(key, MapUtil.getOrDefault(m, key, 0) + AbilityUtils.calculateAmount(card, varValue, sa));
             }
         } else if ("CardSet".equals(type)) {
             Set<Card> cards = (Set<Card>) params.get(varName);

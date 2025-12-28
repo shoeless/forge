@@ -28,6 +28,7 @@ import forge.item.PaperCard;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 import forge.util.ItemPool;
+import forge.util.MapUtil;
 
 import java.io.Serializable;
 import java.util.*;
@@ -1352,7 +1353,8 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
     }
 
     public int getCharacterFlag(String key) {
-        return (int) characterFlags.getOrDefault(key, (byte) 0);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        return (int) MapUtil.getOrDefault(characterFlags, key, (byte) 0);
     }
 
     // Quest functions.
@@ -1377,7 +1379,8 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
     }
 
     public int getQuestFlag(String key) {
-        return (int) questFlags.getOrDefault(key, (byte) 0);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        return (int) MapUtil.getOrDefault(questFlags, key, (byte) 0);
     }
 
     public void resetQuestFlags() {
@@ -1514,7 +1517,8 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
         for (Deck deck : decks) {
             for (final Map.Entry<PaperCard, Integer> cp : deck.getAllCardsInASinglePool(true, true)) {
                 int count = cp.getValue();
-                if (count > maxCardCounts.getOrDefault(cp.getKey(), 0)) {
+                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                if (count > MapUtil.getOrDefault(maxCardCounts, cp.getKey(), 0)) {
                     maxCardCounts.put(cp.getKey(), count);
                 }
             }

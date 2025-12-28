@@ -957,7 +957,8 @@ public class Player extends GameEntity implements Comparable<Player> {
         getGame().fireEvent(new GameEventPlayerCounters(this, null, 0, 0));
 
         // create Radiation Effect for GameState
-        if (counters.getOrDefault(CounterEnumType.RAD, 0) > 0) {
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        if (MapUtil.getOrDefault(counters, CounterEnumType.RAD, 0) > 0) {
             this.createRadiationEffect(null);
         } else {
             this.removeRadiationEffect();
@@ -1862,10 +1863,15 @@ public class Player extends GameEntity implements Comparable<Player> {
         return result;
     }
     public final List<Card> getCreaturesAttackedThisTurn(final GameEntity e) {
-        return attackedThisTurn.getOrDefault(e, Lists.newArrayList());
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        return MapUtil.getOrDefault(attackedThisTurn, e, Lists.newArrayList());
     }
     public final void addCreaturesAttackedThisTurn(final Card c, final GameEntity e) {
-        final List<Card> creatures = attackedThisTurn.getOrDefault(e, Lists.newArrayList());
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        List<Card> creatures = MapUtil.getOrDefault(attackedThisTurn, e, Lists.newArrayList());
+        if (!attackedThisTurn.containsKey(e)) {
+            attackedThisTurn.put(e, creatures);
+        }
         creatures.add(c);
         attackedThisTurn.putIfAbsent(e, creatures);
         if (e instanceof Player && !attackedPlayersThisCombat.contains(e)) {
@@ -2878,7 +2884,8 @@ public class Player extends GameEntity implements Comparable<Player> {
     }
 
     public int getCommanderCast(Card commander) {
-        return commanderCast.getOrDefault(commander, 0);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        return MapUtil.getOrDefault(commanderCast, commander, 0);
     }
     public void incCommanderCast(Card commander) {
         commanderCast.put(commander, getCommanderCast(commander) + 1);

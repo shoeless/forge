@@ -143,7 +143,13 @@ public class Untap extends Phase {
 
         for (final Card c : untapList) {
             if (optionalUntap(c, active)) {
-                untapMap.computeIfAbsent(active, i -> new CardCollection()).add(c);
+                // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                CardCollection cards = untapMap.get(active);
+                if (cards == null) {
+                    cards = new CardCollection();
+                    untapMap.put(active, cards);
+                }
+                cards.add(c);
             }
         }
 
@@ -155,7 +161,13 @@ public class Untap extends Phase {
         cardsWithKW.addAll(cardsWithKW2);
         for (final Card cardWithKW : cardsWithKW) {
             if (cardWithKW.untap(active)) {
-                untapMap.computeIfAbsent(cardWithKW.getController(), i -> new CardCollection()).add(cardWithKW);
+                // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                CardCollection cards = untapMap.get(cardWithKW.getController());
+                if (cards == null) {
+                    cards = new CardCollection();
+                    untapMap.put(cardWithKW.getController(), cards);
+                }
+                cards.add(cardWithKW);
             }
         }
 

@@ -18,6 +18,7 @@ import forge.game.spellability.TargetChoices;
 import forge.game.zone.ZoneType;
 import forge.util.*;
 import forge.util.maps.MapOfLists;
+import forge.util.MapUtil;
 
 public class GameLogFormatter extends IGameEventVisitor.Base<GameLogEntry> {
     private final Localizer localizer = Localizer.getInstance();
@@ -136,13 +137,14 @@ public class GameLogFormatter extends IGameEventVisitor.Base<GameLogEntry> {
         for (final GameOutcome game : gamesPlayed) {
             RegisteredPlayer player = game.getWinningPlayer();
 
-            int amount = winCount.getOrDefault(player, 0);
-            winCount.put(player, amount + 1);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            winCount.put(player, MapUtil.getOrDefault(winCount, player, 0) + 1);
         }
 
         final StringBuilder sb = new StringBuilder();
         for (Entry<RegisteredPlayer, String> entry : players.entrySet()) {
-            int amount = winCount.getOrDefault(entry.getKey(), 0);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            int amount = MapUtil.getOrDefault(winCount, entry.getKey(), 0);
 
             //String name = entry.getValue() + " [" + entry.getKey().getPlayer().getType() + "]";
             sb.append(entry.getValue()).append(": ").append(amount).append(" ");

@@ -43,6 +43,7 @@ import forge.game.spellability.TargetChoices;
 import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
 import forge.util.IterableUtil;
+import forge.util.MapUtil;
 import forge.util.TextUtil;
 
 import java.util.*;
@@ -378,7 +379,9 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
                 // TODO this currently assumes that all mana came from your own pool
                 // but with Assist some might belong to another player instead
                 Player manaPayer = sp.getActivatingPlayer();
-                expendPlayers.put(manaPayer, expendPlayers.getOrDefault(manaPayer, 0) + 1);
+
+                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                expendPlayers.put(manaPayer, MapUtil.getOrDefault(expendPlayers, manaPayer, 0) + 1);
             }
 
             for (Entry<Player, Integer> entry : expendPlayers.entrySet()) {

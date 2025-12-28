@@ -817,8 +817,8 @@ public class ComputerUtilCard {
 
             Set<String> cardCreatureTypes = c.getType().getCreatureTypes();
             for (String type : cardCreatureTypes) {
-                Integer count = typesInDeck.getOrDefault(type, 0);
-                typesInDeck.put(type, count + weight);
+                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                typesInDeck.put(type, MapUtil.getOrDefault(typesInDeck, type, 0) + weight);
             }
 
             //also take into account abilities that generate tokens
@@ -829,16 +829,16 @@ public class ComputerUtilCard {
                         if (tokenCR == null)
                             continue;
                         for (String type : tokenCR.getType().getCreatureTypes()) {
-                            Integer count = typesInDeck.getOrDefault(type, 0);
-                            typesInDeck.put(type, count + 1);
+                            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                            typesInDeck.put(type, MapUtil.getOrDefault(typesInDeck, type, 0) + 1);
                         }
                     }
                 }
 
                 // special rule for Fabricate and Servo
                 if (c.hasKeyword(Keyword.FABRICATE)) {
-                    Integer count = typesInDeck.getOrDefault("Servo", 0);
-                    typesInDeck.put("Servo", count + weight);
+                    // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                    typesInDeck.put("Servo", MapUtil.getOrDefault(typesInDeck, "Servo", 0) + weight);
                 }
             }
         }

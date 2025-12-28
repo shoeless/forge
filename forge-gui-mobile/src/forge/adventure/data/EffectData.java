@@ -5,6 +5,7 @@ import forge.item.IPaperCard;
 import forge.item.PaperCard;
 import forge.item.PaperToken;
 import forge.model.FModel;
+import forge.util.MapUtil;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -88,7 +89,8 @@ public class EffectData implements Serializable {
         Map<IPaperCard, Integer> duplicateCountMap = new HashMap<>();
         for (Object obj : paperCards.toArray()) {
             IPaperCard card = (IPaperCard) obj;
-            duplicateCountMap.put(card, duplicateCountMap.getOrDefault(card, 0) + 1);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            duplicateCountMap.put(card, MapUtil.getOrDefault(duplicateCountMap, card, 0) + 1);
         }
         for (Map.Entry<IPaperCard, Integer> entry : duplicateCountMap.entrySet()) {
             ret.append("\n").append(entry.getValue()).append("x ").append(entry.getKey());

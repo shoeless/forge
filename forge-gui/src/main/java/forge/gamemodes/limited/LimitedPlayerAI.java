@@ -9,6 +9,7 @@ import forge.deck.generation.DeckGeneratorBase;
 import forge.item.PaperCard;
 import forge.item.PaperCardPredicates;
 import forge.util.IterableUtil;
+import forge.util.MapUtil;
 import forge.util.StreamUtil;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -126,7 +127,8 @@ public class LimitedPlayerAI extends LimitedPlayer {
             return false;
         }
 
-        List<String> nobleBanneret = getDraftNotes().getOrDefault("Noble Banneret", null);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        List<String> nobleBanneret = MapUtil.getOrDefault(getDraftNotes(), "Noble Banneret", null);
         return nobleBanneret == null || !nobleBanneret.contains(bestPick.getName());
     }
 
@@ -138,7 +140,8 @@ public class LimitedPlayerAI extends LimitedPlayer {
             return false;
         }
 
-        List<String> notedTypes = getDraftNotes().getOrDefault("Paliano Vanguard", null);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        List<String> notedTypes = MapUtil.getOrDefault(getDraftNotes(), "Paliano Vanguard", null);
 
         Set<String> types = bestPick.getRules().getType().getCreatureTypes();
 
@@ -152,7 +155,8 @@ public class LimitedPlayerAI extends LimitedPlayer {
     @Override
     protected boolean revealWithSmuggler(PaperCard bestPick) {
         // Note a name we haven't noted yet
-        List<String> notedNames = getDraftNotes().getOrDefault("Smuggler Captain", null);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        List<String> notedNames = MapUtil.getOrDefault(getDraftNotes(), "Smuggler Captain", null);
         if (notedNames != null && !notedNames.isEmpty() && notedNames.contains(bestPick.getName())) {
             return false;
         }

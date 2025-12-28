@@ -17,6 +17,7 @@ import forge.game.player.Player;
 import forge.game.replacement.ReplacementType;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
+import forge.util.MapUtil;
 
 public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, GameEntity, Map<CounterType, Integer>> {
 
@@ -78,7 +79,8 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
         }
         Map<CounterType, Integer> alreadyRemoved = column(ge).get(Optional.<Player>empty());
         for (Map.Entry<CounterType, Integer> e : ge.getCounters().entrySet()) {
-            int rest = e.getValue() - (alreadyRemoved.getOrDefault(e.getKey(), 0));
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            int rest = e.getValue() - MapUtil.getOrDefault(alreadyRemoved, e.getKey(), 0);
             if (rest > 0) {
                 result.put(e.getKey(), rest);
             }

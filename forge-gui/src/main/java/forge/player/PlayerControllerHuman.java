@@ -1332,8 +1332,8 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
             }
 
             for (String type : c.getType().getCreatureTypes()) {
-                Integer count = typesInDeck.getOrDefault(type, 0);
-                typesInDeck.put(type, count + 1);
+                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                typesInDeck.put(type, MapUtil.getOrDefault(typesInDeck, type, 0) + 1);
             }
             // also take into account abilities that generate tokens
             for (SpellAbility sa : c.getAllSpellAbilities()) {
@@ -1345,8 +1345,8 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                     for (String token : sa.getParam("TokenScript").split(",")) {
                         Card protoType = TokenInfo.getProtoType(token, sa, null);
                         for (String type : protoType.getType().getCreatureTypes()) {
-                            Integer count = typesInDeck.getOrDefault(type, 0);
-                            typesInDeck.put(type, count + 1);
+                            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                            typesInDeck.put(type, MapUtil.getOrDefault(typesInDeck, type, 0) + 1);
                         }
                     }
                 }
@@ -1360,8 +1360,8 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                         for (String token : sa.getParam("TokenScript").split(",")) {
                             Card protoType = TokenInfo.getProtoType(token, sa, null);
                             for (String type : protoType.getType().getCreatureTypes()) {
-                                Integer count = typesInDeck.getOrDefault(type, 0);
-                                typesInDeck.put(type, count + 1);
+                                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                                typesInDeck.put(type, MapUtil.getOrDefault(typesInDeck, type, 0) + 1);
                             }
                         }
                     }
@@ -1369,8 +1369,8 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
             }
             // special rule for Fabricate and Servo
             if (c.hasKeyword(Keyword.FABRICATE)) {
-                Integer count = typesInDeck.getOrDefault("Servo", 0);
-                typesInDeck.put("Servo", count + 1);
+                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                typesInDeck.put("Servo", MapUtil.getOrDefault(typesInDeck, "Servo", 0) + 1);
             }
         }
 

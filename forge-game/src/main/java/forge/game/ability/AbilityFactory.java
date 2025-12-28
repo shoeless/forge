@@ -31,6 +31,7 @@ import forge.game.spellability.*;
 import forge.game.zone.ZoneType;
 import forge.util.FileSection;
 import forge.util.IterableUtil;
+import forge.util.MapUtil;
 import io.sentry.Breadcrumb;
 import io.sentry.Sentry;
 
@@ -295,7 +296,8 @@ public final class AbilityFactory {
         }
 
         if (spellAbility instanceof SpellApiBased && hostCard.isPermanent()) {
-            String desc = mapParams.getOrDefault("SpellDescription", spellAbility.getHostCard().getName());
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            String desc = MapUtil.getOrDefault(mapParams, "SpellDescription", spellAbility.getHostCard().getName());
             spellAbility.setDescription(desc);
         } else if (mapParams.containsKey("SpellDescription")) {
             spellAbility.rebuiltDescription();

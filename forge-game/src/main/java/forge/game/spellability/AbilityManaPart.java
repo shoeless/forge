@@ -47,6 +47,7 @@ import forge.game.trigger.TriggerType;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
 import forge.util.IterableUtil;
+import forge.util.MapUtil;
 import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;
 
@@ -99,8 +100,10 @@ public class AbilityManaPart implements java.io.Serializable {
         this.sourceCard = sourceCard;
         sVarHolder = sourceCard;
 
-        origProduced = params.getOrDefault("Produced", "1");
-        this.manaRestrictions = params.getOrDefault("RestrictValid", "");
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        origProduced = MapUtil.getOrDefault(params, "Produced", "1");
+        String restrictValid = params.get("RestrictValid");
+        this.manaRestrictions = restrictValid != null ? restrictValid : "";
         this.cannotCounterSpell = params.get("AddsNoCounter");
         this.addsKeywords = params.get("AddsKeywords");
         this.addsKeywordsType = params.get("AddsKeywordsValid");

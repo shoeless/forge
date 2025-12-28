@@ -558,7 +558,8 @@ public class AiAttackController {
                 if (bestBand != null) {
                     GameEntity defender = combat.getDefenderByAttacker(bestBand);
                     if (attackMax == -1) {
-                        attackMax = restrict.getDefenderMax().getOrDefault(defender, -1);
+                        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                        attackMax = MapUtil.getOrDefault(restrict.getDefenderMax(), defender, -1);
                     }
 
                     if (attackMax == -1 || attackMax > combat.getAttackers().size()) {
@@ -871,6 +872,19 @@ public class AiAttackController {
         final boolean lightmineField = ai.getGame().isCardInPlay("Lightmine Field");
         // TODO: detect Season of the Witch by presence of a card with a specific trigger
         final boolean seasonOfTheWitch = ai.getGame().isCardInPlay("Season of the Witch");
+
+        GlobalAttackRestrictions restrict = combat.getAttackConstraints().getGlobalRestrictions();
+        int attackMax = restrict.getMax();
+        if (attackMax == -1) {
+            // check with the local limitations vs. the chosen defender
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            attackMax = MapUtil.getOrDefault(restrict.getDefenderMax(), defender, -1);
+        }
+
+        if (attackMax == 0) {
+            // can't attack anymore
+            return aiAggression;
+        }
 
         final Queue<Card> attackersLeft = new ConcurrentLinkedQueue<>(this.attackers);
 

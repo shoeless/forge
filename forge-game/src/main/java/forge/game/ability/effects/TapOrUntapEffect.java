@@ -72,7 +72,13 @@ public class TapOrUntapEffect extends SpellAbilityEffect {
             if (tap) {
                 if (gameCard.tap(true, sa, tapper)) tapped.add(gameCard);
             } else if (gameCard.untap()) {
-                untapMap.computeIfAbsent(tapper, i -> new CardCollection()).add(gameCard);
+                // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                CardCollection cards = untapMap.get(tapper);
+                if (cards == null) {
+                    cards = new CardCollection();
+                    untapMap.put(tapper, cards);
+                }
+                cards.add(gameCard);
             }
         }
         if (!untapMap.isEmpty()) {

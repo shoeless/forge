@@ -627,12 +627,13 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
     @Override
     public String toString() {
         if (calculatedType == null) {
-            StringBuilder sb = new StringBuilder(StringUtils.join(getTypesBeforeDash(), ' '));
+            // iOS compatibility: Replace StringUtils.join (uses java.util.Spliterators internally)
+            StringBuilder sb = new StringBuilder(IterableUtil.join(" ", getTypesBeforeDash()));
             if (!subtypes.isEmpty() || hasAllCreatureTypes()) {
                 sb.append(" - ");
             }
             if (!subtypes.isEmpty()) {
-                sb.append(StringUtils.join(subtypes, " "));
+                sb.append(IterableUtil.join(" ", subtypes));
             }
             if (hasAllCreatureTypes()) {
                 if (!subtypes.isEmpty()) {

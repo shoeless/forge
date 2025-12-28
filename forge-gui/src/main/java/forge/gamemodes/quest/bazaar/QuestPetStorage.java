@@ -83,16 +83,17 @@ public class QuestPetStorage {
 
     /**
      * TODO: Write javadoc for this method.
-     * 
+     *
      * @param petCtrl
      */
     private void addToMap(final QuestPetController petCtrl) {
         final int iSlot = petCtrl.getSlot();
-        /*
-        * Refactoring this to List<QuestPetController> list = this.petsBySlot.computeIfAbsent(Integer.valueOf(iSlot), k -> new ArrayList<QuestPetController>());
-        * will cause Android not to compile
-        * */
-        List<QuestPetController> list = this.petsBySlot.computeIfAbsent(iSlot, k -> new ArrayList<>());
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        List<QuestPetController> list = this.petsBySlot.get(iSlot);
+        if (list == null) {
+            list = new ArrayList<>();
+            this.petsBySlot.put(iSlot, list);
+        }
         this.petsByName.put(petCtrl.getName(), petCtrl);
         list.add(petCtrl);
     }

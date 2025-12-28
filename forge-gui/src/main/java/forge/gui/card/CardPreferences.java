@@ -26,7 +26,12 @@ public class CardPreferences {
 
     public static CardPreferences getPrefs(IPaperCard card) {
         String cardName = card.getName();
-        CardPreferences prefs = allPrefs.computeIfAbsent(cardName, CardPreferences::new);
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        CardPreferences prefs = allPrefs.get(cardName);
+        if (prefs == null) {
+            prefs = new CardPreferences(cardName);
+            allPrefs.put(cardName, prefs);
+        }
         return prefs;
     }
 

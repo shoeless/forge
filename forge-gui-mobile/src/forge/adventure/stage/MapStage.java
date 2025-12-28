@@ -40,6 +40,7 @@ import forge.screens.TransitionScreen;
 import forge.sound.SoundEffectType;
 import forge.sound.SoundSystem;
 import forge.util.IterableUtil;
+import forge.util.MapUtil;
 
 import java.util.*;
 import java.util.Queue;
@@ -1199,7 +1200,8 @@ public class MapStage extends GameStage {
     }
 
     public int getQuestFlag(String key) {
-        return (int) changes.getMapFlags().getOrDefault(key, (byte) 0);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        return (int) MapUtil.getOrDefault(changes.getMapFlags(), key, (byte) 0);
     }
 
     public void resetQuestFlags() {

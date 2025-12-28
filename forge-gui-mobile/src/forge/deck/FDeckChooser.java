@@ -140,6 +140,7 @@ public class FDeckChooser extends FScreen {
         btnNewDeck.setCommand(event -> createNewDeck());
         btnEditDeck.setCommand(event -> editSelectedDeck());
         btnViewDeck.setCommand(event -> {
+            System.err.println("DEBUG: View Deck button clicked, selectedDeckType=" + selectedDeckType);
             if (selectedDeckType != DeckType.STANDARD_COLOR_DECK && selectedDeckType != DeckType.STANDARD_CARDGEN_DECK
                     && selectedDeckType != DeckType.PIONEER_CARDGEN_DECK && selectedDeckType != DeckType.HISTORIC_CARDGEN_DECK
                     && selectedDeckType != DeckType.MODERN_CARDGEN_DECK && selectedDeckType != DeckType.LEGACY_CARDGEN_DECK
@@ -147,7 +148,17 @@ public class FDeckChooser extends FScreen {
                     && selectedDeckType != DeckType.PAUPER_CARDGEN_DECK && selectedDeckType != DeckType.PAUPER_COLOR_DECK
                     && selectedDeckType != DeckType.COLOR_DECK && selectedDeckType != DeckType.THEME_DECK
                     && selectedDeckType != DeckType.RANDOM_COMMANDER_DECK && selectedDeckType != DeckType.RANDOM_CARDGEN_COMMANDER_DECK) {
-                FDeckViewer.show(getDeck(), false, DeckType.DRAFT_DECK.equals(selectedDeckType));
+                try {
+                    System.err.println("DEBUG: About to call getDeck()");
+                    Deck deck = getDeck();
+                    System.err.println("DEBUG: getDeck() returned, deck=" + (deck == null ? "null" : deck.getName()));
+                    System.err.println("DEBUG: About to call FDeckViewer.show()");
+                    FDeckViewer.show(deck, false, DeckType.DRAFT_DECK.equals(selectedDeckType));
+                    System.err.println("DEBUG: FDeckViewer.show() completed successfully");
+                } catch (Exception e) {
+                    System.err.println("DEBUG: Exception caught in btnViewDeck handler:");
+                    e.printStackTrace(System.err);
+                }
             }
         });
         btnRandom.setCommand(event -> {

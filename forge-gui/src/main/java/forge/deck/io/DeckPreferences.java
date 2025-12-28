@@ -117,7 +117,12 @@ public class DeckPreferences {
 
     public static DeckPreferences getPrefs(DeckProxy deck) {
         String key = deck.getUniqueKey();
-        DeckPreferences prefs = allPrefs.computeIfAbsent(key, k -> new DeckPreferences());
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        DeckPreferences prefs = allPrefs.get(key);
+        if (prefs == null) {
+            prefs = new DeckPreferences();
+            allPrefs.put(key, prefs);
+        }
         return prefs;
     }
 

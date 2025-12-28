@@ -159,8 +159,9 @@ public class ConquestUtil {
         Collections.sort(out, new Comparator<CardEdition>() {
             @Override
             public int compare(CardEdition e1, CardEdition e2) {
-                int stat1 = editionStats.getOrDefault(e1, 0);
-                int stat2 = editionStats.getOrDefault(e2, 0);
+                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                int stat1 = MapUtil.getOrDefault(editionStats, e1, 0);
+                int stat2 = MapUtil.getOrDefault(editionStats, e2, 0);
                 return Integer.compare(stat1, stat2);
             }
         });

@@ -703,8 +703,9 @@ public class AbilityUtils {
                 }
                 else if (calcX[0].startsWith("TriggerObjects")) {
                     final SpellAbility root = sa.getRootAbility();
-                    list = IterableUtil.filter((Iterable<?>) root.getTriggeringObjects().getOrDefault(
-                            (AbilityKey.fromString(calcX[0].substring(14))), new CardCollection()), Card.class);
+                    // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                    Object triggerObj = MapUtil.getOrDefault(root.getTriggeringObjects(), AbilityKey.fromString(calcX[0].substring(14)), new CardCollection());
+                    list = IterableUtil.filter((Iterable<?>) triggerObj, Card.class);
                 }
                 // CardTriggered<AbilityKey> used to bypass AbilityKeys that could also be Player above
                 else if (calcX[0].startsWith("Triggered") || (calcX[0].startsWith("CardTriggered"))) {
@@ -2444,7 +2445,8 @@ public class AbilityUtils {
 
         if (sq[0].equals("DraftNotesHighest")) {
             // Just in case you are playing this card in a deck without draft notes
-            String note = player.getDraftNotes().getOrDefault(sq[1],  "0");
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            String note = MapUtil.getOrDefault(player.getDraftNotes(), sq[1], "0");
             int highest = 0;
             for (String n : note.split(",")) {
                 int num = Integer.parseInt(n);
@@ -2460,7 +2462,8 @@ public class AbilityUtils {
 
         if (sq[0].equals("DraftNotesCount")) {
             // Just in case you are playing this card in a deck without draft notes
-            String note = player.getDraftNotes().getOrDefault(sq[1],  null);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            String note = MapUtil.getOrDefault(player.getDraftNotes(), sq[1], null);
 
             if (note == null) {
                 return 0;

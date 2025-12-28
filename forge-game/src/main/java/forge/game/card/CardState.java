@@ -992,7 +992,13 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     }
 
     public SpellAbility getAbilityForTrigger(String svar) {
-        return abilityForTrigger.computeIfAbsent(svar, s -> AbilityFactory.getAbility(getCard(), s, this));
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        SpellAbility ability = abilityForTrigger.get(svar);
+        if (ability == null) {
+            ability = AbilityFactory.getAbility(getCard(), svar, this);
+            abilityForTrigger.put(svar, ability);
+        }
+        return ability;
     }
 
     @Override

@@ -9,6 +9,7 @@ import forge.game.card.Card;
 import forge.game.spellability.SpellAbility;
 import forge.util.Expressions;
 import forge.util.Localizer;
+import forge.util.MapUtil;
 
 public class TriggerRolledDie extends Trigger {
 
@@ -25,7 +26,8 @@ public class TriggerRolledDie extends Trigger {
             return false;
         }
         if (hasParam("RolledToVisitAttractions")) {
-            if (!(boolean) runParams.getOrDefault(AbilityKey.RolledToVisitAttractions, false))
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            if (!((boolean) MapUtil.getOrDefault(runParams, AbilityKey.RolledToVisitAttractions, false)))
                 return false;
         }
         if (hasParam("ValidResult")) {

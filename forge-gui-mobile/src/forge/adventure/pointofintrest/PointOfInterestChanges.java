@@ -3,6 +3,7 @@ package forge.adventure.pointofintrest;
 import forge.adventure.util.Current;
 import forge.adventure.util.SaveFileContent;
 import forge.adventure.util.SaveFileData;
+import forge.util.MapUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -125,7 +126,8 @@ public class PointOfInterestChanges implements SaveFileContent  {
     }
 
     public float getShopPriceModifier(int objectID){
-        int shopRep = reputation.getOrDefault(objectID, 0);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        int shopRep = MapUtil.getOrDefault(reputation, objectID, 0);
 
         shopRep = Integer.min(maxRepToApply, (Integer.max(-maxRepToApply, shopRep)));
 
@@ -136,7 +138,8 @@ public class PointOfInterestChanges implements SaveFileContent  {
     float priceModifierPerRep = 0.005f;
 
     public float getTownPriceModifier(){
-        int townRep = reputation.getOrDefault(0, 0);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        int townRep = MapUtil.getOrDefault(reputation, 0, 0);
 
         townRep = Integer.min(maxRepToApply, (Integer.max(-maxRepToApply, townRep)));
 
@@ -150,7 +153,8 @@ public class PointOfInterestChanges implements SaveFileContent  {
 
     public void addObjectReputation(int id, int delta)
     {
-        reputation.put(id, (reputation.getOrDefault(id, 0)) + delta);
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        reputation.put(id, MapUtil.getOrDefault(reputation, id, 0) + delta);
     }
 
     public int getMapReputation(){

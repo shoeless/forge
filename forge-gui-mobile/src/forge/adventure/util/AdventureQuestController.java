@@ -15,6 +15,7 @@ import forge.adventure.stage.GameStage;
 import forge.adventure.stage.MapStage;
 import forge.adventure.world.WorldSave;
 import forge.util.Aggregates;
+import forge.util.MapUtil;
 
 import java.io.Serializable;
 import java.util.*;
@@ -106,8 +107,8 @@ public class AdventureQuestController implements Serializable {
                     if (!toBoost.isEmpty()) {
                         float value = totalWeightToAssign / toBoost.size();
                         for (String key : toBoost) {
-                            float existingValue = boostedSpawns.getOrDefault(key, 0.0f);
-                                boostedSpawns.put(key, value + existingValue);
+                            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                            boostedSpawns.put(key, value + MapUtil.getOrDefault(boostedSpawns, key, 0.0f));
                         }
                     }
                 }

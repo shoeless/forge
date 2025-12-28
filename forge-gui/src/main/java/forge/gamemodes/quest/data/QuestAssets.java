@@ -157,7 +157,12 @@ public class QuestAssets {
      * @param level int
      */
     public final void setPetLevel(final String name, final int level) {
-        QuestItemCondition cond = this.combatPets.computeIfAbsent(name, k -> new QuestItemCondition());
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        QuestItemCondition cond = this.combatPets.get(name);
+        if (cond == null) {
+            cond = new QuestItemCondition();
+            this.combatPets.put(name, cond);
+        }
         // pets have only level that should be serialized for now
         cond.setLevel(level);
     }

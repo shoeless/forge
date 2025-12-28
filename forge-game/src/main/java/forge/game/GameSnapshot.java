@@ -15,6 +15,7 @@ import forge.game.spellability.SpellAbilityStackInstance;
 import forge.game.trigger.TriggerType;
 import forge.game.zone.PlayerZoneBattlefield;
 import forge.game.zone.ZoneType;
+import forge.util.MapUtil;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -225,7 +226,8 @@ public class GameSnapshot {
 
         for (SpellAbilityStackInstance origEntry : fromGame.getStack()) {
             int id = origEntry.getId();
-            SpellAbilityStackInstance instance = stackIds.getOrDefault(id, null);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            SpellAbilityStackInstance instance = MapUtil.getOrDefault(stackIds, id, null);
 
             if (instance != null) {
                 if (!restore) {

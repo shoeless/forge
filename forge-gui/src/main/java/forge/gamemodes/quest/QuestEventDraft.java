@@ -48,6 +48,7 @@ import forge.model.CardBlock;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
 import forge.util.IterableUtil;
+import forge.util.MapUtil;
 import forge.util.MyRandom;
 import forge.util.NameGenerator;
 import forge.util.TextUtil;
@@ -295,10 +296,10 @@ public class QuestEventDraft implements IQuestEvent {
         int boosterPrices = 0;
 
         for (final String boosterSet : boosterConfiguration.split("/")) {
-            int value;
             final String boosterName = FModel.getMagicDb().getEditions().get(boosterSet).getName() + " Booster Pack";
 
-            value = MAP_PRICES.getOrDefault(boosterName, 395);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            int value = MapUtil.getOrDefault(MAP_PRICES, boosterName, 395);
 
             boosterPrices += value;
         }
@@ -517,13 +518,10 @@ public class QuestEventDraft implements IQuestEvent {
     }
 
     private static int getBoosterPrice(final BoosterPack booster) {
-        int value;
-
         final String boosterName = booster.getName();
 
-        value = MAP_PRICES.getOrDefault(boosterName, 395);
-
-        return value;
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        return MapUtil.getOrDefault(MAP_PRICES, boosterName, 395);
     }
 
     public boolean playerHasMatchesLeft() {
@@ -926,10 +924,10 @@ public class QuestEventDraft implements IQuestEvent {
 
         for (final String boosterSet : boosters) {
 
-            int value;
             final String boosterName = FModel.getMagicDb().getEditions().get(boosterSet).getName() + " Booster Pack";
 
-            value = MAP_PRICES.getOrDefault(boosterName, 395);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            int value = MapUtil.getOrDefault(MAP_PRICES, boosterName, 395);
 
             entryFee += value;
 

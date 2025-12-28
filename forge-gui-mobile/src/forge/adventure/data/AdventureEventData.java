@@ -462,20 +462,63 @@ public class AdventureEventData implements Serializable {
                 //2. Fill remaining slots with colors already picked whenever possible
                 Map<String, List<Deck>> colorMap = new HashMap<>();
                 for (Deck option : availableOptions) {
-                    if (option.getTags().contains("black"))
-                        colorMap.computeIfAbsent("black", (k) -> new ArrayList<>()).add(option);
-                    if (option.getTags().contains("blue"))
-                        colorMap.computeIfAbsent("blue", (k) -> new ArrayList<>()).add(option);
-                    if (option.getTags().contains("green"))
-                        colorMap.computeIfAbsent("green", (k) -> new ArrayList<>()).add(option);
-                    if (option.getTags().contains("red"))
-                        colorMap.computeIfAbsent("red", (k) -> new ArrayList<>()).add(option);
-                    if (option.getTags().contains("white"))
-                        colorMap.computeIfAbsent("white", (k) -> new ArrayList<>()).add(option);
-                    if (option.getTags().contains("multicolor"))
-                        colorMap.computeIfAbsent("multicolor", (k) -> new ArrayList<>()).add(option);
-                    if (option.getTags().contains("colorless"))
-                        colorMap.computeIfAbsent("colorless", (k) -> new ArrayList<>()).add(option);
+                    // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                    if (option.getTags().contains("black")) {
+                        List<Deck> list = colorMap.get("black");
+                        if (list == null) {
+                            list = new ArrayList<>();
+                            colorMap.put("black", list);
+                        }
+                        list.add(option);
+                    }
+                    if (option.getTags().contains("blue")) {
+                        List<Deck> list = colorMap.get("blue");
+                        if (list == null) {
+                            list = new ArrayList<>();
+                            colorMap.put("blue", list);
+                        }
+                        list.add(option);
+                    }
+                    if (option.getTags().contains("green")) {
+                        List<Deck> list = colorMap.get("green");
+                        if (list == null) {
+                            list = new ArrayList<>();
+                            colorMap.put("green", list);
+                        }
+                        list.add(option);
+                    }
+                    if (option.getTags().contains("red")) {
+                        List<Deck> list = colorMap.get("red");
+                        if (list == null) {
+                            list = new ArrayList<>();
+                            colorMap.put("red", list);
+                        }
+                        list.add(option);
+                    }
+                    if (option.getTags().contains("white")) {
+                        List<Deck> list = colorMap.get("white");
+                        if (list == null) {
+                            list = new ArrayList<>();
+                            colorMap.put("white", list);
+                        }
+                        list.add(option);
+                    }
+                    if (option.getTags().contains("multicolor")) {
+                        List<Deck> list = colorMap.get("multicolor");
+                        if (list == null) {
+                            list = new ArrayList<>();
+                            colorMap.put("multicolor", list);
+                        }
+                        list.add(option);
+                    }
+                    if (option.getTags().contains("colorless")) {
+                        List<Deck> list = colorMap.get("colorless");
+                        if (list == null) {
+                            list = new ArrayList<>();
+                            colorMap.put("colorless", list);
+                        }
+                        list.add(option);
+                    }
                 }
 
                 done = false;

@@ -20,6 +20,7 @@ import forge.game.player.PlayerController;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
 import forge.util.Localizer;
+import forge.util.MapUtil;
 import forge.util.TextUtil;
 
 public class CountersMoveEffect extends SpellAbilityEffect {
@@ -360,7 +361,8 @@ public class CountersMoveEffect extends SpellAbilityEffect {
         if (cnum > 0) {
             src.subtractCounter(cType, cnum, activator);
             game.updateLastStateForCard(src);
-            countersToAdd.put(cType, (countersToAdd.getOrDefault(cType, 0)) + cnum);
+            // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+            countersToAdd.put(cType, MapUtil.getOrDefault(countersToAdd, cType, 0) + cnum);
         }
     }
 }

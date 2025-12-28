@@ -33,6 +33,7 @@ import forge.game.card.Card;
 import forge.game.player.Player;
 import forge.game.zone.ZoneType;
 import forge.util.Lang;
+import forge.util.MapUtil;
 import forge.util.TextUtil;
 
 /**
@@ -131,8 +132,9 @@ public class TargetRestrictions {
     public TargetRestrictions(Map<String, String> mapParams) {
         this.originalValidTgts = mapParams.get("ValidTgts").split(",");
         this.validTgts = this.originalValidTgts.clone();
-        this.minTargets = mapParams.getOrDefault("TargetMin", "1");
-        this.maxTargets = mapParams.getOrDefault("TargetMax", "1");
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        this.minTargets = MapUtil.getOrDefault(mapParams, "TargetMin", "1");
+        this.maxTargets = MapUtil.getOrDefault(mapParams, "TargetMax", "1");
 
         if (mapParams.containsKey("ValidTgtsDesc")) {
             this.validTgtsDesc = mapParams.get("ValidTgtsDesc");

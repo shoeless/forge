@@ -1886,17 +1886,23 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public boolean createCounterStatic(CounterType counterType) {
         StaticAbility result;
         if (counterType.is(CounterEnumType.MANABOND)) {
-            result = counterTypeKeywordStatic.computeIfAbsent(counterType, ct -> {
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            result = counterTypeKeywordStatic.get(counterType);
+            if (result == null) {
                 String s = "Mode$ Continuous | AffectedDefined$ Self | EffectZone$ All | AddType$ Land | RemoveCardTypes$ True | RemoveSubTypes$ True | RemoveAllAbilities$ True | AddAbility$ ManaReflected";
                 StaticAbility stAb = StaticAbility.create(s, this, currentState, true);
                 String abStr = "AB$ ManaReflected | Cost$ T | Valid$ Defined.Self | ColorOrType$ Color | ReflectProperty$ Is | SpellDescription$ Add one mana of any of this card's colors.";
                 stAb.setSVar("ManaReflected", abStr);
-                return stAb;
-            });
+                result = stAb;
+                counterTypeKeywordStatic.put(counterType, result);
+            }
         } else if (counterType.isKeywordCounter()) {
-            result = counterTypeKeywordStatic.computeIfAbsent(counterType, ct -> {
-                return StaticAbility.create("Mode$ Continuous | AffectedDefined$ Self | EffectZone$ All | AddKeyword$ " + ct.toString(), this, currentState, true);
-            });
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            result = counterTypeKeywordStatic.get(counterType);
+            if (result == null) {
+                result = StaticAbility.create("Mode$ Continuous | AffectedDefined$ Self | EffectZone$ All | AddKeyword$ " + counterType.toString(), this, currentState, true);
+                counterTypeKeywordStatic.put(counterType, result);
+            }
 
             if (!Keyword.smartValueOf(counterType.toString().split(":")[0]).isMultipleRedundant()) {
                 result.putParam("KeywordMultiplier", String.valueOf(getCounters(counterType)));
@@ -6475,8 +6481,10 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 damageType = DamageType.M1M1Counters;
             }
             else { // 120.3e
-                int old = damage.getOrDefault(Objects.hash(source.getId(), source.getGameTimestamp()), 0);
-                damage.put(Objects.hash(source.getId(), source.getGameTimestamp()), old + damageIn);
+                // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                Integer damageKey = Objects.hash(source.getId(), source.getGameTimestamp());
+                int old = MapUtil.getOrDefault(damage, damageKey, 0);
+                damage.put(damageKey, old + damageIn);
                 view.updateDamage(this);
             }
 
@@ -8139,14 +8147,29 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 }
             }
         } else {
-            List<String> result = chosenModesTurn.computeIfAbsent(original, k -> Lists.newArrayList());
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            List<String> result = chosenModesTurn.get(original);
+            if (result == null) {
+                result = Lists.newArrayList();
+                chosenModesTurn.put(original, result);
+            }
             result.add(mode);
 
-            result = chosenModesGame.computeIfAbsent(original, k -> Lists.newArrayList());
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            result = chosenModesGame.get(original);
+            if (result == null) {
+                result = Lists.newArrayList();
+                chosenModesGame.put(original, result);
+            }
             result.add(mode);
 
             if (yourCombat) {
-                result = chosenModesYourCombat.computeIfAbsent(original, k -> Lists.newArrayList());
+                // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                result = chosenModesYourCombat.get(original);
+                if (result == null) {
+                    result = Lists.newArrayList();
+                    chosenModesYourCombat.put(original, result);
+                }
                 result.add(mode);
             }
         }

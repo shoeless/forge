@@ -41,6 +41,7 @@ import forge.game.spellability.SpellAbility;
 import forge.game.trigger.Trigger;
 import forge.game.zone.ZoneType;
 import forge.util.IterableUtil;
+import forge.util.MapUtil;
 import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;
 
@@ -298,7 +299,9 @@ public final class StaticAbilityContinuous {
                 }
 
                 if (params.containsKey("FromDraftNotes")) {
-                    addKeywords = Lists.newArrayList(hostCard.getController().getDraftNotes().getOrDefault(params.get("FromDraftNotes"), "").split(","));
+                    // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+                    String draftNotes = MapUtil.getOrDefault(hostCard.getController().getDraftNotes(), params.get("FromDraftNotes"), "");
+                    addKeywords = Lists.newArrayList(draftNotes.split(","));
                 }
             } else if (params.containsKey("ShareRememberedKeywords")) {
                 List<String> kwToShare = Lists.newArrayList();

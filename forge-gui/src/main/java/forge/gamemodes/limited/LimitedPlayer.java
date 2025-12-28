@@ -13,6 +13,7 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.util.IterableUtil;
+import forge.util.MapUtil;
 import forge.util.TextUtil;
 
 import java.util.*;
@@ -178,7 +179,12 @@ public class LimitedPlayer {
         if ((playerFlags & SearcherNoteNext) == SearcherNoteNext) {
             addLog(name() + " revealed " + bestPick.getDisplayName() + " for Aether Searcher.");
             playerFlags &= ~SearcherNoteNext;
-            List<String> note = noted.computeIfAbsent("Aether Searcher", k -> Lists.newArrayList());
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            List<String> note = noted.get("Aether Searcher");
+            if (note == null) {
+                note = Lists.newArrayList();
+                noted.put("Aether Searcher", note);
+            }
             note.add(String.valueOf(bestPick.getName()));
         }
 
@@ -186,7 +192,12 @@ public class LimitedPlayer {
             if (revealWithSmuggler(bestPick)) {
                 addLog(name() + " revealed " + bestPick.getDisplayName() + " for Smuggler Captain.");
                 playerFlags &= ~SmugglerCaptainActive;
-                List<String> note = noted.computeIfAbsent("Smuggler Captain", k -> Lists.newArrayList());
+                // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                List<String> note = noted.get("Smuggler Captain");
+                if (note == null) {
+                    note = Lists.newArrayList();
+                    noted.put("Smuggler Captain", note);
+                }
                 note.add(String.valueOf(bestPick.getName()));
             }
         }
@@ -294,7 +305,12 @@ public class LimitedPlayer {
             }
 
             if (Iterables.contains(draftActions, "Note how many cards you've drafted this draft round, including CARDNAME.")) {
-                List<String> note = noted.computeIfAbsent(bestPick.getName(), k -> Lists.newArrayList());
+                // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                List<String> note = noted.get(bestPick.getName());
+                if (note == null) {
+                    note = Lists.newArrayList();
+                    noted.put(bestPick.getName(), note);
+                }
                 note.add(String.valueOf(draftedThisRound));
 
                 addLog(name() + " revealed " + bestPick.getDisplayName() + " and noted " + draftedThisRound + " cards drafted this round.");
@@ -317,7 +333,12 @@ public class LimitedPlayer {
                 chosenColors.add(c);
                 availableColors.remove(c);
 
-                List<String> note = noted.computeIfAbsent(bestPick.getName(), k -> Lists.newArrayList());
+                // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                List<String> note = noted.get(bestPick.getName());
+                if (note == null) {
+                    note = Lists.newArrayList();
+                    noted.put(bestPick.getName(), note);
+                }
                 note.add(IterableUtil.join(",", chosenColors));
 
                 addLog(name() + " revealed " + bestPick.getDisplayName() + " and noted " + IterableUtil.join(",", chosenColors) + " chosen colors.");
@@ -326,7 +347,12 @@ public class LimitedPlayer {
                 if (Iterables.contains(draftActions, "You may look at the next card drafted from this booster pack.")) {
                     playerFlags |= SpyNextCardDrafted;
                 } else if (fromPlayer != null && Iterables.contains(draftActions, "Note the player who passed CARDNAME to you.")) {
-                    List<String> note = noted.computeIfAbsent(bestPick.getName(), k -> Lists.newArrayList());
+                    // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+                    List<String> note = noted.get(bestPick.getName());
+                    if (note == null) {
+                        note = Lists.newArrayList();
+                        noted.put(bestPick.getName(), note);
+                    }
                     note.add(String.valueOf(fromPlayer.order));
                     addLog(name() + " revealed " + bestPick.getDisplayName() + " and noted " + fromPlayer.name() + " passed it.");
                 } else if (Iterables.contains(draftActions, "Reveal the next card you draft and note its name.")) {
@@ -474,7 +500,12 @@ public class LimitedPlayer {
     }
 
     public void recordRemoveFromDraft(PaperCard bestPick, String host) {
-        List<String> note = noted.computeIfAbsent(host, k -> Lists.newArrayList());
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        List<String> note = noted.get(host);
+        if (note == null) {
+            note = Lists.newArrayList();
+            noted.put(host, note);
+        }
 
         if (host.equals("Animus of Predation")) {
             if (!bestPick.getRules().getType().isCreature()) {
@@ -561,7 +592,12 @@ public class LimitedPlayer {
         }
 
         // As you draft a creature card, you may reveal it, note its name, then turn CARDNAME face down.
-        List<String> note = noted.computeIfAbsent(found.getName(), k -> Lists.newArrayList());
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        List<String> note = noted.get(found.getName());
+        if (note == null) {
+            note = Lists.newArrayList();
+            noted.put(found.getName(), note);
+        }
         revealed.add(bestPick);
         note.add(bestPick.getName());
         addLog(name() + " revealed " + bestPick.getDisplayName() + " and noted its name for Noble Banneret.");
@@ -610,7 +646,12 @@ public class LimitedPlayer {
         }
 
         // As you draft a creature card, you may reveal it, note its name, then turn CARDNAME face down.
-        List<String> note = noted.computeIfAbsent(found.getName(), k -> Lists.newArrayList());
+        // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+        List<String> note = noted.get(found.getName());
+        if (note == null) {
+            note = Lists.newArrayList();
+            noted.put(found.getName(), note);
+        }
         revealed.add(bestPick);
         note.addAll(bestPick.getRules().getType().getCreatureTypes());
         addLog(name() + " revealed " + bestPick.getDisplayName() + " and noted - " + TextUtil.join(bestPick.getRules().getType().getCreatureTypes(), ",") + " for Paliano Vanguard.");
@@ -705,7 +746,13 @@ public class LimitedPlayer {
         addLog(name() + " reveals " + drafted.getDisplayName() + " from " + guesser.name() + "'s guess of " + guess.getDisplayName() + " with Spire Phantasm.");
         if (guess.equals(drafted)) {
             addLog(guesser.name() + " correctly guessed " + guess.getDisplayName() + " with Spire Phantasm.");
-            guesser.getDraftNotes().computeIfAbsent("Spire Phantasm", k -> Lists.newArrayList()).add(guess.getName());
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            List<String> note = guesser.getDraftNotes().get("Spire Phantasm");
+            if (note == null) {
+                note = Lists.newArrayList();
+                guesser.getDraftNotes().put("Spire Phantasm", note);
+            }
+            note.add(guess.getName());
         } else {
             addLog(guesser.name() + " incorrectly guessed " + guess.getDisplayName() + " with Spire Phantasm.");
         }
@@ -815,15 +862,29 @@ public class LimitedPlayer {
         deck.get(DeckSection.Sideboard).add(offer);
 
         // Exchange noted information
-        player.getDraftNotes().getOrDefault(offer.getName(), Lists.newArrayList()).forEach(note -> {
-            List<String> noteList = noted.computeIfAbsent(offer.getName(), k -> Lists.newArrayList());
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        List<String> offerNotes = MapUtil.getOrDefault(player.getDraftNotes(), offer.getName(), Lists.newArrayList());
+        for (String note : offerNotes) {
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            List<String> noteList = noted.get(offer.getName());
+            if (noteList == null) {
+                noteList = Lists.newArrayList();
+                noted.put(offer.getName(), noteList);
+            }
             noteList.add(note);
-        });
+        }
 
-        this.getDraftNotes().getOrDefault(exchangeCard.getName(), Lists.newArrayList()).forEach(note -> {
-            List<String> noteList = player.getDraftNotes().computeIfAbsent(exchangeCard.getName(), k -> Lists.newArrayList());
+        // iOS compatibility: Replace getOrDefault (Java 8 Map method)
+        List<String> exchangeNotes = MapUtil.getOrDefault(this.getDraftNotes(), exchangeCard.getName(), Lists.newArrayList());
+        for (String note : exchangeNotes) {
+            // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
+            List<String> noteList = player.getDraftNotes().get(exchangeCard.getName());
+            if (noteList == null) {
+                noteList = Lists.newArrayList();
+                player.getDraftNotes().put(exchangeCard.getName(), noteList);
+            }
             noteList.add(note);
-        });
+        }
     }
 
     public void debugPrint(String text) {
