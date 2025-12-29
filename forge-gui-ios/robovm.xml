@@ -13,6 +13,12 @@
     <resource>
       <directory>res</directory>
     </resource>
+    <resource>
+      <directory>.</directory>
+      <includes>
+        <include>Icon*.png</include>
+      </includes>
+    </resource>
   </resources>
   <target>ios</target>
   <iosInfoPList>Info.plist.xml</iosInfoPList>

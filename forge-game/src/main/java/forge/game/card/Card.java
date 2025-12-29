@@ -3376,7 +3376,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                     sbAfter.append("exile it haunting target creature.");
                     sbAfter.append(")");
                     sbAfter.append("\r\n");
-                } else if (keyword.startsWith("Splice") && inst instanceof KeywordWithCostAndType splice) {
+                // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                } else if (keyword.startsWith("Splice") && inst instanceof KeywordWithCostAndType) {
+                    KeywordWithCostAndType splice = (KeywordWithCostAndType) inst;
                     sbAfter.append(splice.getTitle()).append(" (").append(inst.getReminderText()).append(")").append("\r\n");
                 } else if (keyword.equals("Storm")) {
                     sbAfter.append("Storm (");
@@ -5609,7 +5611,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 if (inst.hasSVar(s)) {
                     count += AbilityUtils.calculateAmount(this, inst.getSVar(s), null);
                 } else {
-                    String svar = StringUtils.join(parse);
+                    // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+                    String svar = IterableUtil.join("", parse);
                     if (state.hasSVar(svar)) {
                         count += AbilityUtils.calculateAmount(this, state.getSVar(svar), null);
                     }
@@ -5656,7 +5659,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (MagicColor.fromName(newWord) == 0) {
             throw new RuntimeException("Not a color: " + newWord);
         }
-        changedTextColors.add(timestamp, staticId, StringUtils.capitalize(originalWord), StringUtils.capitalize(newWord));
+        changedTextColors.add(timestamp, staticId, TextUtil.capitalize(originalWord), TextUtil.capitalize(newWord));
 
         updateChangedText();
     }
@@ -7130,7 +7133,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             ability.add(inst.getOriginal());
         }
         Collections.sort(ability);
-        return StringUtils.join(ability.toArray(), ","); //fix nosuchmethod on some android devices...
+        // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+        return IterableUtil.join(",", ability);
     }
 
     public Zone getZone() {

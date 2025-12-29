@@ -8,7 +8,6 @@ import java.util.Set;
 
 import forge.game.card.*;
 import forge.util.Lang;
-import org.apache.commons.lang3.StringUtils;
 
 import forge.card.mana.ManaCost;
 import forge.game.Game;
@@ -25,6 +24,7 @@ import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
 import forge.game.zone.ZoneType;
 import forge.util.Aggregates;
+import forge.util.IterableUtil;
 import forge.util.Localizer;
 
 public class SacrificeEffect extends SpellAbilityEffect {
@@ -67,7 +67,8 @@ public class SacrificeEffect extends SpellAbilityEffect {
             boolean isPaid = activator.getController().payCostToPreventEffect(payCost, sa, false, new PlayerCollection(activator));
             final Map<AbilityKey, Object> runParams = AbilityKey.mapFromCard(host);
             runParams.put(AbilityKey.CumulativeUpkeepPaid, isPaid);
-            runParams.put(AbilityKey.PayingMana, StringUtils.join(sa.getPayingMana(), ""));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            runParams.put(AbilityKey.PayingMana, IterableUtil.joinObjects("", sa.getPayingMana()));
             game.getTriggerHandler().runTrigger(TriggerType.PayCumulativeUpkeep, runParams, false);
             if (isPaid || !host.getController().equals(activator)) {
                 return;

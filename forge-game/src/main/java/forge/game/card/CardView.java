@@ -892,7 +892,8 @@ public class CardView extends GameEntityView {
         Set<Integer> attractionLights = get(TrackableProperty.AttractionLights);
         if (attractionLights != null && !attractionLights.isEmpty()) {
             sb.append("\r\n\r\nLights: ");
-            sb.append(StringUtils.join(attractionLights, ", "));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            sb.append(IterableUtil.joinObjects(", ", attractionLights));
         }
 
         sb.append(getRemembered());

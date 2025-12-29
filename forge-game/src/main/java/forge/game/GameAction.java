@@ -76,8 +76,10 @@ public class GameAction {
 
     private boolean holdCheckingStaticAbilities = false;
 
-    private final static Comparator<StaticAbility> effectOrder = Comparator.comparing(StaticAbility::isCharacteristicDefining).reversed()
-            .thenComparing(StaticAbility::getTimestamp);
+    // iOS compatibility: Use ComparatorUtil instead of Comparator.comparing
+    private final static Comparator<StaticAbility> effectOrder = forge.util.ComparatorUtil.thenComparing(
+            forge.util.ComparatorUtil.reversed(forge.util.ComparatorUtil.comparing(sa -> sa.isCharacteristicDefining())),
+            forge.util.ComparatorUtil.comparingLong(sa -> sa.getTimestamp()));
 
     public GameAction(Game game0) {
         game = game0;

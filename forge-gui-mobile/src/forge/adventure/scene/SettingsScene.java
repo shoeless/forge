@@ -17,14 +17,9 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.sound.SoundSystem;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Stream;
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 /**
  * Scene to handle settings of the base forge and adventure mode
@@ -39,20 +34,37 @@ public class SettingsScene extends UIScene {
     TextField newPlaneName;
     Dialog createNewPlane, copyPlane, errorDialog, restartDialog;
 
+    // iOS compatibility: Recursive directory copy using File API instead of Files.walk() stream
+    private boolean copyDirectoryRecursive(File source, File destination) throws IOException {
+        if (source.isDirectory()) {
+            if (!destination.exists() && !destination.mkdirs()) {
+                return false;
+            }
+            String[] files = source.list();
+            if (files != null) {
+                for (String file : files) {
+                    if (!copyDirectoryRecursive(new File(source, file), new File(destination, file))) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        } else {
+            // Copy file using FileUtil which uses standard I/O
+            forge.util.FileUtil.copyFile(source.getAbsolutePath(), destination.getAbsolutePath());
+            return true;
+        }
+    }
+
     private void copyNewPlane() {
         String plane = selectSourcePlane.getSelected();
-        Path source = Paths.get(Config.instance().getPlanePath(plane));
-        Path destination = Paths.get(Config.instance().getPlanePath("<user>" + newPlaneName.getText()));
+        File source = new File(Config.instance().getPlanePath(plane));
+        File destination = new File(Config.instance().getPlanePath("<user>" + newPlaneName.getText()));
         AtomicBoolean somethingWentWrong = new AtomicBoolean(false);
-        try (Stream<Path> stream = Files.walk(source)) {
-            Files.createDirectories(destination);
-            stream.forEach(s -> {
-                try {
-                    Files.copy(s, destination.resolve(source.relativize(s)), REPLACE_EXISTING);
-                } catch (IOException e) {
-                    somethingWentWrong.set(true);
-                }
-            });
+        try {
+            if (!copyDirectoryRecursive(source, destination)) {
+                somethingWentWrong.set(true);
+            }
         } catch (IOException e) {
             somethingWentWrong.set(true);
         }

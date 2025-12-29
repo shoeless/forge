@@ -86,6 +86,15 @@ public class BugReporter {
         else {
             sb.append(swStr);
         }
+
+        // iOS debugging: Always print full error details to System.err for Console.app
+        System.err.println("============================================");
+        System.err.println("FORGE ERROR REPORT:");
+        System.err.println("============================================");
+        System.err.println(sb.toString());
+        System.err.println("============================================");
+        System.err.flush();
+
         if (isSentryEnabled()) {
             sendSentry();
         } else {

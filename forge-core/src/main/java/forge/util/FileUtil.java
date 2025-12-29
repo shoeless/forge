@@ -23,7 +23,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -110,8 +109,9 @@ public final class FileUtil {
         File source = new File(sourceFilename);
         if (!source.exists()) { return; } //if source doesn't exist, nothing to copy
 
-        try (InputStream is = Files.newInputStream(source.toPath());
-             OutputStream os = Files.newOutputStream(new File(destFilename).toPath())){
+        // iOS compatibility: Use FileInputStream/FileOutputStream instead of Files.newInputStream/newOutputStream
+        try (InputStream is = new FileInputStream(source);
+             OutputStream os = new FileOutputStream(new File(destFilename))){
             byte[] buffer = new byte[1024];
             int length;
             while ((length = is.read(buffer)) > 0) {

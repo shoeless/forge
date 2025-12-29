@@ -28,7 +28,11 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.StringWriter;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.NodeList;
 
 
 public class XmlUtil {
@@ -47,13 +51,87 @@ public class XmlUtil {
     }
 
     public static void saveDocument(final Document document, String filename) throws TransformerException {
-        Transformer t = TransformerFactory.newInstance().newTransformer();
-        t.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-        t.setOutputProperty(OutputKeys.INDENT, "yes");
-        t.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-        DOMSource source = new DOMSource(document);
-        StreamResult result = new StreamResult(new File(filename));
-        t.transform(source, result);
+        try {
+            Transformer t = TransformerFactory.newInstance().newTransformer();
+            t.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            t.setOutputProperty(OutputKeys.INDENT, "yes");
+            t.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+            DOMSource source = new DOMSource(document);
+            StreamResult result = new StreamResult(new File(filename));
+            t.transform(source, result);
+        } catch (NoClassDefFoundError | Exception e) {
+            // iOS compatibility: XML Transformer not available, use manual serialization
+            try {
+                saveDocumentManually(document, filename);
+            } catch (IOException ioEx) {
+                throw new TransformerException("Failed to save XML document", ioEx);
+            }
+        }
+    }
+
+    /**
+     * Manually serialize XML document for iOS compatibility.
+     * Used when Apache Xalan transformer classes are not available.
+     */
+    private static void saveDocumentManually(Document document, String filename) throws IOException {
+        try (FileWriter writer = new FileWriter(filename)) {
+            serializeNode(document.getDocumentElement(), writer, 0);
+        }
+    }
+
+    private static void serializeNode(Node node, FileWriter writer, int indent) throws IOException {
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+            // Write opening tag with attributes
+            writeIndent(writer, indent);
+            writer.write("<" + node.getNodeName());
+
+            NamedNodeMap attributes = node.getAttributes();
+            if (attributes != null) {
+                for (int i = 0; i < attributes.getLength(); i++) {
+                    Node attr = attributes.item(i);
+                    writer.write(" " + attr.getNodeName() + "=\"" + escapeXml(attr.getNodeValue()) + "\"");
+                }
+            }
+
+            NodeList children = node.getChildNodes();
+            if (children.getLength() == 0) {
+                writer.write(" />\n");
+            } else {
+                writer.write(">\n");
+
+                // Write children
+                for (int i = 0; i < children.getLength(); i++) {
+                    Node child = children.item(i);
+                    if (child.getNodeType() == Node.ELEMENT_NODE) {
+                        serializeNode(child, writer, indent + 1);
+                    } else if (child.getNodeType() == Node.TEXT_NODE) {
+                        String text = child.getNodeValue().trim();
+                        if (!text.isEmpty()) {
+                            writer.write(escapeXml(text));
+                        }
+                    }
+                }
+
+                // Write closing tag
+                writeIndent(writer, indent);
+                writer.write("</" + node.getNodeName() + ">\n");
+            }
+        }
+    }
+
+    private static void writeIndent(FileWriter writer, int indent) throws IOException {
+        for (int i = 0; i < indent * 4; i++) {
+            writer.write(' ');
+        }
+    }
+
+    private static String escapeXml(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace("\"", "&quot;")
+                    .replace("'", "&apos;");
     }
 
     public static int getIntAttribute(Element el, String name) {

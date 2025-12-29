@@ -273,7 +273,8 @@ public class CharmEffect extends SpellAbilityEffect {
         }
 
         // Sort Chosen by SA order
-        chosen.sort(Comparator.comparingInt(o -> o.getSVarInt("CharmOrder")));
+        // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt
+        chosen.sort(forge.util.ComparatorUtil.comparingInt(o -> o.getSVarInt("CharmOrder")));
 
         int indx = 1;
         for (AbilitySub sub : chosen) {

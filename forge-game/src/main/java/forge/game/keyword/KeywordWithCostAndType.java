@@ -52,10 +52,12 @@ public class KeywordWithCostAndType extends KeywordInstance<KeywordWithCostAndTy
         if (k.length > 2) {
             reminderType = descType = k[2];
         } else {
-            descType = switch (type) {
-            case "Basic" -> "basic land";
-            default -> Lang.getInstance().buildValidDesc(Arrays.asList(type.split(",")), false);
-            };
+            // iOS compatibility: Use traditional if-else instead of Java 14+ switch expression
+            if ("Basic".equals(type)) {
+                descType = "basic land";
+            } else {
+                descType = Lang.getInstance().buildValidDesc(Arrays.asList(type.split(",")), false);
+            }
 
             reminderType = descType;
             if ("Affinity".equals(type)) {

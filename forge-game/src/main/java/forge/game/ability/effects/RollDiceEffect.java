@@ -15,6 +15,7 @@ import forge.game.replacement.ReplacementType;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.MyRandom;
@@ -263,16 +264,17 @@ public class RollDiceEffect extends SpellAbilityEffect {
         //Notify of results
         if (amount > 0) {
             StringBuilder sb = new StringBuilder();
-            String rollResults = StringUtils.join(getFinalResults(resultsList), ", ");
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            String rollResults = IterableUtil.joinObjects(", ", getFinalResults(resultsList));
             String resultMessage = toVisitAttractions ? "lblAttractionRollResult" : "lblPlayerRolledResult";
             sb.append(Localizer.getInstance().getMessage(resultMessage, player, rollResults));
             if (!ignored.isEmpty()) {
                 sb.append("\r\n").append(Localizer.getInstance().getMessage("lblIgnoredRolls",
-                        StringUtils.join(ignored, ", ")));
+                        IterableUtil.joinObjects(", ", ignored)));
             }
             if (hasBeenModified) {
                 sb.append("\r\n").append(Localizer.getInstance().getMessage("lblNaturalRolls",
-                        StringUtils.join(getNaturalResults(resultsList), ", ")));
+                        IterableUtil.joinObjects(", ", getNaturalResults(resultsList))));
             }
             player.getGame().getAction().notifyOfValue(sa, player, sb.toString(), null);
             player.addDieRollThisTurn(getFinalResults(resultsList));

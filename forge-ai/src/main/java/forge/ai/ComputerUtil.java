@@ -57,6 +57,7 @@ import forge.game.zone.ZoneType;
 import forge.util.Aggregates;
 import forge.util.IterableUtil;
 import forge.util.MyRandom;
+import forge.util.TextUtil;
 import forge.util.collect.FCollection;
 import org.apache.commons.lang3.StringUtils;
 
@@ -2531,7 +2532,7 @@ public class ComputerUtil {
                     }
                 }
                 CardCollection lists = CardLists.filterControlledBy(game.getCardsInGame(), ai.getOpponents());
-                return restrictedToColors.get(StringUtils.capitalize(ComputerUtilCard.getMostProminentColor(lists, restrictedToColors.keySet())));
+                return restrictedToColors.get(TextUtil.capitalize(ComputerUtilCard.getMostProminentColor(lists, restrictedToColors.keySet())));
             }
             return Iterables.getFirst(votes.keySet(), null);
         case "FeatherOrQuill":

@@ -1752,7 +1752,11 @@ public class AbilityUtils {
                     final SpellAbility root = sa.getRootAbility();
                     String mana = (String) root.getTriggeringObject(AbilityKey.PayingMana);
                     int count = 0;
-                    Matcher mat = Pattern.compile(StringUtils.join(sq, "|", 1, sq.length)).matcher(mana);
+                    // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+                    // Note: StringUtils.join(array, delimiter, start, end) is not directly supported by IterableUtil
+                    // Create a sublist from the array
+                    List<String> subList = Arrays.asList(sq).subList(1, sq.length);
+                    Matcher mat = Pattern.compile(IterableUtil.join("|", subList)).matcher(mana);
                     while (mat.find()) {
                         count++;
                     }
@@ -1786,7 +1790,8 @@ public class AbilityUtils {
 
                 // Count$Adamant.<Color>.<True>.<False>
                 if (sq[0].startsWith("Adamant")) {
-                    final String payingMana = StringUtils.join(sa.getRootAbility().getPayingMana());
+                    // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+                    final String payingMana = IterableUtil.joinObjects("", sa.getRootAbility().getPayingMana());
                     final int num = sq[0].length() > 7 ? Integer.parseInt(sq[0].split("_")[1]) : 3;
                     final boolean adamant = StringUtils.countMatches(payingMana, MagicColor.toShortString(sq[1])) >= num;
                     return doXMath(calculateAmount(c,sq[adamant ? 2 : 3], ctb), expr, c, ctb);
@@ -3051,7 +3056,7 @@ public class AbilityUtils {
             if (key.equals("Any")) {
                 for (final byte c : MagicColor.WUBRG) {
                     final String colorLowerCase = MagicColor.toLongString(c).toLowerCase(),
-                            colorCaptCase = StringUtils.capitalize(MagicColor.toLongString(c));
+                            colorCaptCase = TextUtil.capitalize(MagicColor.toLongString(c));
                     // Color should not replace itself.
                     if (e.getValue().equalsIgnoreCase(colorLowerCase)) {
                         continue;

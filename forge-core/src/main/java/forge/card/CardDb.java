@@ -25,6 +25,7 @@ import forge.card.CardEdition.Type;
 import forge.deck.generation.IDeckGenPool;
 import forge.item.IPaperCard;
 import forge.item.PaperCard;
+import forge.util.IterableUtil;
 import forge.util.Lang;
 import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -493,7 +494,8 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
                     System.out.println(" ... 100% ");
                 } else {
                     int missing = (e.getAllCardsInSet().size() - missingCards.size()) * 10000 / e.getAllCardsInSet().size();
-                    System.out.printf(" ... %.2f%% (%s missing: %s)%n", missing * 0.01f, Lang.nounWithAmount(missingCards.size(), "card"), StringUtils.join(missingCards, " | "));
+                    // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+                    System.out.printf(" ... %.2f%% (%s missing: %s)%n", missing * 0.01f, Lang.nounWithAmount(missingCards.size(), "card"), IterableUtil.join(" | ", missingCards));
                 }
             }
             if (isCoreExpSet && logMissingSummary) {
@@ -504,7 +506,8 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         }
 
         if (logMissingSummary) {
-            System.out.printf("Totally %d cards not implemented: %s\n", allMissingCards.size(), StringUtils.join(allMissingCards, " | "));
+            // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+            System.out.printf("Totally %d cards not implemented: %s\n", allMissingCards.size(), IterableUtil.join(" | ", allMissingCards));
         }
 
         if (upcomingSet != null) {

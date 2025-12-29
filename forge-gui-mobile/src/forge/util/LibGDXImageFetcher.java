@@ -5,12 +5,12 @@ import forge.Forge;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeConstants;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Files;
 
 public class LibGDXImageFetcher extends ImageFetcher {
     @Override
@@ -51,7 +51,8 @@ public class LibGDXImageFetcher extends ImageFetcher {
             FileHandle destFile = FileHandleUtil.getLocal(newdespath + ".tmp");
             System.out.println(newdespath);
             destFile.parent().mkdirs();
-            try(OutputStream out = Files.newOutputStream(destFile.file().toPath())) {
+            // iOS compatibility: Use FileOutputStream instead of Files.newOutputStream (NIO.2 not well supported)
+            try(OutputStream out = new FileOutputStream(destFile.file())) {
                 // Conversion to JPEG will be handled differently depending on the platform
                 Forge.getDeviceAdapter().convertToJPEG(is, out);
                 is.close();

@@ -53,10 +53,26 @@ public class Zone implements java.io.Serializable, Iterable<Card> {
     protected final transient MapOfLists<ZoneType, Card> cardsAddedLastTurn = new EnumMapOfLists<>(ZoneType.class, ArrayList::new);
 
     // might support different order via preference later
-    private static final Comparator<Card> COMPARATOR = Comparator.comparingInt((Card c) -> c.getCMC())
-            .thenComparing(c -> c.getColor().getOrderWeight())
-            .thenComparing(Comparator.comparing(Card::getName))
-            .thenComparing(Card::hasPerpetual);
+    // iOS compatibility: Manual comparator instead of Comparator.comparingInt (Java 8)
+    private static final Comparator<Card> COMPARATOR = new Comparator<Card>() {
+        @Override
+        public int compare(Card c1, Card c2) {
+            // First compare by CMC
+            int cmc = Integer.compare(c1.getCMC(), c2.getCMC());
+            if (cmc != 0) return cmc;
+
+            // Then compare by color order weight
+            int color = Integer.compare(c1.getColor().getOrderWeight(), c2.getColor().getOrderWeight());
+            if (color != 0) return color;
+
+            // Then compare by name
+            int name = c1.getName().compareTo(c2.getName());
+            if (name != 0) return name;
+
+            // Finally compare by perpetual status
+            return Boolean.compare(c1.hasPerpetual(), c2.hasPerpetual());
+        }
+    };
 
     protected void sort() {
         cardList.sort(COMPARATOR);

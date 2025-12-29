@@ -6,8 +6,8 @@ import forge.deck.DeckSection;
 import forge.util.FileSection;
 import forge.util.FileSectionManual;
 import forge.util.FileUtil;
+import forge.util.IterableUtil;
 import forge.util.TextUtil;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -32,8 +32,9 @@ public class DeckSerializer {
         final List<String> general = map.get("general");
         if (general != null) {
             final FileSectionManual fs = new FileSectionManual();
-            fs.put(DeckFileHeader.NAME, StringUtils.join(map.get(""), " "));
-            fs.put(DeckFileHeader.DECK_TYPE, StringUtils.join(general, " "));
+            // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+            fs.put(DeckFileHeader.NAME, IterableUtil.join(" ", map.get("")));
+            fs.put(DeckFileHeader.DECK_TYPE, IterableUtil.join(" ", general));
             return new DeckFileHeader(fs);
         }
 
@@ -50,10 +51,12 @@ public class DeckSerializer {
             out.add(TextUtil.concatNoSpace(DeckFileHeader.COMMENT,"=", d.getComment().replaceAll("\n", "")));
         }
         if (!d.getTags().isEmpty()) {
-            out.add(TextUtil.concatNoSpace(DeckFileHeader.TAGS,"=", StringUtils.join(d.getTags(), DeckFileHeader.TAGS_SEPARATOR)));
+            // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+            out.add(TextUtil.concatNoSpace(DeckFileHeader.TAGS,"=", IterableUtil.join(DeckFileHeader.TAGS_SEPARATOR, d.getTags())));
         }
         if (!d.getAiHints().isEmpty()) {
-            out.add(TextUtil.concatNoSpace(DeckFileHeader.AI_HINTS, "=", StringUtils.join(d.getAiHints(), " | ")));
+            // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+            out.add(TextUtil.concatNoSpace(DeckFileHeader.AI_HINTS, "=", IterableUtil.join(" | ", d.getAiHints())));
         }
         if (!d.getDraftNotes().isEmpty()) {
             String sb = serializeDraftNotes(d.getDraftNotes());

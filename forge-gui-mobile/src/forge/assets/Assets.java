@@ -9,6 +9,7 @@ import com.badlogic.gdx.assets.loaders.FileHandleResolver;
 import com.badlogic.gdx.assets.loaders.ParticleEffectLoader;
 import com.badlogic.gdx.assets.loaders.TextureLoader.TextureParameter;
 import com.badlogic.gdx.assets.loaders.resolvers.AbsoluteFileHandleResolver;
+import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
@@ -34,6 +35,37 @@ import java.util.Map;
 import static forge.assets.FSkin.getDefaultSkinFile;
 
 public class Assets implements Disposable {
+    /**
+     * Custom FileHandleResolver for iOS/Android that handles both:
+     * - Absolute paths (for writable cache/Documents files)
+     * - Relative paths (for read-only bundle resources)
+     */
+    private static class HybridFileHandleResolver implements FileHandleResolver {
+        private final AbsoluteFileHandleResolver absoluteResolver = new AbsoluteFileHandleResolver();
+        private final InternalFileHandleResolver internalResolver = new InternalFileHandleResolver();
+        private final boolean isIosOrAndroid;
+
+        public HybridFileHandleResolver() {
+            this.isIosOrAndroid = Gdx.app != null &&
+                (Gdx.app.getType() == ApplicationType.iOS || Gdx.app.getType() == ApplicationType.Android);
+        }
+
+        @Override
+        public FileHandle resolve(String fileName) {
+            if (isIosOrAndroid) {
+                // On iOS/Android: absolute paths use absoluteResolver, relative paths use internalResolver
+                if (fileName.startsWith("/")) {
+                    return absoluteResolver.resolve(fileName);
+                } else {
+                    return internalResolver.resolve(fileName);
+                }
+            } else {
+                // On Desktop: always use absolute paths
+                return absoluteResolver.resolve(fileName);
+            }
+        }
+    }
+
     /**
      * Helper method to get FileHandle that works on both iOS and Android.
      * On iOS/Android, bundled resources must use internal() with relative paths.
@@ -159,8 +191,12 @@ public class Assets implements Disposable {
     }
 
     public MemoryTrackingAssetManager manager() {
-        if (manager == null)
-            manager = new MemoryTrackingAssetManager(new AbsoluteFileHandleResolver());
+        if (manager == null) {
+            // Use HybridFileHandleResolver that intelligently handles both:
+            // - Absolute paths (for writable cache/Documents files)
+            // - Relative paths (for read-only bundle resources)
+            manager = new MemoryTrackingAssetManager(new HybridFileHandleResolver());
+        }
         return manager;
     }
 
@@ -331,6 +367,8 @@ public class Assets implements Disposable {
         if (defaultImage == null) {
             FileHandle blankImage = getFileHandle(ForgeConstants.NO_CARD_FILE);
             if (blankImage.exists()) {
+                // Use the FileHandle path directly - the FileHandleResolver will handle it correctly
+                // (InternalFileHandleResolver for iOS/Android, AbsoluteFileHandleResolver for Desktop)
                 defaultImage = manager().get(blankImage.path(), Texture.class, false);
                 if (defaultImage != null)
                     return defaultImage;

@@ -1681,8 +1681,8 @@ public class ChangeZoneEffect extends SpellAbilityEffect {
             final List<String> options = topBot ? Arrays.asList(Localizer.getInstance().getMessage("lblTop") +
                             (libPos1 == 0 ? "" : " (" + Lang.getInstance().getOrdinal(libPos1 + 1) + ")"),
                     Localizer.getInstance().getMessage("lblBottom")) :
-                    Arrays.asList(StringUtils.capitalize(dest1.getTranslatedName()),
-                            StringUtils.capitalize(dest2.getTranslatedName()));
+                    Arrays.asList(TextUtil.capitalize(dest1.getTranslatedName()),
+                            TextUtil.capitalize(dest2.getTranslatedName()));
             Player decider = p;
             if (sa.hasParam("AlternativeDecider")) {
                 PlayerCollection c = AbilityUtils.getDefinedPlayers(host, sa.getParam("AlternativeDecider"), sa);

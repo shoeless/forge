@@ -69,12 +69,13 @@ public class CardLists {
         return CardLists.filter(in, c -> c.getNumAllCounters() >= atLeastCounters);
     }
 
-    public static final Comparator<Card> ToughnessComparator = Comparator.comparingInt(Card::getNetToughness);
-    public static final Comparator<Card> ToughnessComparatorInv = Comparator.comparingInt(Card::getNetToughness).reversed();
-    public static final Comparator<Card> PowerComparator = Comparator.comparingInt(Card::getNetCombatDamage);
-    public static final Comparator<Card> CmcComparatorInv = Comparator.<Card>comparingInt(Card::getCMC).reversed();
+    // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt
+    public static final Comparator<Card> ToughnessComparator = forge.util.ComparatorUtil.comparingInt(c -> c.getNetToughness());
+    public static final Comparator<Card> ToughnessComparatorInv = forge.util.ComparatorUtil.reversed(forge.util.ComparatorUtil.comparingInt(c -> c.getNetToughness()));
+    public static final Comparator<Card> PowerComparator = forge.util.ComparatorUtil.comparingInt(c -> c.getNetCombatDamage());
+    public static final Comparator<Card> CmcComparatorInv = forge.util.ComparatorUtil.reversed(forge.util.ComparatorUtil.comparingInt(c -> c.getCMC()));
 
-    public static final Comparator<Card> TextLenComparator = Comparator.comparingInt(a -> a.getView().getText().length());
+    public static final Comparator<Card> TextLenComparator = forge.util.ComparatorUtil.comparingInt(a -> a.getView().getText().length());
 
     /**
      * <p>

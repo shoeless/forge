@@ -25,9 +25,9 @@ import forge.game.card.CardCollection;
 import forge.game.card.CardLists;
 import forge.game.card.CardZoneTable;
 import forge.game.spellability.SpellAbility;
+import forge.util.IterableUtil;
 import forge.util.Localizer;
 import forge.util.MapUtil;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 
@@ -120,7 +120,8 @@ public class TriggerAbilityTriggered extends Trigger {
             newRunParams.put(AbilityKey.Cause, ImmutableList.of(runParams.get(AbilityKey.Card)));
         } else if (regtrig.getMode() == TriggerType.ChangesZoneAll) {
             final CardZoneTable table = (CardZoneTable) runParams.get(AbilityKey.Cards);
-            newRunParams.put(AbilityKey.Destination, StringUtils.join(table.columnKeySet(), ","));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            newRunParams.put(AbilityKey.Destination, IterableUtil.joinObjects(",", table.columnKeySet()));
             newRunParams.put(AbilityKey.Cause, table.allCards());
         } else if (regtrig.getMode() == TriggerType.Attacks) {
             newRunParams.put(AbilityKey.Cause, ImmutableList.of(runParams.get(AbilityKey.Attacker)));

@@ -2,7 +2,6 @@ package forge.game.ability.effects;
 
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 
 import forge.game.ability.AbilityUtils;
 import forge.game.ability.SpellAbilityEffect;
@@ -11,13 +10,15 @@ import forge.game.card.CardCollectionView;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.Localizer;
 
 
 public class ControlExchangeVariantEffect extends SpellAbilityEffect {
     @Override
     protected String getStackDescription(SpellAbility sa) {
-        return "Exchange cards controlled by " + StringUtils.join(getTargetPlayers(sa), ",");
+        // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+        return "Exchange cards controlled by " + IterableUtil.joinObjects(",", getTargetPlayers(sa));
     }
 
     @Override

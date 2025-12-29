@@ -69,20 +69,21 @@ public final class PlayerPredicates {
         return c -> c != null && c.isValid(restrictions, sourceController, source, spellAbility);
     }
 
+    // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt
     public static Comparator<Player> compareByZoneSize(final ZoneType zone) {
-        return Comparator.comparingInt(arg0 -> arg0.getCardsIn(zone).size());
+        return forge.util.ComparatorUtil.comparingInt(arg0 -> arg0.getCardsIn(zone).size());
     }
-    
+
     public static Comparator<Player> compareByZoneSize(final ZoneType zone, final Predicate<Card> pred) {
-        return Comparator.comparingInt(arg0 -> CardLists.count(arg0.getCardsIn(zone), pred));
+        return forge.util.ComparatorUtil.comparingInt(arg0 -> CardLists.count(arg0.getCardsIn(zone), pred));
     }
-    
+
     public static Comparator<Player> compareByLife() {
-        return Comparator.comparingInt(Player::getLife);
+        return forge.util.ComparatorUtil.comparingInt(p -> p.getLife());
     }
-    
+
     public static Comparator<Player> compareByPoison() {
-        return Comparator.comparingInt(Player::getPoisonCounters);
+        return forge.util.ComparatorUtil.comparingInt(p -> p.getPoisonCounters());
     }
 
     public static final Predicate<Player> NOT_LOST = p -> p.getOutcome() == null || p.getOutcome().hasWon();

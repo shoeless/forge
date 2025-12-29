@@ -28,7 +28,6 @@ import forge.player.GamePlayerUtil;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
@@ -228,7 +227,7 @@ public class QuestWinLoseController {
 
         credBase = (int) (base * multiplier);
 
-        sb.append(StringUtils.capitalize(qEvent.getDifficulty().getTitle()));
+        sb.append(TextUtil.capitalize(qEvent.getDifficulty().getTitle()));
         sb.append(" opponent: ").append(credBase).append(" credits.\n");
 
         if(qEvent.getIsRandomMatch()){

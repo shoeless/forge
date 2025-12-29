@@ -581,6 +581,33 @@ public final class IterableUtil {
     }
 
     /**
+     * Joins elements from an iterable into a string using the specified delimiter.
+     * iOS-compatible replacement for StringUtils.join() which uses Stream API.
+     * Calls toString() on each element.
+     *
+     * @param delimiter the separator to use between elements
+     * @param elements the iterable of elements to join
+     * @return the joined string
+     */
+    public static String joinObjects(CharSequence delimiter, Iterable<?> elements) {
+        if (elements == null) {
+            return "";
+        }
+        StringBuilder result = new StringBuilder();
+        boolean first = true;
+        for (Object element : elements) {
+            if (!first) {
+                result.append(delimiter);
+            }
+            if (element != null) {
+                result.append(element.toString());
+            }
+            first = false;
+        }
+        return result.toString();
+    }
+
+    /**
      * Selects a random element from the iterable.
      * iOS-compatible replacement for stream().collect(StreamUtil.random()).get().
      *

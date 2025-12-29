@@ -1,79 +1,105 @@
+/*
+ * Forge: Play Magic: the Gathering.
+ * Copyright (C) 2011  Forge Team
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package forge.util;
 
-import java.util.Collection;
+import forge.util.function.Function;
+import forge.util.function.ToIntFunction;
+import forge.util.function.ToLongFunction;
+
 import java.util.Comparator;
 
 /**
- * @author Gili Tzabari
+ * iOS-compatible utility methods for creating Comparators.
+ * Replaces Java 8 Comparator factory methods (comparingInt, comparing, etc.)
+ * which are not available on iOS/RoboVM.
  */
-public final class ComparatorUtil
-{
-    /**
-     * Verify that a comparator is transitive.
-     *
-     * @param <T>        the type being compared
-     * @param comparator the comparator to test
-     * @param elements   the elements to test against
-     * @throws AssertionError if the comparator is not transitive
-     */
-    public static <T> String verifyTransitivity(Comparator<T> comparator, Collection<T> elements)
-    {
-        String exception = "";
-        for (T first: elements)
-        {
-            for (T second: elements)
-            {
-                int result1 = comparator.compare(first, second);
-                int result2 = comparator.compare(second, first);
-                if (result1 != -result2)
-                {
-                    // Uncomment the following line to step through the failed case
-                    //comparator.compare(first, second);
-                    /*throw new AssertionError("compare(" + first + ", " + second + ") == " + result1 +
-                        " but swapping the parameters returns " + result2);*/
-                    exception = "compare(" + first + ", " + second + ") == " + result1 +
-                            " but swapping the parameters returns " + result2;
-                    System.err.println(exception);
-                    return exception;
-                }
-            }
-        }
-        for (T first: elements)
-        {
-            for (T second: elements)
-            {
-                int firstGreaterThanSecond = comparator.compare(first, second);
-                if (firstGreaterThanSecond <= 0)
-                    continue;
-                for (T third: elements)
-                {
-                    int secondGreaterThanThird = comparator.compare(second, third);
-                    if (secondGreaterThanThird <= 0)
-                        continue;
-                    int firstGreaterThanThird = comparator.compare(first, third);
-                    if (firstGreaterThanThird <= 0)
-                    {
-                        // Uncomment the following line to step through the failed case
-                        //comparator.compare(first, third);
-                        /*throw new AssertionError("compare(" + first + ", " + second + ") > 0, " +
-                            "compare(" + second + ", " + third + ") > 0, but compare(" + first + ", " + third + ") == " +
-                            firstGreaterThanThird);*/
-                        exception = "compare(" + first + ", " + second + ") > 0, " +
-                                "compare(" + second + ", " + third + ") > 0, but compare(" + first + ", " + third + ") == " +
-                                firstGreaterThanThird;
-                        System.err.println(exception);
-                        return exception;
-                    }
-                }
-            }
-        }
-        return exception;
+public final class ComparatorUtil {
+
+    private ComparatorUtil() {
+        throw new AssertionError();
     }
 
     /**
-     * Prevent construction.
+     * Returns a comparator that compares by extracting an int value.
+     * iOS-compatible replacement for Comparator.comparingInt()
      */
-    private ComparatorUtil()
-    {
+    public static <T> Comparator<T> comparingInt(final ToIntFunction<? super T> keyExtractor) {
+        return new Comparator<T>() {
+            @Override
+            public int compare(T a, T b) {
+                return Integer.compare(keyExtractor.applyAsInt(a), keyExtractor.applyAsInt(b));
+            }
+        };
+    }
+
+    /**
+     * Returns a comparator that compares by extracting a long value.
+     * iOS-compatible replacement for Comparator.comparingLong()
+     */
+    public static <T> Comparator<T> comparingLong(final ToLongFunction<? super T> keyExtractor) {
+        return new Comparator<T>() {
+            @Override
+            public int compare(T a, T b) {
+                return Long.compare(keyExtractor.applyAsLong(a), keyExtractor.applyAsLong(b));
+            }
+        };
+    }
+
+    /**
+     * Returns a comparator that compares by extracting a comparable value.
+     * iOS-compatible replacement for Comparator.comparing()
+     */
+    public static <T, U extends Comparable<? super U>> Comparator<T> comparing(
+            final Function<? super T, ? extends U> keyExtractor) {
+        return new Comparator<T>() {
+            @Override
+            public int compare(T a, T b) {
+                U ka = keyExtractor.apply(a);
+                U kb = keyExtractor.apply(b);
+                return ka.compareTo(kb);
+            }
+        };
+    }
+
+    /**
+     * Returns a reversed comparator.
+     * iOS-compatible replacement for Comparator.reversed()
+     */
+    public static <T> Comparator<T> reversed(final Comparator<T> comparator) {
+        return new Comparator<T>() {
+            @Override
+            public int compare(T a, T b) {
+                return comparator.compare(b, a);
+            }
+        };
+    }
+
+    /**
+     * Returns a comparator that uses another comparator when the first compares equal.
+     * iOS-compatible replacement for Comparator.thenComparing()
+     */
+    public static <T> Comparator<T> thenComparing(final Comparator<T> first, final Comparator<? super T> second) {
+        return new Comparator<T>() {
+            @Override
+            public int compare(T a, T b) {
+                int result = first.compare(a, b);
+                return (result != 0) ? result : second.compare(a, b);
+            }
+        };
     }
 }

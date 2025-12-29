@@ -1294,7 +1294,8 @@ public class ComputerUtilMana {
                 }
             }
         }
-        return unused.isEmpty() ? null : StringUtils.join(unused, ' ');
+        // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+        return unused.isEmpty() ? null : IterableUtil.join(" ", unused);
     }
 
     /**

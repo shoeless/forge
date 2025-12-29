@@ -43,6 +43,25 @@ public class TextUtil {
         int l = romanMap.floorKey(number);
         return romanMap.get(l) + toRoman(number-l);
     }
+
+    /**
+     * Capitalizes the first character of a string.
+     * iOS-compatible replacement for TextUtil.capitalize() which uses Stream API.
+     *
+     * @param str the string to capitalize
+     * @return the capitalized string, or the original if already capitalized or null/empty
+     */
+    public static String capitalize(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        char firstChar = str.charAt(0);
+        if (Character.isTitleCase(firstChar) || Character.isUpperCase(firstChar)) {
+            return str;
+        }
+        return Character.toTitleCase(firstChar) + str.substring(1);
+    }
+
     public static String normalizeText(String text) {
         if (text == null)
             return IPaperCard.NO_ARTIST_NAME;
@@ -213,12 +232,6 @@ public class TextUtil {
             }
         }
         return builder.toString();
-    }
-
-    public static String capitalize(final String s) {
-        return s.substring(0, 1).toUpperCase()
-                + s.substring(1);
-
     }
 
     //concatenate with spaces

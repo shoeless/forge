@@ -21,8 +21,9 @@ import forge.game.keyword.KeywordInterface;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.item.PaperToken;
+import forge.util.IterableUtil;
+import forge.util.TextUtil;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -215,7 +216,8 @@ public class TokenInfo {
 
                 // update generated Name
                 if (nameGenerated) {
-                    result.setName(StringUtils.join(type.getSubtypes(), " ") + " Token");
+                    // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+                    result.setName(IterableUtil.join(" ", type.getSubtypes()) + " Token");
                 }
             }
         }
@@ -242,19 +244,19 @@ public class TokenInfo {
             // replace color words
             for (final Map.Entry<String, String> e : colorMap.entrySet()) {
                 final String vName = e.getValue();
-                final String vCaps = StringUtils.capitalize(vName);
+                final String vCaps = TextUtil.capitalize(vName);
                 final String vLow = vName.toLowerCase();
                 if ("Any".equals(e.getKey())) {
                     for (final byte c : MagicColor.WUBRG) {
                         final String cName = MagicColor.toLongString(c);
-                        final String cNameCaps = StringUtils.capitalize(cName);
+                        final String cNameCaps = TextUtil.capitalize(cName);
                         final String cNameLow = cName.toLowerCase();
                         r = r.replaceAll(cNameCaps, vCaps);
                         r = r.replaceAll(cNameLow, vLow);
                     }
                 } else {
                     final String cName = e.getKey();
-                    final String cNameCaps = StringUtils.capitalize(cName);
+                    final String cNameCaps = TextUtil.capitalize(cName);
                     final String cNameLow = cName.toLowerCase();
                     r = r.replaceAll(cNameCaps, vCaps);
                     r = r.replaceAll(cNameLow, vLow);

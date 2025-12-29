@@ -12,7 +12,6 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -111,8 +110,9 @@ public class GuiDownloadZipService extends GuiDownloadService {
 
             // input stream to read file - with 8k buffer
             // output stream to write file
+            // iOS compatibility: Use FileOutputStream instead of Files.newOutputStream
             try(InputStream input = new BufferedInputStream(conn.getInputStream(), 8192);
-                OutputStream output = java.nio.file.Files.newOutputStream(Paths.get(destFile))) {
+                OutputStream output = new FileOutputStream(destFile)) {
 
                 int count;
                 long total = 0;
@@ -233,7 +233,8 @@ public class GuiDownloadZipService extends GuiDownloadService {
         final byte[] buffer = new byte[1024];
         int len;
 
-        try (BufferedOutputStream out = new BufferedOutputStream(java.nio.file.Files.newOutputStream(Paths.get(outPath)))) {
+        // iOS compatibility: Use FileOutputStream instead of Files.newOutputStream
+        try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outPath))) {
             while ((len = in.read(buffer)) >= 0) {
                 out.write(buffer, 0, len);
             }

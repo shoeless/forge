@@ -31,6 +31,7 @@ import forge.game.trigger.Trigger;
 import forge.game.zone.ZoneType;
 import forge.util.Expressions;
 import forge.util.ITranslatable;
+import forge.util.IterableUtil;
 import forge.util.MapUtil;
 
 /**
@@ -364,7 +365,8 @@ public abstract class CardTraitBase implements GameObject, IHasCardView, IHasSVa
             if (hostCard.getCastSA() == null) {
                 return false;
             }
-            final String payingMana = StringUtils.join(hostCard.getCastSA().getPayingMana());
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            final String payingMana = IterableUtil.joinObjects("", hostCard.getCastSA().getPayingMana());
             final String color = params.get("Adamant");
             if ("Any".equals(color)) {
                 boolean bFlag = false;

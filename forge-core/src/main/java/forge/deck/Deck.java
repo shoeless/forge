@@ -26,7 +26,6 @@ import forge.card.CardType;
 import forge.item.IPaperCard;
 import forge.item.PaperCard;
 import forge.util.IterableUtil;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.ObjectStreamException;
@@ -239,7 +238,8 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
                 cp.addAll(kv.getValue());
             }
         }
-        result.setAiHints(StringUtils.join(aiHints, " | "));
+        // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+        result.setAiHints(IterableUtil.join(" | ", aiHints));
         result.setDraftNotes(draftNotes);
         //noinspection ConstantValue
         if(tags != null) //Can happen deserializing old Decks.

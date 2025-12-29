@@ -1696,7 +1696,7 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                 labels = ImmutableList.of(localizer.getMessage("lblHeads"), localizer.getMessage("lblTails"));
                 break;
             case TapOrUntap:
-                labels = ImmutableList.of(StringUtils.capitalize(localizer.getMessage("lblTap")),
+                labels = ImmutableList.of(TextUtil.capitalize(localizer.getMessage("lblTap")),
                         localizer.getMessage("lblUntap"));
                 break;
             case OddsOrEvens:

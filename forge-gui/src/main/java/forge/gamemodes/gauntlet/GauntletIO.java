@@ -21,7 +21,6 @@ import forge.util.IgnoringXStream;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.zip.GZIPInputStream;
@@ -98,7 +97,8 @@ public class GauntletIO {
 
     public static GauntletData loadGauntlet(final File xmlSaveFile) {
         boolean isCorrupt = false;
-        try (GZIPInputStream zin = new GZIPInputStream(Files.newInputStream(xmlSaveFile.toPath()));
+        // iOS compatibility: Use FileInputStream instead of Files.newInputStream
+        try (GZIPInputStream zin = new GZIPInputStream(new FileInputStream(xmlSaveFile));
              InputStreamReader reader = new InputStreamReader(zin)) {
             final GauntletData data = (GauntletData)GauntletIO.getSerializer(true).fromXML(reader);
 
@@ -134,7 +134,8 @@ public class GauntletIO {
     }
 
     private static void savePacked(final XStream xStream0, final GauntletData gd0) throws IOException {
-        try(final BufferedOutputStream bout = new BufferedOutputStream(Files.newOutputStream(getGauntletFile(gd0).toPath()));
+        // iOS compatibility: Use FileOutputStream instead of Files.newOutputStream
+        try(final BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(getGauntletFile(gd0)));
             final GZIPOutputStream zout = new GZIPOutputStream(bout)) {
             xStream0.toXML(gd0, zout);
             zout.flush();

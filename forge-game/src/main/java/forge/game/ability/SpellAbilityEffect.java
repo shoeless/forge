@@ -307,7 +307,8 @@ public abstract class SpellAbilityEffect {
             starter = AbilityUtils.getDefinedPlayers(sa.getHostCard(), sa.getParam("StartingWith"), sa).getFirst();
         }
         PlayerCollection ordered = game.getPlayersInTurnOrder(starter);
-        resultDuplicate.sort(Comparator.comparingInt(ordered::indexOf));
+        // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt
+        resultDuplicate.sort(forge.util.ComparatorUtil.comparingInt(p -> ordered.indexOf(p)));
         return resultUnique;
     }
 

@@ -20,6 +20,7 @@ import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.util.CardTranslation;
+import forge.util.IterableUtil;
 import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.TextUtil;
@@ -492,7 +493,8 @@ public class CardDetailUtil {
         // stored dice results
         if (card.getStoredRolls() != null) {
             area.append("\n");
-            area.append("(stored dice results: ").append(StringUtils.join(card.getStoredRolls(), ", "));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            area.append("(stored dice results: ").append(IterableUtil.joinObjects(", ", card.getStoredRolls()));
             area.append(")");
         }
 
@@ -515,7 +517,8 @@ public class CardDetailUtil {
             if (card.isFaceDown() && state.getState() == CardStateName.FaceDown) {
                 area.append("Hidden");
             } else {
-                area.append(StringUtils.join(card.getNamedCard(), ", "));
+                // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+                area.append(IterableUtil.joinObjects(", ", card.getNamedCard()));
             }
             area.append(")");
         }
@@ -555,7 +558,8 @@ public class CardDetailUtil {
         if (card.hasCardAttachments()) {
             area.append("\n");
             area.append("=Attached: ");
-            area.append(StringUtils.join(card.getAttachedCards(), ", "));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            area.append(IterableUtil.joinObjects(", ", card.getAttachedCards()));
             area.append("=");
         }
 
@@ -573,7 +577,8 @@ public class CardDetailUtil {
         if (card.getGainControlTargets() != null) {
             area.append("\n");
             area.append("+Controlling: ");
-            area.append(StringUtils.join(card.getGainControlTargets(), ", "));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            area.append(IterableUtil.joinObjects(", ", card.getGainControlTargets()));
             area.append("+");
         }
 
@@ -600,21 +605,24 @@ public class CardDetailUtil {
         if (card.getImprintedCards() != null) {
             area.append("\n");
             area.append("Imprinting: ");
-            area.append(StringUtils.join(card.getImprintedCards(), ", "));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            area.append(IterableUtil.joinObjects(", ", card.getImprintedCards()));
         }
 
         // CardsExiledBy
         if (card.getExiledCards() != null) {
             area.append("\n");
             area.append("Exiled: ");
-            area.append(StringUtils.join(card.getExiledCards(), ", "));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            area.append(IterableUtil.joinObjects(", ", card.getExiledCards()));
         }
 
         // Haunt
         if (card.getHauntedBy() != null) {
             area.append("\n");
             area.append("Haunted by: ");
-            area.append(StringUtils.join(card.getHauntedBy(), ", "));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            area.append(IterableUtil.joinObjects(", ", card.getHauntedBy()));
         }
         if (card.getHaunting() != null) {
             area.append("\n");

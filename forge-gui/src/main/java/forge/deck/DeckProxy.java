@@ -361,7 +361,8 @@ public class DeckProxy implements InventoryItem {
     public String getFormatsString() {
         Set<GameFormat> formats = getFormats();
         if (formats.size() > 1)
-            return StringUtils.join(IterableUtil.transform(formats, GameFormat::getName), ", ");
+            // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+            return IterableUtil.join(", ", IterableUtil.transform(formats, GameFormat::getName));
         Object[] formatArray = formats.toArray();
         GameFormat format = (GameFormat)formatArray[0];
         if (format != GameFormat.NoFormat)

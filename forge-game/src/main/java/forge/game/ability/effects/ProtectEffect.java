@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.collect.Lists;
 
@@ -21,6 +20,7 @@ import forge.game.card.CardUtil;
 import forge.game.event.GameEventCardStatsChanged;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
+import forge.util.IterableUtil;
 import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.TextUtil;
@@ -190,7 +190,8 @@ public class ProtectEffect extends SpellAbilityEffect {
                 gains.addAll(MagicColor.Constant.ONLY_COLORS);
                 choices = choices.replaceAll("AnyColor,?", "");
             } else if (choices.contains("CardType")) {
-                choices = StringUtils.join(CardType.getAllCardTypes(), ",");
+                // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+                choices = IterableUtil.joinObjects(",", CardType.getAllCardTypes());
             }
             // Add any remaining choices
             if (choices.length() > 0) {

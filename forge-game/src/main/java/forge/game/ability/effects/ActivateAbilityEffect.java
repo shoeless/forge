@@ -2,7 +2,6 @@ package forge.game.ability.effects;
 
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -12,6 +11,7 @@ import forge.game.card.CardLists;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.collect.FCollection;
@@ -23,7 +23,8 @@ public class ActivateAbilityEffect extends SpellAbilityEffect {
 
         final List<Player> tgtPlayers = getTargetPlayers(sa);
 
-        sb.append(StringUtils.join(tgtPlayers, ", "));
+        // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+        sb.append(IterableUtil.joinObjects(", ", tgtPlayers));
         sb.append(" activates ");
         sb.append(Lang.nounWithAmount(1, sa.hasParam("ManaAbility") ? "mana ability" : "ability"));
         sb.append(" of each ").append(sa.getParamOrDefault("Type", "Card"));

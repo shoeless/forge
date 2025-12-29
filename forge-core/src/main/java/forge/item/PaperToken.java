@@ -2,8 +2,8 @@ package forge.item;
 
 import forge.ImageKeys;
 import forge.card.*;
+import forge.util.IterableUtil;
 import forge.util.MyRandom;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +52,8 @@ public class PaperToken implements InventoryItemFromSet, IPaperCard {
         }
         build.add(types);
 
-        String fileName = StringUtils.join(build, "_");
+        // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+        String fileName = IterableUtil.join("_", build);
         return makeTokenFileName(fileName);
     }
 

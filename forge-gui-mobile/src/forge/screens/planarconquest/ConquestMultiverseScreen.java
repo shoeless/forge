@@ -2,7 +2,6 @@ package forge.screens.planarconquest;
 
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
@@ -49,6 +48,7 @@ import forge.toolbox.FDisplayObject;
 import forge.toolbox.FList;
 import forge.toolbox.FOptionPane;
 import forge.toolbox.FScrollPane;
+import forge.util.IterableUtil;
 import forge.util.Utils;
 import forge.util.collect.FCollectionView;
 
@@ -636,7 +636,8 @@ public class ConquestMultiverseScreen extends FScreen {
             ConquestEvent event = loc.getEvent();
             String details = event.getName();
             if (!event.getVariants().isEmpty()) {
-                details += " (" + StringUtils.join(event.getVariants(), ", ") + ")";
+                // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+                details += " (" + IterableUtil.joinObjects(", ", event.getVariants()) + ")";
             }
             x = PADDING;
             y += symbolSize;

@@ -22,8 +22,8 @@ import com.google.common.collect.*;
 import forge.util.ITranslatable;
 import forge.util.Localizer;
 import forge.util.Settable;
+import forge.util.TextUtil;
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 import forge.util.function.Predicate;
@@ -292,7 +292,15 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
         if (!isCreature() && !isKindred()) {
             return false;
         }
-        boolean changed = subtypes.removeIf(CardType::isACreatureType);
+        // iOS compatibility: Use iterator instead of removeIf()
+        boolean changed = false;
+        Iterator<String> it = subtypes.iterator();
+        while (it.hasNext()) {
+            if (CardType.isACreatureType(it.next())) {
+                it.remove();
+                changed = true;
+            }
+        }
         // need to remove AllCreatureTypes too when setting Creature Type
         if (allCreatureTypes) {
             changed = true;
@@ -380,7 +388,7 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
             return true;
         }
 
-        t = StringUtils.capitalize(t);
+        t = TextUtil.capitalize(t);
         final CoreType type = CoreType.getEnum(t);
         if (type != null) {
             return hasType(type);
@@ -443,7 +451,7 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
             if (i != 0) {
                 sb.append("-");
             }
-            sb.append(StringUtils.capitalize(types[i]));
+            sb.append(TextUtil.capitalize(types[i]));
         }
         return sb.toString();
     }
@@ -641,7 +649,8 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
                 }
                 sb.append("(All");
                 if (!excludedCreatureSubtypes.isEmpty()) {
-                    sb.append(" except ").append(StringUtils.join(excludedCreatureSubtypes, " "));
+                    // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+                    sb.append(" except ").append(IterableUtil.join(" ", excludedCreatureSubtypes));
                 }
                 sb.append(")");
             }
@@ -721,7 +730,13 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
         }
 
         final Predicate<String> finalFilter = allowedTypes;
-        subtypes.removeIf(s -> !finalFilter.test(s));
+        // iOS compatibility: Use iterator instead of removeIf() which requires java.util.function.Predicate
+        Iterator<String> it = subtypes.iterator();
+        while (it.hasNext()) {
+            if (!finalFilter.test(it.next())) {
+                it.remove();
+            }
+        }
     }
 
     @Override

@@ -188,7 +188,8 @@ public enum ColumnDef {
                         sanctioned.add(gf);
                     }
                 }
-                return StringUtils.join(IterableUtil.transform(sanctioned, GameFormat::getName), ", ");
+                // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+                return IterableUtil.join(", ", IterableUtil.transform(sanctioned, GameFormat::getName));
             }),
     /**
      * The Draft ranking column.

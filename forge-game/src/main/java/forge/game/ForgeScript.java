@@ -22,7 +22,7 @@ import forge.game.staticability.StaticAbilityColorlessDamageSource;
 import forge.game.trigger.Trigger;
 import forge.game.zone.ZoneType;
 import forge.util.Expressions;
-import org.apache.commons.lang3.StringUtils;
+import forge.util.TextUtil;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -106,7 +106,7 @@ public class ForgeScript {
         } else if (property.equals("ChosenType")) {
             String chosenType = source.getChosenType();
             if (chosenType.startsWith("Non")) {
-                return !type.hasStringType(StringUtils.capitalize(chosenType.substring(3)));
+                return !type.hasStringType(TextUtil.capitalize(chosenType.substring(3)));
             }
             return type.hasStringType(chosenType);
         } else if (property.equals("IsNotChosenType")) {

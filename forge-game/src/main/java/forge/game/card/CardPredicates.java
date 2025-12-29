@@ -229,8 +229,9 @@ public final class CardPredicates {
         return c -> c.getNetPower() > minPower;
     }
 
+    // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt
     public static Comparator<Card> compareByCounterType(final CounterType type) {
-        return Comparator.comparingInt(arg0 -> arg0.getCounters(type));
+        return forge.util.ComparatorUtil.comparingInt(arg0 -> arg0.getCounters(type));
     }
 
     public static Predicate<Card> hasSVar(final String name) {
@@ -241,8 +242,9 @@ public final class CardPredicates {
         return c -> card.equals(c.getExiledWith());
     }
 
+    // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingLong
     public static Comparator<Card> compareByGameTimestamp() {
-        return Comparator.comparingLong(Card::getGameTimestamp);
+        return forge.util.ComparatorUtil.comparingLong(c -> c.getGameTimestamp());
     }
 
     public static Predicate<Card> inZone(final ZoneType zt) {

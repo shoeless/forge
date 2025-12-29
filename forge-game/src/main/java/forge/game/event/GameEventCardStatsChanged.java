@@ -4,9 +4,9 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import com.google.common.collect.Iterables;
-import org.apache.commons.lang3.StringUtils;
 
 import forge.game.card.Card;
+import forge.util.IterableUtil;
 
 /**
  * This means card's characteristics have changed on server, clients must re-request them
@@ -57,13 +57,14 @@ public class GameEventCardStatsChanged implements GameEvent {
         Card card = Iterables.getFirst(cards, null);
         if (null == card)
             return "Card state changes: (empty list)";
-        if (cards.size() == 1) 
+        // iOS compatibility: Use IterableUtil.join() instead of StringUtils.join() which uses Stream API
+        if (cards.size() == 1)
             return "Card state changes: " + card.getName() +
-                  " (" + StringUtils.join(card.getType(), ' ') + ") " +
+                  " (" + IterableUtil.join(" ", card.getType()) + ") " +
                   card.getNetPower() + "/" + card.getNetToughness();
         else
             return "Card state changes: " + card.getName() +
-                  " (" + StringUtils.join(card.getType(), ' ') + ") " +
+                  " (" + IterableUtil.join(" ", card.getType()) + ") " +
                   card.getNetPower() + "/" + card.getNetToughness() +
                   " and " + (cards.size() - 1) + " more";
     }

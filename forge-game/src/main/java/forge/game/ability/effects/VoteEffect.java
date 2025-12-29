@@ -7,7 +7,6 @@ import java.util.Map;
 
 import forge.game.event.GameEventRandomLog;
 import forge.util.Lang;
-import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -25,6 +24,7 @@ import forge.game.spellability.AbilitySub;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 import forge.util.Localizer;
 
 public class VoteEffect extends SpellAbilityEffect {
@@ -37,7 +37,8 @@ public class VoteEffect extends SpellAbilityEffect {
         final StringBuilder sb = new StringBuilder();
         sb.append(Lang.joinHomogenous(getDefinedPlayersOrTargeted(sa))).append(" vote ");
         if (sa.hasParam("Choices")) {
-            sb.append("for ").append(StringUtils.join(sa.getAdditionalAbilityList("Choices"), " or "));
+            // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+            sb.append("for ").append(IterableUtil.joinObjects(" or ", sa.getAdditionalAbilityList("Choices")));
         } else if (sa.hasParam("VoteMessage")) {
             sb.append(sa.getParam("VoteMessage"));
         }

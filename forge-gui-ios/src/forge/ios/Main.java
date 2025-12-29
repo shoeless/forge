@@ -73,8 +73,9 @@ public class Main extends IOSApplication.Delegate {
             System.err.println("FORGE: Bundle res dir: " + bundleResDir.getAbsolutePath());
 
             if (bundleResDir.exists() && bundleResDir.isDirectory()) {
-                // Only copy the languages directory (9 small files) to avoid watchdog timeout
-                // The rest of resources will be accessed directly from the bundle
+                // Copy essential small resource directories to avoid watchdog timeout
+
+                // Copy languages directory (9 small files)
                 File bundleLangDir = new File(bundleResDir, "languages");
                 File docsLangDir = new File(assetsDir + "/res", "languages");
 
@@ -86,6 +87,20 @@ public class Main extends IOSApplication.Delegate {
                     System.err.println("FORGE: Languages directory already exists");
                 } else {
                     System.err.println("FORGE: Languages directory not found in bundle");
+                }
+
+                // Copy defaults directory (placeholder images like no_card.jpg)
+                File bundleDefaultsDir = new File(bundleResDir, "defaults");
+                File docsDefaultsDir = new File(assetsDir + "/res", "defaults");
+
+                if (bundleDefaultsDir.exists() && !docsDefaultsDir.exists()) {
+                    System.err.println("FORGE: Copying defaults directory...");
+                    copyDirectory(bundleDefaultsDir, docsDefaultsDir);
+                    System.err.println("FORGE: Defaults copied successfully");
+                } else if (docsDefaultsDir.exists()) {
+                    System.err.println("FORGE: Defaults directory already exists");
+                } else {
+                    System.err.println("FORGE: Defaults directory not found in bundle");
                 }
             } else {
                 System.err.println("FORGE: No bundled resources found at: " + bundleResDir.getAbsolutePath());
@@ -134,7 +149,7 @@ public class Main extends IOSApplication.Delegate {
         System.err.println("FORGE: createApplication() starting");
         try {
             // Use the app bundle as assetsDir so resources are read directly from there
-            // This avoids copying 16,662 files and hitting watchdog timeout
+            // This avoids copying files and hitting watchdog timeout
             String bundlePath = NSBundle.getMainBundle().getBundlePath();
             // Ensure path ends with / so relative paths are appended correctly
             final String assetsDir = bundlePath.endsWith("/") ? bundlePath : bundlePath + "/";
@@ -151,8 +166,16 @@ public class Main extends IOSApplication.Delegate {
             config.useAccelerometer = false;
             config.useCompass = false;
             config.useAudio = false;  // Disable audio to avoid OpenAL initialization crash
+            config.preferredFramesPerSecond = 60;  // Smooth 60 FPS rendering
+            config.preventScreenDimming = true;  // Keep screen on during gameplay
+
+            // Detect if running on iPad (UIUserInterfaceIdiomPad = 1)
+            boolean isTablet = org.robovm.apple.uikit.UIDevice.getCurrentDevice().getUserInterfaceIdiom()
+                == org.robovm.apple.uikit.UIUserInterfaceIdiom.Pad;
+            System.err.println("FORGE: Device is tablet: " + isTablet);
+
             System.err.println("FORGE: Calling Forge.getApp()");
-            final ApplicationListener app = Forge.getApp(null, new IOSClipboard(), new IOSAdapter(), assetsDir, false, false, 0, false, 0);
+            final ApplicationListener app = Forge.getApp(null, new IOSClipboard(), new IOSAdapter(), assetsDir, false, false, 0, isTablet, 0);
             System.err.println("FORGE: app class is: " + app.getClass().getName());
             System.err.flush();
 
@@ -170,9 +193,18 @@ public class Main extends IOSApplication.Delegate {
     public static void main(String[] args) {
         System.err.println("FORGE: main() starting");
         try {
-            // Use iOS NSTimeZone API to avoid sandbox violations when accessing /etc/timezone
+            // Use iOS NSTimeZone API to avoid sandbox violations when accessing /etc/localtime
             NSTimeZone systemTimeZone = NSTimeZone.getSystemTimeZone();
-            System.setProperty("user.timezone", systemTimeZone.getName());
+            if (systemTimeZone != null) {
+                String tzName = systemTimeZone.getName();
+                long offsetSeconds = systemTimeZone.getSecondsFromGMT();
+                int offsetMillis = (int) (offsetSeconds * 1000);
+
+                // Set both the property AND the default timezone to prevent /etc/localtime access
+                System.setProperty("user.timezone", tzName != null ? tzName : "UTC");
+                TimeZone.setDefault(new SimpleTimeZone(offsetMillis, tzName != null ? tzName : "UTC"));
+                System.err.println("FORGE: Timezone set to " + tzName + " in main()");
+            }
 
             final NSAutoreleasePool pool = new NSAutoreleasePool();
             System.err.println("FORGE: Calling UIApplication.main()");
@@ -205,6 +237,8 @@ public class Main extends IOSApplication.Delegate {
     }
 
     private static final class IOSAdapter implements IDeviceAdapter {
+        private static final int IO_BUFFER_SIZE = 8192;  // 8 KB buffer for file I/O operations
+
         @Override
         public boolean isConnectedToInternet() {
             return true;
@@ -272,7 +306,14 @@ public class Main extends IOSApplication.Delegate {
 
         @Override
         public void convertToJPEG(InputStream input, OutputStream output) throws IOException {
-
+            // iOS compatibility: Simply copy the input stream to output
+            // No conversion needed - Scryfall already provides JPEG images
+            byte[] buffer = new byte[IO_BUFFER_SIZE];
+            int bytesRead;
+            while ((bytesRead = input.read(buffer)) != -1) {
+                output.write(buffer, 0, bytesRead);
+            }
+            output.flush();
         }
 
         @Override

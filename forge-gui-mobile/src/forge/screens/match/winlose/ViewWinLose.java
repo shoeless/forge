@@ -2,7 +2,6 @@ package forge.screens.match.winlose;
 
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.utils.Align;
@@ -28,6 +27,7 @@ import forge.toolbox.FDisplayObject;
 import forge.toolbox.FLabel;
 import forge.toolbox.FOverlay;
 import forge.toolbox.FTextArea;
+import forge.util.IterableUtil;
 import forge.util.Utils;
 
 public class ViewWinLose extends FOverlay implements IWinLoseView<FButton> {
@@ -62,7 +62,8 @@ public class ViewWinLose extends FOverlay implements IWinLoseView<FButton> {
         btnContinue.setEnabled(!game0.isMatchOver());
 
         lblLog = add(new FLabel.Builder().text(Forge.getLocalizer().getMessage("lblGameLog")).align(Align.center).font(FSkinFont.get(18)).build());
-        txtLog = add(new FTextArea(true, StringUtils.join(game.getGameLog().getLogEntries(null), "\r\n")) {
+        // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
+        txtLog = add(new FTextArea(true, IterableUtil.joinObjects("\r\n", game.getGameLog().getLogEntries(null)).replace("[COMPUTER]", "[AI]")) {
             @Override
             public boolean tap(float x, float y, int count) {
                 if (txtLog.getMaxScrollTop() > 0) {
