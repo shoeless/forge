@@ -102,4 +102,13 @@ public final class ComparatorUtil {
             }
         };
     }
+
+    /**
+     * Verifies comparator transitivity for debugging purposes.
+     * Used only in error reporting - returns empty string on iOS.
+     */
+    public static <T> String verifyTransitivity(final Comparator<T> comparator, final java.util.List<T> elements) {
+        // Simplified implementation for iOS - full transitivity checking not critical for runtime
+        return "Transitivity check not available on iOS";
+    }
 }

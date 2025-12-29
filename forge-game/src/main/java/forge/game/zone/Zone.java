@@ -61,8 +61,8 @@ public class Zone implements java.io.Serializable, Iterable<Card> {
             int cmc = Integer.compare(c1.getCMC(), c2.getCMC());
             if (cmc != 0) return cmc;
 
-            // Then compare by color order weight
-            int color = Integer.compare(c1.getColor().getOrderWeight(), c2.getColor().getOrderWeight());
+            // Then compare by color order weight (returns float)
+            int color = Float.compare(c1.getColor().getOrderWeight(), c2.getColor().getOrderWeight());
             if (color != 0) return color;
 
             // Then compare by name
