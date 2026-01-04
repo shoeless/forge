@@ -17,6 +17,7 @@ import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -149,7 +150,13 @@ public class MillAi extends SpellAbilityAi {
             }
 
             // select Player which would cause the most damage
-            Map.Entry<Player, Integer> max = Collections.max(list.entrySet(), Map.Entry.comparingByValue());
+            // iOS compatibility: Replace Map.Entry.comparingByValue() with anonymous Comparator
+            Map.Entry<Player, Integer> max = Collections.max(list.entrySet(), new Comparator<Map.Entry<Player, Integer>>() {
+                @Override
+                public int compare(Map.Entry<Player, Integer> e1, Map.Entry<Player, Integer> e2) {
+                    return e1.getValue().compareTo(e2.getValue());
+                }
+            });
 
             sa.getTargets().add(max.getKey());
         }

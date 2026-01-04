@@ -332,14 +332,20 @@ public class CardUtil {
         if (card == null)
             return 0;
 
-        return switch (card.getRarity()) {
-            case BasicLand -> 5;
-            case Common -> 50;
-            case Uncommon -> 150;
-            case Rare -> 300;
-            case MythicRare -> 500;
-            default -> 600;
-        };
+        switch (card.getRarity()) {
+            case BasicLand:
+                return 5;
+            case Common:
+                return 50;
+            case Uncommon:
+                return 150;
+            case Rare:
+                return 300;
+            case MythicRare:
+                return 500;
+            default:
+                return 600;
+        }
     }
 
     public static int getRewardPrice(Reward reward) {
@@ -383,13 +389,24 @@ public class CardUtil {
 
             for (int i = 0; i < data.jumpstartPacks.length; i++) {
                 final byte targetColor = MagicColor.fromName(data.jumpstartPacks[i]);
-                String targetName = switch (targetColor) {
-                    case MagicColor.BLUE -> "Island";
-                    case MagicColor.BLACK -> "Swamp";
-                    case MagicColor.RED -> "Mountain";
-                    case MagicColor.GREEN -> "Forest";
-                    default -> "Plains";
-                };
+                String targetName;
+                switch (targetColor) {
+                    case MagicColor.BLUE:
+                        targetName = "Island";
+                        break;
+                    case MagicColor.BLACK:
+                        targetName = "Swamp";
+                        break;
+                    case MagicColor.RED:
+                        targetName = "Mountain";
+                        break;
+                    case MagicColor.GREEN:
+                        targetName = "Forest";
+                        break;
+                    default:
+                        targetName = "Plains";
+                        break;
+                }
 
                 packCandidates = new HashMap<>();
                 for (SealedTemplate template : StaticData.instance().getSpecialBoosters()) {

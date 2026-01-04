@@ -20,17 +20,14 @@ public class CardRendererUtils {
             if (Forge.enableUIMask.equals("Art"))
                 return false;
             switch (fPref) {
-                case UI_ROTATE_SPLIT_CARDS -> {
+                case UI_ROTATE_SPLIT_CARDS:
                     return card.isSplitCard() && MatchController.instance.mayView(card) && !card.isFaceDown();
-                }
-                case UI_ROTATE_PLANE_OR_PHENOMENON -> {
+                case UI_ROTATE_PLANE_OR_PHENOMENON:
                     return card.getCurrentState().isPhenomenon() || card.getCurrentState().isPlane()
                             || (card.getCurrentState().isBattle() && !altState)
                             || (card.getAlternateState() != null && card.getAlternateState().isBattle() && altState);
-                }
-                default -> {
+                default:
                     return false;
-                }
             }
         }
         return false;

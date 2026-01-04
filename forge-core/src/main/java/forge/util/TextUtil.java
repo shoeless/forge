@@ -62,6 +62,44 @@ public class TextUtil {
         return Character.toTitleCase(firstChar) + str.substring(1);
     }
 
+    /**
+     * iOS-compatible replacement for StringUtils.uncapitalize().
+     * Converts the first character of the string to lowercase.
+     *
+     * @param str the string to uncapitalize
+     * @return the uncapitalized string, or the original if already lowercase or null/empty
+     */
+    public static String uncapitalize(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        char firstChar = str.charAt(0);
+        if (Character.isLowerCase(firstChar)) {
+            return str;
+        }
+        return Character.toLowerCase(firstChar) + str.substring(1);
+    }
+
+    /**
+     * iOS-compatible replacement for StringUtils.equalsAnyIgnoreCase().
+     * Checks if a string equals any of the given strings, ignoring case.
+     *
+     * @param str the string to check
+     * @param searchStrings the strings to compare against
+     * @return true if str equals any of the search strings (case-insensitive)
+     */
+    public static boolean equalsAnyIgnoreCase(String str, CharSequence... searchStrings) {
+        if (str == null || searchStrings == null) {
+            return false;
+        }
+        for (CharSequence search : searchStrings) {
+            if (str.equalsIgnoreCase(search.toString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static String normalizeText(String text) {
         if (text == null)
             return IPaperCard.NO_ARTIST_NAME;

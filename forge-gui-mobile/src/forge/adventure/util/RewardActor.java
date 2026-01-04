@@ -59,6 +59,7 @@ import forge.util.ImageUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
+import java.util.List;
 import java.util.Scanner;
 
 import static forge.localinstance.properties.ForgeConstants.IMAGE_LIST_QUEST_BOOSTERS_FILE;
@@ -968,7 +969,7 @@ public class RewardActor extends Actor implements Disposable, ImageFetcher.Callb
     }
 
     private static boolean inCollectionLike(PaperCard pc) {
-        var coll = AdventurePlayer.current().getCollectionCards(true).toFlatList();
+        List<PaperCard> coll = AdventurePlayer.current().getCollectionCards(true).toFlatList();
         String name = pc.getName();
         for (PaperCard c : coll) {
             if (c.equals(pc) || c.getName().equals(name))

@@ -103,7 +103,7 @@ public class TokenInfo {
         for (CardType.CoreType t : c.getType().getCoreTypes()) {
             relevantTypes.add(t.name());
         }
-        c.getType().getSubtypes().forEach(relevantTypes::add);
+        IterableUtil.forEach(c.getType().getSubtypes(), relevantTypes::add);
         if (c.getType().isLegendary()) {
             relevantTypes.add("Legendary");
         }

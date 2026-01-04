@@ -153,7 +153,8 @@ public class SpellAbilityStackInstance implements IIdentifiable, IHasCardView {
                 Map<AbilityKey, Object> runParams = AbilityKey.newMap();
                 runParams.put(AbilityKey.SourceSA, ability);
                 runParams.put(AbilityKey.Target, tgt);
-                if (tgt instanceof Card c) {
+                if (tgt instanceof Card) {
+                    Card c = (Card) tgt;
                     if (!c.hasBecomeTargetThisTurn()) {
                         runParams.put(AbilityKey.FirstTime, null);
                     }

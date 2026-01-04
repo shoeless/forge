@@ -41,9 +41,9 @@ import forge.util.function.Predicate;
  */
 public enum DeckFormat {
     //               Main board: allowed size         SB: restriction  Max distinct non-basic cards
-    Constructed    ( Range.of(60, Integer.MAX_VALUE), Range.of(0, 15), 4),
-    QuestDeck      ( Range.of(40, Integer.MAX_VALUE), Range.of(0, 15), 4),
-    Limited        ( Range.of(40, Integer.MAX_VALUE), null, Integer.MAX_VALUE) {
+    Constructed    ( Range.between(60, Integer.MAX_VALUE), Range.between(0, 15), 4),
+    QuestDeck      ( Range.between(40, Integer.MAX_VALUE), Range.between(0, 15), 4),
+    Limited        ( Range.between(40, Integer.MAX_VALUE), null, Integer.MAX_VALUE) {
         @Override
         public String getAttractionDeckConformanceProblem(Deck deck) {
             //Limited attraction decks have a minimum size of 3 and no singleton restriction.
@@ -65,17 +65,17 @@ public enum DeckFormat {
             return super.getExtraSectionMaxCopies(section);
         }
     },
-    Commander      ( Range.is(99),                         Range.of(0, 10), 1, null,
+    Commander      ( Range.between(99, 99),                Range.between(0, 10), 1, null,
             card -> StaticData.instance().getCommanderPredicate().test(card)
     ),
-    Oathbreaker      ( Range.is(58),                         Range.of(0, 10), 1, null,
+    Oathbreaker      ( Range.between(58, 58),                Range.between(0, 10), 1, null,
             card -> StaticData.instance().getOathbreakerPredicate().test(card)
     ),
-    Pauper      ( Range.is(60),                         Range.of(0, 10), 1),
-    Brawl      ( Range.is(59), Range.of(0, 15), 1, null,
+    Pauper      ( Range.between(60, 60),                Range.between(0, 10), 1),
+    Brawl      ( Range.between(59, 59), Range.between(0, 15), 1, null,
             card -> StaticData.instance().getBrawlPredicate().test(card)
     ),
-    TinyLeaders    ( Range.is(49),                         Range.of(0, 10), 1, new Predicate<>() {
+    TinyLeaders    ( Range.between(49, 49),                Range.between(0, 10), 1, new Predicate<>() {
         private final Set<String> bannedCards = ImmutableSet.of(
                 "Ancestral Recall", "Balance", "Black Lotus", "Black Vise", "Channel", "Chaos Orb", "Contract From Below", "Counterbalance", "Darkpact", "Demonic Attorney", "Demonic Tutor", "Earthcraft", "Edric, Spymaster of Trest", "Falling Star",
                 "Fastbond", "Flash", "Goblin Recruiter", "Grindstone", "Hermit Druid", "Imperial Seal", "Jeweled Bird", "Karakas", "Library of Alexandria", "Mana Crypt", "Mana Drain", "Mana Vault", "Metalworker", "Mind Twist", "Mishra's Workshop",
@@ -111,18 +111,18 @@ public enum DeckFormat {
             cmcLevels.add(ImmutablePair.of(new FilterCMC(3, 3), 3));
         }
     },
-    PlanarConquest ( Range.of(40, Integer.MAX_VALUE), Range.is(0), 1),
-    Adventure      ( Range.of(40, Integer.MAX_VALUE), Range.of(0, Integer.MAX_VALUE), 4) {
+    PlanarConquest ( Range.between(40, Integer.MAX_VALUE), Range.between(0, 0), 1),
+    Adventure      ( Range.between(40, Integer.MAX_VALUE), Range.between(0, Integer.MAX_VALUE), 4) {
         @Override
         public boolean allowCustomCards() {
             //If the player has them, may as well allow them.
             return true;
         }
     },
-    Vanguard       ( Range.of(60, Integer.MAX_VALUE), Range.is(0), 4),
-    Planechase     ( Range.of(60, Integer.MAX_VALUE), Range.is(0), 4),
-    Archenemy      ( Range.of(60, Integer.MAX_VALUE), Range.is(0), 4),
-    Puzzle         ( Range.of(0, Integer.MAX_VALUE), Range.is(0), 4);
+    Vanguard       ( Range.between(60, Integer.MAX_VALUE), Range.between(0, 0), 4),
+    Planechase     ( Range.between(60, Integer.MAX_VALUE), Range.between(0, 0), 4),
+    Archenemy      ( Range.between(60, Integer.MAX_VALUE), Range.between(0, 0), 4),
+    Puzzle         ( Range.between(0, Integer.MAX_VALUE), Range.between(0, 0), 4);
 
     private final Range<Integer> mainRange;
     private final Range<Integer> sideRange; // null => no check
@@ -226,12 +226,21 @@ public enum DeckFormat {
     }
 
     public int getExtraSectionMaxCopies(DeckSection section) {
-        return switch (section) {
-            case Avatar, Commander, Planes, Dungeon, Attractions, Contraptions -> 1;
-            case Schemes -> 2;
-            case Conspiracy -> Integer.MAX_VALUE;
-            default -> maxCardCopies;
-        };
+        switch (section) {
+            case Avatar:
+            case Commander:
+            case Planes:
+            case Dungeon:
+            case Attractions:
+            case Contraptions:
+                return 1;
+            case Schemes:
+                return 2;
+            case Conspiracy:
+                return Integer.MAX_VALUE;
+            default:
+                return maxCardCopies;
+        }
     }
 
     /**

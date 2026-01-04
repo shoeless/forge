@@ -16,9 +16,9 @@ import forge.game.spellability.SpellAbility;
 import forge.game.spellability.SpellAbilityStackInstance;
 import forge.game.zone.ZoneType;
 import forge.util.Aggregates;
+import forge.util.IterableUtil;
 import forge.util.TextUtil;
 import forge.util.collect.FCollectionView;
-import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.*;
 
@@ -563,7 +563,8 @@ public class AiCostDecision extends CostDecisionMakerBase {
     protected int removeCounter(GameEntityCounterTable table, List<Card> prefs, CounterEnumType cType, int stillToRemove) {
         int removed = 0;
         if (!prefs.isEmpty() && stillToRemove > 0) {
-            prefs.sort(CardPredicates.compareByCounterType(cType));
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(prefs, CardPredicates.compareByCounterType(cType));
 
             for (Card prefCard : prefs) {
                 // already enough removed
@@ -583,7 +584,8 @@ public class AiCostDecision extends CostDecisionMakerBase {
     @Override
     public PaymentDecision visit(CostRemoveAnyCounter cost) {
         final int c = cost.getAbilityAmount(ability);
-        final Card originalHost = ObjectUtils.getIfNull(ability.getOriginalHost(), source);
+        final Card origHost = ability.getOriginalHost();
+        final Card originalHost = origHost != null ? origHost : source;
 
         if (c <= 0) {
             return null;
@@ -716,7 +718,8 @@ public class AiCostDecision extends CostDecisionMakerBase {
                 }
                 return crd.getCounters(CounterEnumType.QUEST) > e;
             });
-            prefs.sort(Collections.reverseOrder(CardPredicates.compareByCounterType(CounterEnumType.QUEST)));
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(prefs, Collections.reverseOrder(CardPredicates.compareByCounterType(CounterEnumType.QUEST)));
 
             for (final Card crd : prefs) {
                 int e = 0;

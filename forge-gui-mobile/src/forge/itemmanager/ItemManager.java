@@ -407,32 +407,32 @@ public abstract class ItemManager<T extends InventoryItem> extends FContainer im
         ConquestCommandersScreen.CommanderColorFilter commanderColorFilter = null;
         ConquestCommandersScreen.CommanderOriginFilter commanderOriginFilter = null;
         for (ItemFilter<? extends T> filter : filters) {
-            if (filter instanceof CardTypeFilter ct) {
-                cardTypeFilter = ct;
+            if (filter instanceof CardTypeFilter) {
+                cardTypeFilter = (CardTypeFilter) filter;
                 continue;
             }
-            if (filter instanceof CardColorFilter cr) {
-                colorFilter = cr;
+            if (filter instanceof CardColorFilter) {
+                colorFilter = (CardColorFilter) filter;
                 continue;
             }
-            if (filter instanceof CardFormatFilter cf) {
-                cardFormatFilter = cf;
+            if (filter instanceof CardFormatFilter) {
+                cardFormatFilter = (CardFormatFilter) filter;
                 continue;
             }
-            if (filter instanceof DeckColorFilter dc) {
-                deckColorFilter = dc;
+            if (filter instanceof DeckColorFilter) {
+                deckColorFilter = (DeckColorFilter) filter;
                 continue;
             }
-            if (filter instanceof DeckFormatFilter df) {
-                deckFormatFilter = df;
+            if (filter instanceof DeckFormatFilter) {
+                deckFormatFilter = (DeckFormatFilter) filter;
                 continue;
             }
-            if (filter instanceof ConquestCommandersScreen.CommanderColorFilter ccf) {
-                commanderColorFilter = ccf;
+            if (filter instanceof ConquestCommandersScreen.CommanderColorFilter) {
+                commanderColorFilter = (ConquestCommandersScreen.CommanderColorFilter) filter;
                 continue;
             }
-            if (filter instanceof ConquestCommandersScreen.CommanderOriginFilter cof) {
-                commanderOriginFilter = cof;
+            if (filter instanceof ConquestCommandersScreen.CommanderOriginFilter) {
+                commanderOriginFilter = (ConquestCommandersScreen.CommanderOriginFilter) filter;
                 continue;
             }
             helper.include(filter.getWidget(), filter.getPreferredWidth(helper.getRemainingLineWidth(), fieldHeight), fieldHeight);

@@ -1302,7 +1302,8 @@ public class ChangeZoneAi extends SpellAbilityAi {
             int loyaltyDiff = AiProfileUtil.getIntProperty(ai, AiProps.BLINK_RELOAD_PLANESWALKER_LOYALTY_DIFF);
             int chance = AiProfileUtil.getIntProperty(ai, AiProps.BLINK_RELOAD_PLANESWALKER_CHANCE);
             if (MyRandom.percentTrue(chance)) {
-                aiPlaneswalkers.sort(CardPredicates.compareByCounterType(CounterEnumType.LOYALTY));
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                IterableUtil.sort(aiPlaneswalkers, CardPredicates.compareByCounterType(CounterEnumType.LOYALTY));
                 for (Card pw : aiPlaneswalkers) {
                     int curLoyalty = pw.getCounters(CounterEnumType.LOYALTY);
                     int freshLoyalty = Integer.parseInt(pw.getCurrentState().getBaseLoyalty());
@@ -1726,10 +1727,12 @@ public class ChangeZoneAi extends SpellAbilityAi {
         String definedSac = StringUtils.split(source.getSVar("AIPreference"), "$")[1];
 
         CardCollection listToSac = CardLists.getValidCards(ai.getCardsIn(ZoneType.Battlefield), definedSac, ai, source, sa);
-        listToSac.sort(Collections.reverseOrder(CardLists.CmcComparatorInv));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(listToSac, Collections.reverseOrder(CardLists.CmcComparatorInv));
 
         CardCollection listToRet = CardLists.filter(ai.getCardsIn(ZoneType.Graveyard), CardPredicates.CREATURES);
-        listToRet.sort(CardLists.CmcComparatorInv);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(listToRet, CardLists.CmcComparatorInv);
 
         if (!listToSac.isEmpty() && !listToRet.isEmpty()) {
             Card worstSac = listToSac.getFirst();
@@ -1763,7 +1766,8 @@ public class ChangeZoneAi extends SpellAbilityAi {
         boolean anyCMC = !definedGoal.contains(".cmc");
 
         CardCollection listToSac = CardLists.getValidCards(ai.getCardsIn(ZoneType.Battlefield), definedSac, ai, source, sa);
-        listToSac.sort(!sacWorst ? CardLists.CmcComparatorInv : Collections.reverseOrder(CardLists.CmcComparatorInv));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(listToSac, !sacWorst ? CardLists.CmcComparatorInv : Collections.reverseOrder(CardLists.CmcComparatorInv));
 
         for (Card sacCandidate : listToSac) {
             int sacCMC = sacCandidate.getCMC();

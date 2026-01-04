@@ -500,7 +500,8 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
                     runParams = AbilityKey.newMap();
                     runParams.put(AbilityKey.SourceSA, s);
                     runParams.put(AbilityKey.Target, tgt);
-                    if (tgt instanceof Card c) {
+                    if (tgt instanceof Card) {
+                        Card c = (Card) tgt;
                         if (!c.hasBecomeTargetThisTurn()) {
                             runParams.put(AbilityKey.FirstTime, null);
                         }

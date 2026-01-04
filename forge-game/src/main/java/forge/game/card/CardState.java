@@ -547,7 +547,8 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
             String desc = "";
             String extra = "";
             for (KeywordInterface ki : this.getCachedKeyword(Keyword.ENCHANT)) {
-                if (ki instanceof KeywordWithType kwt) {
+                if (ki instanceof KeywordWithType) {
+                    KeywordWithType kwt = (KeywordWithType) ki;
                     desc = kwt.getTypeDescription();
                 }
                 break;
@@ -799,8 +800,9 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
             }
         }
         ReplacementEffect runRE = null;
-        if (ctb instanceof SpellAbility sp && sp.isReplacementAbility()
+        if (ctb instanceof SpellAbility && ((SpellAbility) ctb).isReplacementAbility()
             && source.getCard().equals(ctb.getHostCard())) {
+            SpellAbility sp = (SpellAbility) ctb;
             runRE = sp.getReplacementEffect();
         }
 

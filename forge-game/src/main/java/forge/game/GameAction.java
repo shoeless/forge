@@ -745,17 +745,30 @@ public class GameAction {
     public final Card moveTo(final ZoneType name, final Card c, final int libPosition, SpellAbility cause, Map<AbilityKey, Object> params) {
         // Call specific functions to set PlayerZone, then move onto moveTo
         try {
-            return switch (name) {
-                case Hand -> moveToHand(c, cause, params);
-                case Library -> moveToLibrary(c, libPosition, cause, params);
-                case Battlefield -> moveToPlay(c, c.getController(), cause, params);
-                case Graveyard -> moveToGraveyard(c, cause, params);
-                case Exile -> !c.canExiledBy(cause, true) ? null : exile(c, cause, params);
-                case Stack -> moveToStack(c, cause, params);
-                case PlanarDeck, SchemeDeck, AttractionDeck, ContraptionDeck -> moveToVariantDeck(c, name, libPosition, cause, params);
-                case Junkyard -> moveToJunkyard(c, cause, params);
-                default -> moveTo(c.getOwner().getZone(name), c, cause); // sideboard will also get there
-            };
+            // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+            switch (name) {
+                case Hand:
+                    return moveToHand(c, cause, params);
+                case Library:
+                    return moveToLibrary(c, libPosition, cause, params);
+                case Battlefield:
+                    return moveToPlay(c, c.getController(), cause, params);
+                case Graveyard:
+                    return moveToGraveyard(c, cause, params);
+                case Exile:
+                    return !c.canExiledBy(cause, true) ? null : exile(c, cause, params);
+                case Stack:
+                    return moveToStack(c, cause, params);
+                case PlanarDeck:
+                case SchemeDeck:
+                case AttractionDeck:
+                case ContraptionDeck:
+                    return moveToVariantDeck(c, name, libPosition, cause, params);
+                case Junkyard:
+                    return moveToJunkyard(c, cause, params);
+                default:
+                    return moveTo(c.getOwner().getZone(name), c, cause); // sideboard will also get there
+            }
         } catch (Exception e) {
             // Include all details in exception message to avoid duplicate logging
             String msg = String.format("GameAction:moveTo: Error moving card %s to zone %s (Owner: %s, SA: %s)",
@@ -1170,7 +1183,9 @@ public class GameAction {
 
         for (final CardCollectionView affected : affectedPerAbility.values()) {
             if (affected != null) {
-                affected.forEach(affectedCards::add);
+                for (Card card : affected) {
+                    affectedCards.add(card);
+                }
             }
         }
 
@@ -2327,26 +2342,37 @@ public class GameAction {
         startGame(lastGameOutcome, null);
     }
     public void startGame(GameOutcome lastGameOutcome, Runnable startGameHook) {
+        System.err.println("DEBUG GameAction.startGame: Starting game");
         Player first = determineFirstTurnPlayer(lastGameOutcome);
+        System.err.println("DEBUG GameAction.startGame: First player is " + (first != null ? first.getName() : "NULL"));
 
         GameType gameType = game.getRules().getGameType();
+        System.err.println("DEBUG GameAction.startGame: Game type is " + gameType);
         do {
-            if (game.isGameOver()) { break; } // conceded during "play or draw"
+            if (game.isGameOver()) {
+                System.err.println("DEBUG GameAction.startGame: Game already over, breaking");
+                break;
+            } // conceded during "play or draw"
 
             // FControl should determine now if there are any human players.
             // Where there are none, it should bring up speed controls
+            System.err.println("DEBUG GameAction.startGame: Firing GameEventGameStarted");
             game.fireEvent(new GameEventGameStarted(gameType, first, game.getPlayers()));
 
+            System.err.println("DEBUG GameAction.startGame: Running pre-opening hand actions");
             runPreOpeningHandActions(first);
 
+            System.err.println("DEBUG GameAction.startGame: Setting game age to Mulligan");
             game.setAge(GameStage.Mulligan);
             for (final Player p1 : game.getPlayers()) {
                 // Choose starting hand for each player with multiple hands
+                System.err.println("DEBUG GameAction.startGame: Drawing cards for " + p1.getName() + ", library size=" + p1.getZone(forge.game.zone.ZoneType.Library).size());
                 if (StaticData.instance().getFilteredHandsEnabled() ) {
                     drawStartingHand(p1);
                 } else {
                     p1.drawCards(p1.getStartingHandSize());
                 }
+                System.err.println("DEBUG GameAction.startGame: After draw, hand size=" + p1.getZone(forge.game.zone.ZoneType.Hand).size());
 
                 BackupPlanService backupPlans = new BackupPlanService(p1);
                 if (backupPlans.initializeExtraHands()) {
@@ -2708,7 +2734,8 @@ public class GameAction {
         if (isCombat) {
             for (Map.Entry<GameEntity, Map<Card, Integer>> et : damageMap.columnMap().entrySet()) {
                 final GameEntity ge = et.getKey();
-                if (ge instanceof Card c) {
+                if (ge instanceof Card) {
+                    Card c = (Card) ge;
                     c.clearAssignedDamage();
                 }
             }
@@ -2729,7 +2756,8 @@ public class GameAction {
                     continue;
                 }
 
-                if (e.getKey() instanceof Card c && !lethalDamage.containsKey(c)) {
+                if (e.getKey() instanceof Card && !lethalDamage.containsKey(e.getKey())) {
+                    Card c = (Card) e.getKey();
                     lethalDamage.put(c, c.getExcessDamageValue(false));
                 }
 

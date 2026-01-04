@@ -171,8 +171,11 @@ public class ComputerUtilCombat {
     public static int damageIfUnblocked(final Card attacker, final GameEntity attacked, final Combat combat, boolean withoutAbilities) {
         int damage = attacker.getNetCombatDamage();
         int sum = 0;
-        if (attacked instanceof Player p && !p.canLoseLife()) {
-            return 0;
+        if (attacked instanceof Player) {
+            Player p = (Player) attacked;
+            if (!p.canLoseLife()) {
+                return 0;
+            }
         }
 
         if (!attacker.hasKeyword(Keyword.INFECT)) {
@@ -2528,7 +2531,8 @@ public class ComputerUtilCombat {
         if (combat != null) {
             GameEntity def = combat.getDefenderByAttacker(sa.getHostCard());
             // 1. If the card that spawned the attacker was sent at a card, attack the same. Consider improving.
-            if (def instanceof Card card && Iterables.contains(defenders, def)) {
+            if (def instanceof Card && Iterables.contains(defenders, def)) {
+                Card card = (Card) def;
                 if (card.isPlaneswalker()) {
                     return def;
                 }
@@ -2538,11 +2542,17 @@ public class ComputerUtilCombat {
             }
             // 2. Otherwise, go through the list of options one by one, choose the first one that can't be blocked profitably.
             for (GameEntity p : defenders) {
-                if (p instanceof Player p1 && !ComputerUtilCard.canBeBlockedProfitably(p1, attacker, true)) {
-                    return p;
+                if (p instanceof Player) {
+                    Player p1 = (Player) p;
+                    if (!ComputerUtilCard.canBeBlockedProfitably(p1, attacker, true)) {
+                        return p;
+                    }
                 }
-                if (p instanceof Card card && !ComputerUtilCard.canBeBlockedProfitably(card.getController(), attacker, true)) {
-                    return p;
+                if (p instanceof Card) {
+                    Card card = (Card) p;
+                    if (!ComputerUtilCard.canBeBlockedProfitably(card.getController(), attacker, true)) {
+                        return p;
+                    }
                 }
             }
         }

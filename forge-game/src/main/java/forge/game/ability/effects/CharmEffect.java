@@ -15,6 +15,7 @@ import forge.game.player.Player;
 import forge.game.spellability.AbilitySub;
 import forge.game.spellability.SpellAbility;
 import forge.util.Aggregates;
+import forge.util.IterableUtil;
 import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.collect.FCollection;
@@ -272,8 +273,8 @@ public class CharmEffect extends SpellAbilityEffect {
         }
 
         // Sort Chosen by SA order
-        // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt
-        chosen.sort(forge.util.ComparatorUtil.comparingInt(o -> o.getSVarInt("CharmOrder")));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(chosen, forge.util.ComparatorUtil.comparingInt(o -> o.getSVarInt("CharmOrder")));
 
         int indx = 1;
         for (AbilitySub sub : chosen) {

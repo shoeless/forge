@@ -805,7 +805,8 @@ public class SpecialCardAi {
                     sa.getParamOrDefault("ChangeNum", "1"), sa);
             CardCollection lib = CardLists.filter(ai.getCardsIn(ZoneType.Library),
                     CardPredicates.nameNotEquals(sa.getHostCard().getName()));
-            lib.sort(CardLists.CmcComparatorInv);
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(lib, CardLists.CmcComparatorInv);
 
             // Additional cards which are difficult to auto-classify but which are generally good to Intuition for
             List<String> highPriorityNamedCards = Lists.newArrayList("Accumulated Knowledge", "Take Inventory");
@@ -902,7 +903,8 @@ public class SpecialCardAi {
             // If we're playing Reanimator, we're really interested just in the highest CMC spells, not the
             // ones we necessarily have multiples of
             if (ComputerUtil.isPlayingReanimator(ai)) {
-                libHighPriorityList.sort(CardLists.CmcComparatorInv);
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                IterableUtil.sort(libHighPriorityList, CardLists.CmcComparatorInv);
             }
 
             // Otherwise, try to grab something that is hopefully decent to grab, in priority order
@@ -1305,7 +1307,9 @@ public class SpecialCardAi {
     // Phyrexian Dreadnought
     public static class PhyrexianDreadnought {
         public static CardCollection reviseCreatureSacList(final Player ai, final SpellAbility sa, final CardCollection choices) {
-            choices.sort(ComputerUtilCard.getCachedCreatureComparator());
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            // Note: NOT reversed to match upstream behavior (ascending order)
+            IterableUtil.sort(choices, ComputerUtilCard.EvaluateCreatureComparator);
             int power = 0;
             List<Card> toKeep = Lists.newArrayList();
             for (Card c : choices) {
@@ -1563,7 +1567,8 @@ public class SpecialCardAi {
             if (atTargetCMCInLib.isEmpty()) {
                 atTargetCMCInLib = CardLists.filter(creatsInLib, CardPredicates.greaterCMC(numManaSrcs));
             }
-            atTargetCMCInLib.sort(CardLists.CmcComparatorInv);
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(atTargetCMCInLib, CardLists.CmcComparatorInv);
             if (atTargetCMCInLib.isEmpty()) {
                 // Nothing to aim for?
                 return null;
@@ -1571,11 +1576,13 @@ public class SpecialCardAi {
 
             // Cards in hand that are below the max CMC affordable by the AI
             CardCollection belowMaxCMC = CardLists.filter(creatsInHand, CardPredicates.lessCMC(numManaSrcs - 1));
-            belowMaxCMC.sort(Collections.reverseOrder(CardLists.CmcComparatorInv));
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(belowMaxCMC, Collections.reverseOrder(CardLists.CmcComparatorInv));
 
             // Cards in hand that are above the max CMC affordable by the AI
             CardCollection aboveMaxCMC = CardLists.filter(creatsInHand, CardPredicates.greaterCMC(numManaSrcs + 1));
-            aboveMaxCMC.sort(CardLists.CmcComparatorInv);
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(aboveMaxCMC, CardLists.CmcComparatorInv);
 
             Card maxCMC = !aboveMaxCMC.isEmpty() ? aboveMaxCMC.getFirst() : null;
             Card minCMC = !belowMaxCMC.isEmpty() ? belowMaxCMC.getFirst() : null;
@@ -1608,7 +1615,8 @@ public class SpecialCardAi {
             // worth to fill the graveyard now
             if (ComputerUtil.isPlayingReanimator(ai) && !creatsInLib.isEmpty()) {
                 CardCollection creatsInHandByCMC = new CardCollection(creatsInHand);
-                creatsInHandByCMC.sort(CardLists.CmcComparatorInv);
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                IterableUtil.sort(creatsInHandByCMC, CardLists.CmcComparatorInv);
                 return creatsInHandByCMC.getFirst();
             }
 
@@ -1630,14 +1638,16 @@ public class SpecialCardAi {
             if (atTargetCMCInLib.isEmpty()) {
                 atTargetCMCInLib = CardLists.filter(creatsInLib, CardPredicates.greaterCMC(numManaSrcs));
             }
-            atTargetCMCInLib.sort(CardLists.CmcComparatorInv);
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(atTargetCMCInLib, CardLists.CmcComparatorInv);
 
             Card bestInLib = atTargetCMCInLib != null ? atTargetCMCInLib.getFirst() : null;
 
             if (bestInLib == null && ComputerUtil.isPlayingReanimator(ai)) {
                 // For Reanimator, we don't mind grabbing the biggest thing possible to recycle it again with SotF later.
                 CardCollection creatsInLibByCMC = new CardCollection(creatsInLib);
-                creatsInLibByCMC.sort(CardLists.CmcComparatorInv);
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                IterableUtil.sort(creatsInLibByCMC, CardLists.CmcComparatorInv);
                 return creatsInLibByCMC.getFirst();
             }
 

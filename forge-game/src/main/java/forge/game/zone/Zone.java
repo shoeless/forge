@@ -20,6 +20,7 @@ package forge.game.zone;
 import java.util.*;
 import java.util.Map.Entry;
 import forge.util.function.Predicate;
+import forge.util.IterableUtil;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -75,7 +76,8 @@ public class Zone implements java.io.Serializable, Iterable<Card> {
     };
 
     protected void sort() {
-        cardList.sort(COMPARATOR);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(cardList, COMPARATOR);
     }
 
     public Zone(final ZoneType zone0, Game game0) {

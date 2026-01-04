@@ -73,11 +73,19 @@ public class ImageUtil {
             return null;
         }
         
-        PaperToken pt = switch (split.length) {
-            case 1 -> db.getToken(split[0]);
-            case 2, 3 -> db.getToken(split[0], split[1]);
-            default -> db.getToken(split[0], split[1], Integer.parseInt(split[3]));
-        };
+        PaperToken pt;
+        switch (split.length) {
+            case 1:
+                pt = db.getToken(split[0]);
+                break;
+            case 2:
+            case 3:
+                pt = db.getToken(split[0], split[1]);
+                break;
+            default:
+                pt = db.getToken(split[0], split[1], Integer.parseInt(split[3]));
+                break;
+        }
 
         if (pt == null) {
             System.err.println("Can't find PaperToken from key: " + key);

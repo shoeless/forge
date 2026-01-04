@@ -710,62 +710,67 @@ public enum FSkinProp {
     }
 
     public static FSkinProp iconFromColor(MagicColor.Color color) {
-        return switch (color) {
-            case WHITE -> IMG_MANA_W;
-            case BLUE -> IMG_MANA_U;
-            case BLACK -> IMG_MANA_B;
-            case RED -> IMG_MANA_R;
-            case GREEN -> IMG_MANA_G;
-            case COLORLESS -> IMG_MANA_COLORLESS;
-        };
+        // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+        switch (color) {
+            case WHITE: return IMG_MANA_W;
+            case BLUE: return IMG_MANA_U;
+            case BLACK: return IMG_MANA_B;
+            case RED: return IMG_MANA_R;
+            case GREEN: return IMG_MANA_G;
+            case COLORLESS: return IMG_MANA_COLORLESS;
+            default: return IMG_MANA_COLORLESS;
+        }
     }
 
     public static FSkinProp iconFromCoreType(CardType.CoreType core) {
-        return switch (core) {
-            case Artifact -> IMG_ARTIFACT;
-            case Creature -> IMG_CREATURE;
-            case Enchantment -> IMG_ENCHANTMENT;
-            case Instant -> IMG_INSTANT;
-            case Land -> IMG_LAND;
-            case Planeswalker -> IMG_PLANESWALKER;
-            case Sorcery -> IMG_SORCERY;
-            case Battle -> IMG_BATTLE;
-            default -> null;
-        };
+        // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+        switch (core) {
+            case Artifact: return IMG_ARTIFACT;
+            case Creature: return IMG_CREATURE;
+            case Enchantment: return IMG_ENCHANTMENT;
+            case Instant: return IMG_INSTANT;
+            case Land: return IMG_LAND;
+            case Planeswalker: return IMG_PLANESWALKER;
+            case Sorcery: return IMG_SORCERY;
+            case Battle: return IMG_BATTLE;
+            default: return null;
+        }
     }
 
     public static FSkinProp iconFromZone(ZoneType zoneType, boolean hdbuttons) {
-        return switch (zoneType) {
-            case Hand -> hdbuttons ? IMG_HDZONE_HAND : IMG_ZONE_HAND;
-            case Library -> hdbuttons ? IMG_HDZONE_LIBRARY : IMG_ZONE_LIBRARY;
-            case Graveyard -> hdbuttons ? IMG_HDZONE_GRAVEYARD : IMG_ZONE_GRAVEYARD;
-            case Exile -> hdbuttons ? IMG_HDZONE_EXILE : IMG_ZONE_EXILE;
-            case Sideboard -> hdbuttons ? IMG_HDZONE_SIDEBOARD : IMG_ZONE_SIDEBOARD;
-            case Flashback -> hdbuttons ? IMG_HDZONE_FLASHBACK : IMG_ZONE_FLASHBACK;
-            case Command -> IMG_ZONE_COMMAND; //IMG_PLANESWALKER
-            case PlanarDeck -> IMG_ZONE_PLANAR;
-            case SchemeDeck -> IMG_ZONE_SCHEME;
-            case AttractionDeck -> IMG_ZONE_ATTRACTION;
-            case ContraptionDeck -> IMG_ZONE_CONTRAPTION;
-            case Ante -> IMG_ZONE_ANTE;
-            case Junkyard ->IMG_ZONE_JUNKYARD;
-            default -> IMG_HDZONE_LIBRARY;
-        };
+        // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+        switch (zoneType) {
+            case Hand: return hdbuttons ? IMG_HDZONE_HAND : IMG_ZONE_HAND;
+            case Library: return hdbuttons ? IMG_HDZONE_LIBRARY : IMG_ZONE_LIBRARY;
+            case Graveyard: return hdbuttons ? IMG_HDZONE_GRAVEYARD : IMG_ZONE_GRAVEYARD;
+            case Exile: return hdbuttons ? IMG_HDZONE_EXILE : IMG_ZONE_EXILE;
+            case Sideboard: return hdbuttons ? IMG_HDZONE_SIDEBOARD : IMG_ZONE_SIDEBOARD;
+            case Flashback: return hdbuttons ? IMG_HDZONE_FLASHBACK : IMG_ZONE_FLASHBACK;
+            case Command: return IMG_ZONE_COMMAND;
+            case PlanarDeck: return IMG_ZONE_PLANAR;
+            case SchemeDeck: return IMG_ZONE_SCHEME;
+            case AttractionDeck: return IMG_ZONE_ATTRACTION;
+            case ContraptionDeck: return IMG_ZONE_CONTRAPTION;
+            case Ante: return IMG_ZONE_ANTE;
+            case Junkyard: return IMG_ZONE_JUNKYARD;
+            default: return IMG_HDZONE_LIBRARY;
+        }
     }
 
     public static FSkinProp iconFromDeckSection(DeckSection deckSection, boolean hdbuttons) {
-        return switch (deckSection) {
-            case Main -> hdbuttons ? IMG_HDZONE_LIBRARY : ICO_DECKLIST;
-            case Sideboard -> hdbuttons ? IMG_HDZONE_SIDEBOARD : IMG_ZONE_SIDEBOARD;
-            case Commander -> IMG_ZONE_COMMAND;
-            case Avatar -> IMG_ZONE_AVATAR;
-            case Conspiracy -> IMG_ZONE_CONSPIRACY;
-            case Planes -> IMG_ZONE_PLANAR;
-            case Schemes -> IMG_ZONE_SCHEME;
-            case Attractions -> IMG_ZONE_ATTRACTION;
-            case Contraptions -> IMG_ZONE_CONTRAPTION;
-            default -> IMG_HDZONE_SIDEBOARD;
-        };
+        // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+        switch (deckSection) {
+            case Main: return hdbuttons ? IMG_HDZONE_LIBRARY : ICO_DECKLIST;
+            case Sideboard: return hdbuttons ? IMG_HDZONE_SIDEBOARD : IMG_ZONE_SIDEBOARD;
+            case Commander: return IMG_ZONE_COMMAND;
+            case Avatar: return IMG_ZONE_AVATAR;
+            case Conspiracy: return IMG_ZONE_CONSPIRACY;
+            case Planes: return IMG_ZONE_PLANAR;
+            case Schemes: return IMG_ZONE_SCHEME;
+            case Attractions: return IMG_ZONE_ATTRACTION;
+            case Contraptions: return IMG_ZONE_CONTRAPTION;
+            default: return IMG_HDZONE_SIDEBOARD;
+        }
     }
 
     public enum PropType {

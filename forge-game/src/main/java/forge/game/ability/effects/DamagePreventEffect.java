@@ -47,7 +47,8 @@ public class DamagePreventEffect extends SpellAbilityEffect {
             }
 
             final Object o = tgts.get(i);
-            if (o instanceof Card tgtC) {
+            if (o instanceof Card) {
+                Card tgtC = (Card) o;
                 if (tgtC.isFaceDown()) {
                     sb.append("Morph");
                 } else {
@@ -103,7 +104,8 @@ public class DamagePreventEffect extends SpellAbilityEffect {
 
         for (final GameEntity o : tgts) {
             numDam = sa.usesTargeting() && sa.isDividedAsYouChoose() ? sa.getDividedValue(o) : numDam;
-            if (o instanceof Card c) {
+            if (o instanceof Card) {
+                Card c = (Card) o;
                 if (c.isInPlay()) {
                     addPreventNextDamage(sa, o, numDam);
                 }

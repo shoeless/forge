@@ -87,7 +87,8 @@ public class BoosterGenerator {
     }
 
     public static List<PaperCard> getBoosterPack(SealedTemplate template) {
-        if (template instanceof SealedTemplateWithSlots slots) {
+        if (template instanceof SealedTemplateWithSlots) {
+            SealedTemplateWithSlots slots = (SealedTemplateWithSlots) template;
             return BoosterGenerator.getBoosterPack(slots);
         }
 

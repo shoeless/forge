@@ -11,7 +11,6 @@ import forge.game.player.PlayerActionConfirmMode;
 import forge.game.spellability.SpellAbility;
 
 import java.util.Map;
-import forge.util.function.Predicate;
 
 public class MutateAi extends SpellAbilityAi {
     @Override
@@ -21,12 +20,12 @@ public class MutateAi extends SpellAbilityAi {
 
         // Filter out some abilities that are useless
         // TODO: add other stuff useless for Mutate here
-        mutateTgts = CardLists.filter(mutateTgts, Predicate.not(
+        mutateTgts = CardLists.filter(mutateTgts,
                 CardPredicates.hasKeyword(Keyword.DEFENDER)
                         .or(CardPredicates.hasKeyword("CARDNAME can't attack."))
                         .or(CardPredicates.hasKeyword("CARDNAME can't block."))
                         .or(card -> ComputerUtilCard.isUselessCreature(aiPlayer, card))
-                )
+                        .negate()
         );
 
         if (mutateTgts.isEmpty()) {

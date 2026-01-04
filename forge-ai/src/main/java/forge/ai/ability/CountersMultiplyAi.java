@@ -185,7 +185,8 @@ public class CountersMultiplyAi extends SpellAbilityAi {
             return;
         }
 
-        newList.sort(Collections.reverseOrder(CardPredicates.compareByCounterType(type)));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(newList, Collections.reverseOrder(CardPredicates.compareByCounterType(type)));
         while (sa.canAddMoreTarget()) {
             if (newList.isEmpty()) {
                 break;

@@ -1318,7 +1318,8 @@ public class PlayerControllerAi extends PlayerController {
     public boolean playSaFromPlayEffect(SpellAbility tgtSA) {
         boolean optional = !tgtSA.getPayCosts().isMandatory();
         boolean noManaCost = tgtSA.hasParam("WithoutManaCost");
-        if (tgtSA instanceof Spell spell) { // Isn't it ALWAYS a spell?
+        if (tgtSA instanceof Spell) { // Isn't it ALWAYS a spell?
+            Spell spell = (Spell) tgtSA;
             // TODO if mandatory AI is only forced to use mana when it's already in the pool
             if (brains.canPlayFromEffectAI(spell, !optional, noManaCost) == AiPlayDecision.WillPlay || !optional) {
                 return ComputerUtil.playStack(tgtSA, player, getGame());

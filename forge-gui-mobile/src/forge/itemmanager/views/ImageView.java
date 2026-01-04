@@ -1116,7 +1116,8 @@ public class ImageView<T extends InventoryItem> extends ItemView<T> {
                 deckSelectMode = true;
                 deckProxy = (DeckProxy) item;
             }
-            if (item instanceof PaperCard pc) {
+            if (item instanceof PaperCard) {
+                PaperCard pc = (PaperCard) item;
                 showRanking = itemManager.getShowRanking() && FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_OVERLAY_DRAFT_RANKING);
                 if (showRanking) {
                     double score = CardRanker.getRawScore(pc);
@@ -1193,7 +1194,8 @@ public class ImageView<T extends InventoryItem> extends ItemView<T> {
                 }
             }
 
-            if (item instanceof PaperCard pc) {
+            if (item instanceof PaperCard) {
+                PaperCard pc = (PaperCard) item;
                 CardRenderer.drawCard(g, pc, x, y, w, h, pos);
                 if (showRanking) {
                     float rankSize = w / 2;

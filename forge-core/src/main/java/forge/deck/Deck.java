@@ -674,7 +674,8 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
     /** {@inheritDoc} */
     @Override
     public boolean equals(final Object o) {
-        if (o instanceof DeckBase deckBase) {
+        if (o instanceof DeckBase) {
+            DeckBase deckBase = (DeckBase) o;
             boolean deckBaseEquals = super.equals(deckBase);
             if (!deckBaseEquals)
                 return false;

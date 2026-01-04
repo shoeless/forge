@@ -137,9 +137,6 @@ public class ImageCache {
         if (documentsIndex != -1) {
             // Found Documents directory - construct relative path from Library/local
             String relativePath = "../../Documents" + absolutePath.substring(documentsIndex + "/Documents".length());
-            System.err.println("DEBUG: Path conversion successful:");
-            System.err.println("  Absolute: " + absolutePath);
-            System.err.println("  Relative: " + relativePath);
             return relativePath;
         }
 
@@ -147,14 +144,9 @@ public class ImageCache {
         if (libraryIndex != -1) {
             // File is in Library somewhere - might already be accessible
             String relativePath = absolutePath.substring(absolutePath.indexOf("/Library/") + "/Library/".length());
-            System.err.println("DEBUG: Path in Library:");
-            System.err.println("  Absolute: " + absolutePath);
-            System.err.println("  Relative: " + relativePath);
             return relativePath;
         }
 
-        System.err.println("DEBUG: Path conversion failed - no Documents or Library");
-        System.err.println("  Path: " + absolutePath);
         return absolutePath;
     }
 
@@ -356,7 +348,6 @@ public class ImageCache {
         if (absolutePath.contains("/Documents/cache")) {
             Texture cached = downloadedTextureCache.get(absolutePath);
             if (cached != null) {
-                System.err.println("DEBUG: Using cached texture for: " + absolutePath);
                 return cached;
             }
         }

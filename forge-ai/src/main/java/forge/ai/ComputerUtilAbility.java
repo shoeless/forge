@@ -7,8 +7,8 @@ import java.util.Set;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
-
 import com.google.common.collect.Multimap;
+import forge.util.IterableUtil;
 import forge.card.CardStateName;
 import forge.game.Game;
 import forge.game.GameActionUtil;
@@ -458,7 +458,8 @@ public class ComputerUtilAbility {
             return all;
         }
         // TODO this doesn't account for nearly identical creatures where one is a newer but more cost efficient variant
-        creatures.sort(ComputerUtilCard.EvaluateCreatureSpellComparator);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(creatures, ComputerUtilCard.EvaluateCreatureSpellComparator);
         int idx = 0;
         for (int i = 0; i < all.size(); i++) {
             if (all.get(i).getApi() == ApiType.PermanentCreature) {

@@ -173,7 +173,8 @@ public class GameEntityCounterTable extends ForwardingTable<Player, GameEntity, 
             }
 
             boolean firstTime = false;
-            if (gm.getKey() instanceof Card c) {
+            if (gm.getKey() instanceof Card) {
+                Card c = (Card) gm.getKey();
                 firstTime = game.getCounterAddedThisTurn(null, c) == 0;
             }
 

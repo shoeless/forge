@@ -102,7 +102,8 @@ public class CardView extends GameEntityView {
     protected void updateName(GameEntity e) {
         //Name reflects the current display name, as modified by any flavor names.
         //OracleName can be used to find the true name of a card.
-        if (e instanceof Card c) {
+        if (e instanceof Card) {
+            Card c = (Card) e;
             set(TrackableProperty.Name, c.getDisplayName());
             set(TrackableProperty.OracleName, c.getName());
         }

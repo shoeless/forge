@@ -8,11 +8,12 @@ import forge.deck.DeckSection;
 import forge.deck.generation.DeckGeneratorBase;
 import forge.item.PaperCard;
 import forge.item.PaperCardPredicates;
+import forge.util.Aggregates;
 import forge.util.IterableUtil;
 import forge.util.MapUtil;
-// iOS compatibility: StreamUtil removed, using Aggregates.random() instead
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

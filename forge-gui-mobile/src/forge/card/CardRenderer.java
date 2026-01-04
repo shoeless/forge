@@ -749,12 +749,16 @@ public class CardRenderer {
             //locked room
             if (card.isSplitCard() && card.hasAlternateState() && !card.isFaceDown() && !CardStateName.Original.equals(details.getState())) {
                 switch (details.getState()) {
-                    case EmptyRoom -> {
+                    case EmptyRoom:
                         g.drawImage(FSkinImage.PADLOCK, cx, cy + ch / 2, cw, ch);
                         g.drawImage(FSkinImage.PADLOCK, cx, cy, cw, ch);
-                    }
-                    case RightSplit -> g.drawImage(FSkinImage.PADLOCK, cx, cy + ch / 2, cw, ch);
-                    case LeftSplit -> g.drawImage(FSkinImage.PADLOCK, cx, cy, cw, ch);
+                        break;
+                    case RightSplit:
+                        g.drawImage(FSkinImage.PADLOCK, cx, cy + ch / 2, cw, ch);
+                        break;
+                    case LeftSplit:
+                        g.drawImage(FSkinImage.PADLOCK, cx, cy, cw, ch);
+                        break;
                 }
             }
         }

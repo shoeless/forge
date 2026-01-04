@@ -107,7 +107,7 @@ public class TargetSelection {
         boolean hasEnoughCandidates = candidates.size() >= minTargets;
         if (tgt.isDifferentControllers() || tgt.isForEachPlayer()) {
             PlayerCollection controllers = new PlayerCollection();
-            IterableUtil.filter(candidates, Card.class).forEach(c -> controllers.add(c.getController()));
+            IterableUtil.forEach(IterableUtil.filter(candidates, Card.class), c -> controllers.add(c.getController()));
             hasEnoughCandidates &= controllers.size() >= minTargets;
         }
         mandatory &= hasEnoughCandidates;

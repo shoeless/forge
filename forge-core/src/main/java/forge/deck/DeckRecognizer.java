@@ -27,6 +27,7 @@ import forge.card.MagicColor;
 import forge.item.IPaperCard;
 import forge.item.PaperCard;
 import forge.util.Localizer;
+import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -756,12 +757,17 @@ public class DeckRecognizer {
     // This would save tons of time in parsing Input + would also allow to return UnsupportedCardTokens beforehand
     private DeckSection getTokenSection(String deckSec, DeckSection currentDeckSection, PaperCard card){
         if (deckSec != null) {
-            DeckSection cardSection = switch (deckSec.toUpperCase().trim()) {
-                case "MB" -> DeckSection.Main;
-                case "SB" -> DeckSection.Sideboard;
-                case "CM" -> DeckSection.Commander;
-                default -> DeckSection.matchingSection(card);
-            };
+            DeckSection cardSection;
+            String sec = deckSec.toUpperCase().trim();
+            if (sec.equals("MB")) {
+                cardSection = DeckSection.Main;
+            } else if (sec.equals("SB")) {
+                cardSection = DeckSection.Sideboard;
+            } else if (sec.equals("CM")) {
+                cardSection = DeckSection.Commander;
+            } else {
+                cardSection = DeckSection.matchingSection(card);
+            }
             if (cardSection.validate(card))
                 return cardSection;
         }
@@ -905,7 +911,7 @@ public class DeckRecognizer {
         String nonCardToken = nonCardTokenMatch(lineAsIs);
         if (nonCardToken == null)
             return false;
-        return StringUtils.equalsAnyIgnoreCase(nonCardToken, DECK_SECTION_NAMES);
+        return TextUtil.equalsAnyIgnoreCase(nonCardToken, DECK_SECTION_NAMES);
     }
 
     private static String nonCardTokenMatch(final String lineAsIs){

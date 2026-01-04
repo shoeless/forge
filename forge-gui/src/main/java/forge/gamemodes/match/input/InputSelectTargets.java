@@ -289,9 +289,12 @@ public final class InputSelectTargets extends InputSyncronizedBase {
 
         if (tgt.isDifferentNames()) {
             for (final GameObject o : targets) {
-                if (o instanceof Card c && c.sharesNameWith(card)) {
-                    showMessage(sa.getHostCard() + " - Cannot target this card (must have different names)");
-                    return false;
+                if (o instanceof Card) {
+                    Card c = (Card) o;
+                    if (c.sharesNameWith(card)) {
+                        showMessage(sa.getHostCard() + " - Cannot target this card (must have different names)");
+                        return false;
+                    }
                 }
             }
         }
@@ -410,12 +413,14 @@ public final class InputSelectTargets extends InputSyncronizedBase {
         }
         targets.remove(ge);
         sa.getTargets().remove(ge);
-        if (ge instanceof Card c) {
+        if (ge instanceof Card) {
+            Card c = (Card) ge;
             getController().getGui().setUsedToPay(CardView.get(c), false);
             // try to get last selected card
             lastTarget = Iterables.getLast(IterableUtil.filter(targets, Card.class), null);
         }
-        else if (ge instanceof Player p) {
+        else if (ge instanceof Player) {
+            Player p = (Player) ge;
             getController().getGui().setHighlighted(PlayerView.get(p), false);
         }
 

@@ -69,14 +69,14 @@ public final class MagicColor {
     }
 
     public static byte fromName(final char c) {
-        return switch (Character.toLowerCase(c)) {
-            case 'w' -> MagicColor.WHITE;
-            case 'u' -> MagicColor.BLUE;
-            case 'b' -> MagicColor.BLACK;
-            case 'r' -> MagicColor.RED;
-            case 'g' -> MagicColor.GREEN;
-            default  -> 0; // unknown means 'colorless'
-        };
+        switch (Character.toLowerCase(c)) {
+            case 'w': return MagicColor.WHITE;
+            case 'u': return MagicColor.BLUE;
+            case 'b': return MagicColor.BLACK;
+            case 'r': return MagicColor.RED;
+            case 'g': return MagicColor.GREEN;
+            default:  return 0; // unknown means 'colorless'
+        }
     }
 
     // This probably should be in ManaAtom since it cares about Mana, not Color.
@@ -166,24 +166,22 @@ public final class MagicColor {
         }
 
         public static Color fromByte(final byte color) {
-            return switch (color) {
-                case MagicColor.WHITE -> WHITE;
-                case MagicColor.BLUE -> BLUE;
-                case MagicColor.BLACK -> BLACK;
-                case MagicColor.RED -> RED;
-                case MagicColor.GREEN -> GREEN;
-                default -> COLORLESS;
-            };
+            switch (color) {
+                case MagicColor.WHITE: return WHITE;
+                case MagicColor.BLUE: return BLUE;
+                case MagicColor.BLACK: return BLACK;
+                case MagicColor.RED: return RED;
+                case MagicColor.GREEN: return GREEN;
+                default: return COLORLESS;
+            }
         }
         public static Color fromName(final String color) {
-            return switch (color) {
-                case MagicColor.Constant.WHITE -> WHITE;
-                case MagicColor.Constant.BLUE -> BLUE;
-                case MagicColor.Constant.BLACK -> BLACK;
-                case MagicColor.Constant.RED -> RED;
-                case MagicColor.Constant.GREEN -> GREEN;
-                default -> COLORLESS;
-            };
+            if (MagicColor.Constant.WHITE.equals(color)) return WHITE;
+            if (MagicColor.Constant.BLUE.equals(color)) return BLUE;
+            if (MagicColor.Constant.BLACK.equals(color)) return BLACK;
+            if (MagicColor.Constant.RED.equals(color)) return RED;
+            if (MagicColor.Constant.GREEN.equals(color)) return GREEN;
+            return COLORLESS;
         }
 
         @Override

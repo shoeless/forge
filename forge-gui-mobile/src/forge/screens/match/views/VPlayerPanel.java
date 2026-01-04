@@ -312,8 +312,14 @@ public class VPlayerPanel extends FContainer {
             }
 
             //update flashback zone when graveyard, library, exile, or stack zones updated
+            // iOS compatibility: Replace Java 14+ switch expression with traditional switch
             switch (zoneType) {
-                case Graveyard, Library, Exile, Stack -> zoneTabs.get(ZoneType.Flashback).update();
+                case Graveyard:
+                case Library:
+                case Exile:
+                case Stack:
+                    zoneTabs.get(ZoneType.Flashback).update();
+                    break;
             }
         }
     }
@@ -928,7 +934,8 @@ public class VPlayerPanel extends FContainer {
 
         @Override
         public float getIdealWidth(float pref) {
-            if (displayArea instanceof VCardDisplayArea vCardDisplayArea) {
+            if (displayArea instanceof VCardDisplayArea) {
+                VCardDisplayArea vCardDisplayArea = (VCardDisplayArea) displayArea;
                 float cardWidth = vCardDisplayArea.getCardWidth(vCardDisplayArea.getHeight());
                 float size = vCardDisplayArea.getCount();
                 return Math.min(cardWidth * size, pref);
@@ -1080,7 +1087,8 @@ public class VPlayerPanel extends FContainer {
 
         @Override
         public float getIdealWidth(float pref) {
-            if (getDisplayArea() instanceof VCardDisplayArea vCardDisplayArea) {
+            if (getDisplayArea() instanceof VCardDisplayArea) {
+                VCardDisplayArea vCardDisplayArea = (VCardDisplayArea) getDisplayArea();
                 float cardWidth = vCardDisplayArea.getCardWidth(vCardDisplayArea.getHeight());
                 float size = vCardDisplayArea.getCount();
                 return Math.min(cardWidth * size, pref);

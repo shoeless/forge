@@ -69,7 +69,8 @@ public class ControlSpellEffect extends SpellAbilityEffect {
                 // Currently the only Exchange Control for Spells is a Permanent Trigger
                 // Use "DefinedExchange" to Reference Object that is Exchanging the other direction
                 GameObject obj = Iterables.getFirst(getDefinedOrTargeted(sa, "DefinedExchange"), null);
-                if (obj instanceof Card c) {
+                if (obj instanceof Card) {
+                    Card c = (Card) obj;
                     if (!c.isInPlay() || c.isPhasedOut() || si == null) {
                         // Exchanging object isn't available, continue
                         continue;

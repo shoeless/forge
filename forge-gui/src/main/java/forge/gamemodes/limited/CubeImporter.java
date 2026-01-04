@@ -37,13 +37,15 @@ public class CubeImporter {
      */
     public CustomLimited importCube() {
         try {
-            return switch (platform) {
-                case CUBECOBRA -> {
+            switch (platform) {
+                case CUBECOBRA:
                     cubecobraUrl = new URI("https://cubecobra.com/cube/download/forge/" + cubeId).toURL();
-                    yield parseFromURL(cubecobraUrl);
-                }
-                case CUBEARTISAN -> null; // Not implemented yet
-            };
+                    return parseFromURL(cubecobraUrl);
+                case CUBEARTISAN:
+                    return null; // Not implemented yet
+                default:
+                    return null;
+            }
         } catch (Exception e) {
             System.err.println("Error importing cube: " + e.getMessage());
             return null;
@@ -87,14 +89,20 @@ public class CubeImporter {
      * @return string representing the cube ID
      */
     private String parseCubeId(String inputStr) {
-        String parsedStr = switch (platform) {
-            case CUBECOBRA -> {
+        String parsedStr;
+        switch (platform) {
+            case CUBECOBRA:
                 String[] parts = inputStr.trim().split("/");
-                yield parts[parts.length - 1];
-            }
-            case CUBEARTISAN -> // Not implemented yet, but could be similar to CubeCobra
-                null;
-        };
+                parsedStr = parts[parts.length - 1];
+                break;
+            case CUBEARTISAN:
+                // Not implemented yet, but could be similar to CubeCobra
+                parsedStr = null;
+                break;
+            default:
+                parsedStr = null;
+                break;
+        }
 
         // Check if parsedStr is alphanumeric only, allow hyphens as well since full Cube IDs can contain them
         if (parsedStr != null && !parsedStr.matches("^[a-zA-Z0-9\\-]+$")) {

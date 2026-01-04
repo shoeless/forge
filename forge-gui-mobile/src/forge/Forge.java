@@ -330,10 +330,11 @@ public class Forge implements ApplicationListener {
     }
     public static void setAltZoneTabMode(String mode) {
         Forge.altZoneTabMode = mode;
-        switch (Forge.altZoneTabMode) {
-            case "Vertical", "Horizontal" -> Forge.altZoneTabs = true;
-            case "Off" -> Forge.altZoneTabs = false;
-            default -> Forge.altZoneTabs = false;
+        // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+        if ("Vertical".equals(Forge.altZoneTabMode) || "Horizontal".equals(Forge.altZoneTabMode)) {
+            Forge.altZoneTabs = true;
+        } else {
+            Forge.altZoneTabs = false;
         }
     }
     public static boolean isHorizontalTabLayout() {

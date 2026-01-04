@@ -261,7 +261,8 @@ public class CountersRemoveEffect extends SpellAbilityEffect {
             if (chosenAmount > 0) {
                 removed += chosenAmount;
                 entity.subtractCounter(chosenType, chosenAmount, activator);
-                if (entity instanceof Card gameCard) {
+                if (entity instanceof Card) {
+                    Card gameCard = (Card) entity;
                     game.updateLastStateForCard(gameCard);
                 }
 

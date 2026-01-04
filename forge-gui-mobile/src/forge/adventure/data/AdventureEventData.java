@@ -159,12 +159,16 @@ public class AdventureEventData implements Serializable {
     }
 
     private static CardBlock pickCardBlockByFormat(AdventureEventController.EventFormat format) {
-        return switch (format) {
-            case Draft -> pickWeightedCardBlock();
-            case Jumpstart -> pickJumpstartCardBlock();
-            case Constructed -> null;
-            case Sealed -> null;
-        };
+        switch (format) {
+            case Draft:
+                return pickWeightedCardBlock();
+            case Jumpstart:
+                return pickJumpstartCardBlock();
+            case Constructed:
+            case Sealed:
+            default:
+                return null;
+        }
     }
 
     private static final Predicate<CardEdition> filterPioneer = FModel.getFormats().getPioneer().editionLegalPredicate;
@@ -973,13 +977,20 @@ public class AdventureEventData implements Serializable {
         }
 
         public String getPairingDescription() {
-            return switch (pairingStyle) {
-                case Swiss -> "swiss";
-                case SwissWithCut -> "swiss (with cut)";
-                case RoundRobin -> "round robin";
-                case SingleElimination -> "single elimination";
-                case DoubleElimination -> "double elimination";
-            };
+            switch (pairingStyle) {
+                case Swiss:
+                    return "swiss";
+                case SwissWithCut:
+                    return "swiss (with cut)";
+                case RoundRobin:
+                    return "round robin";
+                case SingleElimination:
+                    return "single elimination";
+                case DoubleElimination:
+                    return "double elimination";
+                default:
+                    return "";
+            }
         }
     }
 

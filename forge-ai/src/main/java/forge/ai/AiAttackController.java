@@ -117,7 +117,8 @@ public class AiAttackController {
     } // overloaded constructor to evaluate single specified attacker
 
     private void refreshCombatants(GameEntity defender) {
-        if (defender instanceof Card card && card.isBattle()) {
+        if (defender instanceof Card && ((Card) defender).isBattle()) {
+            Card card = (Card) defender;
             this.oppList = getOpponentCreatures(card.getProtectingPlayer());
         } else {
             this.oppList = getOpponentCreatures(defendingOpponent);
@@ -820,9 +821,11 @@ public class AiAttackController {
         // decided to attack another defender so related lists need to be updated
         // (though usually rather try to avoid this situation for performance reasons)
         if (defender != defendingOpponent) {
-            if (defender instanceof Player p) {
+            if (defender instanceof Player) {
+                Player p = (Player) defender;
                 defendingOpponent = p;
-            } else if (defender instanceof Card defCard) {
+            } else if (defender instanceof Card) {
+                Card defCard = (Card) defender;
                 if (defCard.isBattle()) {
                     defendingOpponent = defCard.getProtectingPlayer();
                 } else {
@@ -910,7 +913,8 @@ public class AiAttackController {
                         // check defenders in order of maximum requirements
                         List<Pair<GameEntity, Integer>> reqs = combat.getAttackConstraints().getRequirements().get(attacker).getSortedRequirements();
                         final GameEntity def = finalDefender;
-                        reqs.sort((r1, r2) -> {
+                        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                        IterableUtil.sort(reqs, (r1, r2) -> {
                             if (r1.getValue() == r2.getValue()) {
                                 // try to attack the designated defender
                                 if (r1.getKey().equals(def) && !r2.getKey().equals(def)) {
@@ -927,7 +931,9 @@ public class AiAttackController {
                                     return 1;
                                 }
                                 // or weakest player
-                                if (r1.getKey() instanceof Player p1 && r2.getKey() instanceof Player p2) {
+                                if (r1.getKey() instanceof Player && r2.getKey() instanceof Player) {
+                                    Player p1 = (Player) r1.getKey();
+                                    Player p2 = (Player) r2.getKey();
                                     return p1.getLife() - p2.getLife();
                                 }
                             }
@@ -1303,7 +1309,8 @@ public class AiAttackController {
                     attackersAssigned.add(attacker);
 
                     // check if attackers are enough to finish the attacked planeswalker
-                    if (i < left.size() - 1 && defender instanceof Card card) {
+                    if (i < left.size() - 1 && defender instanceof Card) {
+                        Card card = (Card) defender;
                         final int blockNum = this.blockers.size();
                         int attackNum = 0;
                         int damage = 0;
@@ -1743,10 +1750,12 @@ public class AiAttackController {
     private boolean doRevengeOfRavensAttackLogic(final GameEntity defender, final Queue<Card> attackersLeft, int numForcedAttackers, int maxAttack) {
         // TODO: detect Revenge of Ravens by the trigger instead of by name
         boolean revengeOfRavens = false;
-        if (defender instanceof Player player) {
+        if (defender instanceof Player) {
+            Player player = (Player) defender;
             revengeOfRavens = !CardLists.filter(player.getCardsIn(ZoneType.Battlefield),
                     CardPredicates.nameEquals("Revenge of Ravens")).isEmpty();
-        } else if (defender instanceof Card card) {
+        } else if (defender instanceof Card) {
+            Card card = (Card) defender;
             revengeOfRavens = !CardLists.filter(card.getController().getCardsIn(ZoneType.Battlefield),
                     CardPredicates.nameEquals("Revenge of Ravens")).isEmpty();
         }

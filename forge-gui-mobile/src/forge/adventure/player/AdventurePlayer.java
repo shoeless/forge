@@ -640,7 +640,8 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
         if (data.containsKey("newCards")) {
             InventoryItem[] items = (InventoryItem[]) data.readObject("newCards");
             for (InventoryItem item : items) {
-                if (item instanceof PaperCard pc) {
+                if (item instanceof PaperCard) {
+                    PaperCard pc = (PaperCard) item;
                     if (isUnsupported.test(pc))
                         unsupportedCards.add(pc);
                     else
@@ -1110,7 +1111,11 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
             } else {
                 switch (item.equipmentSlot) {
                     // limit to these for easy and normal
-                    case "Boots", "Body", "Neck" -> items.add(item);
+                    case "Boots":
+                    case "Body":
+                    case "Neck":
+                        items.add(item);
+                        break;
                 }
             }
         }
@@ -1127,9 +1132,10 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
             } else {
                 switch (item.equipmentSlot) {
                     // limit to these for easy and normal
-                    case "Boots", "Body", "Neck" -> {
+                    case "Boots":
+                    case "Body":
+                    case "Neck":
                         return true;
-                    }
                 }
             }
         }

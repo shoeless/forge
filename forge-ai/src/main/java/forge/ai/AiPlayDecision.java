@@ -44,9 +44,20 @@ public enum AiPlayDecision {
     CurseEffects;
 
     public boolean willingToPlay() {
-        return switch (this) {
-            case WillPlay, MandatoryPlay, PlayToEmptyHand, AddBoardPresence, ImpactCombat, ResponseToStackResolve, Removal, Tempo, CardAdvantage -> true;
-            default -> false;
-        };
+        // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+        switch (this) {
+            case WillPlay:
+            case MandatoryPlay:
+            case PlayToEmptyHand:
+            case AddBoardPresence:
+            case ImpactCombat:
+            case ResponseToStackResolve:
+            case Removal:
+            case Tempo:
+            case CardAdvantage:
+                return true;
+            default:
+                return false;
+        }
     }
 }

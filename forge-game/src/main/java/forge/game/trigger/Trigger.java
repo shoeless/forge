@@ -446,6 +446,13 @@ public abstract class Trigger extends TriggerReplacementBase {
             if (game.getCombat().getAttackersAndDefenders().values().containsAll(attacker.getOpponents())) {
                 return false;
             }
+        } else if (condition.startsWith("FromNamedAbility")) {
+            String rest = condition.substring(16);
+            final SpellAbility trigSA = (SpellAbility) runParams.get(AbilityKey.Cause);
+
+            if (trigSA != null && !trigSA.getName().equals(rest)) {
+                return false;
+            }
         }
         
         return true;
@@ -609,7 +616,8 @@ public abstract class Trigger extends TriggerReplacementBase {
     public SpellAbility ensureAbility(final IHasSVars sVarHolder) {
         SpellAbility sa = getOverridingAbility();
         if (sa == null && hasParam("Execute")) {
-            if (this.isIntrinsic() && sVarHolder instanceof CardState state) {
+            if (this.isIntrinsic() && sVarHolder instanceof CardState) {
+                CardState state = (CardState) sVarHolder;
                 sa = state.getAbilityForTrigger(getParam("Execute"));
             } else {
                 sa = AbilityFactory.getAbility(getHostCard(), getParam("Execute"), sVarHolder);

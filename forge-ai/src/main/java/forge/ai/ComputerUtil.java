@@ -641,7 +641,8 @@ public class ComputerUtil {
             // FIXME: This is suboptimal, maybe implement a single comparator that'll take care of all of this?
             CardLists.sortByCmcDesc(typeList);
             Collections.reverse(typeList);
-            typeList.sort((a, b) -> {
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(typeList, (a, b) -> {
                 if (!a.isInPlay() && b.isInPlay()) return -1;
                 else if (!b.isInPlay() && a.isInPlay()) return 1;
                 else return 0;
@@ -1383,7 +1384,8 @@ public class ComputerUtil {
             }
         }
         for (final CostPart part : abCost.getCostParts()) {
-            if (part instanceof CostSacrifice sac) {
+            if (part instanceof CostSacrifice) {
+                CostSacrifice sac = (CostSacrifice) part;
                 if (sac.payCostFromSource()) {
                     if (source.getSVar("SacMe").equals("6")) {
                         return true;
@@ -1636,7 +1638,9 @@ public class ComputerUtil {
                 sub = sub.getSubAbility();
             }
             if (sa == null || (sa != spell && sa != sub)) {
-                predictThreatenedObjects(ai, sa, spell).forEach(objects::add);
+                for (GameObject obj : predictThreatenedObjects(ai, sa, spell)) {
+                    objects.add(obj);
+                }
             }
             if (top) {
                 break; // only evaluate top-stack
@@ -1734,7 +1738,8 @@ public class ComputerUtil {
                 noRegen = true;
             }
             for (final Object o : objects) {
-                if (o instanceof Card c) {
+                if (o instanceof Card) {
+                    Card c = (Card) o;
                     // indestructible
                     if (c.hasKeyword(Keyword.INDESTRUCTIBLE)) {
                         continue;
@@ -1798,7 +1803,8 @@ public class ComputerUtil {
                     if (ComputerUtilCombat.predictDamageTo(c, dmg, source, false) >= ComputerUtilCombat.getDamageToKill(c, false)) {
                         threatened.add(c);
                     }
-                } else if (o instanceof Player p) {
+                } else if (o instanceof Player) {
+                    Player p = (Player) o;
                     if (source.hasKeyword(Keyword.INFECT)) {
                         if (p.canReceiveCounters(CounterEnumType.POISON) && ComputerUtilCombat.predictDamageTo(p, dmg, source, false) >= 10 - p.getPoisonCounters()) {
                             threatened.add(p);
@@ -1816,7 +1822,8 @@ public class ComputerUtil {
                 || saviourApi == null)) {
             final int dmg = -AbilityUtils.calculateAmount(source, topStack.getParam("NumDef"), topStack);
             for (final Object o : objects) {
-                if (o instanceof Card c) {
+                if (o instanceof Card) {
+                    Card c = (Card) o;
                     final boolean canRemove = (c.getNetToughness() <= dmg)
                             || (!c.hasKeyword(Keyword.INDESTRUCTIBLE) && c.getShieldCount() == 0 && dmg >= ComputerUtilCombat.getDamageToKill(c, false));
                     if (!canRemove) {
@@ -1862,7 +1869,8 @@ public class ComputerUtil {
                         || saviourApi == ApiType.Protection || saviourApi == null
                         || saviorWithSubsApi == ApiType.Pump || saviorWithSubsApi == ApiType.PumpAll)) {
             for (final Object o : objects) {
-                if (o instanceof Card c) {
+                if (o instanceof Card) {
+                    Card c = (Card) o;
                     if (c.hasKeyword(Keyword.INDESTRUCTIBLE)) {
                         continue;
                     }
@@ -1911,7 +1919,8 @@ public class ComputerUtil {
                 && topStack.hasParam("Destination")
                 && topStack.getParam("Destination").equals("Exile")) {
             for (final Object o : objects) {
-                if (o instanceof Card c) {
+                if (o instanceof Card) {
+                    Card c = (Card) o;
                     // give Shroud to targeted creatures
                     if ((saviourApi == ApiType.Pump || saviourApi == ApiType.PumpAll) && (!topStack.usesTargeting() || !grantShroud)) {
                         continue;
@@ -1938,7 +1947,8 @@ public class ComputerUtil {
                 && (saviourApi == ApiType.ChangeZone || saviourApi == ApiType.Pump || saviourApi == ApiType.PumpAll
                 || saviourApi == ApiType.Protection || saviourApi == null)) {
             for (final Object o : objects) {
-                if (o instanceof Card c) {
+                if (o instanceof Card) {
+                    Card c = (Card) o;
                     // give Shroud to targeted creatures
                     if ((saviourApi == ApiType.Pump || saviourApi == ApiType.PumpAll) && (!topStack.usesTargeting() || !grantShroud)) {
                         continue;
@@ -1959,7 +1969,8 @@ public class ComputerUtil {
             boolean enableCurseAuraRemoval = AiProfileUtil.getBoolProperty(aiPlayer, AiProps.ACTIVELY_DESTROY_IMMEDIATELY_UNBLOCKABLE);
             if (enableCurseAuraRemoval) {
                 for (final Object o : objects) {
-                    if (o instanceof Card c) {
+                    if (o instanceof Card) {
+                        Card c = (Card) o;
                         // give Shroud to targeted creatures
                         if ((saviourApi == ApiType.Pump || saviourApi == ApiType.PumpAll) && (!topStack.usesTargeting() || !grantShroud)) {
                             continue;
@@ -1975,7 +1986,9 @@ public class ComputerUtil {
             }
         }
 
-        predictThreatenedObjects(aiPlayer, saviour, topStack.getSubAbility()).forEach(threatened::add);
+        for (GameObject obj : predictThreatenedObjects(aiPlayer, saviour, topStack.getSubAbility())) {
+            threatened.add(obj);
+        }
         return threatened;
     }
 
@@ -2319,7 +2332,8 @@ public class ComputerUtil {
             return goodChoices;
         }
 
-        goodChoices.sort(CardLists.TextLenComparator);
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(goodChoices, CardLists.TextLenComparator);
 
         CardLists.sortByCmcDesc(goodChoices);
 
@@ -2527,7 +2541,8 @@ public class ComputerUtil {
             if (votes.isEmpty()) {
                 Map<String, SpellAbility> restrictedToColors = Maps.newHashMap();
                 for (Object o : options) {
-                    if (o instanceof SpellAbility sp) { // TODO check for Color Word Changes
+                    if (o instanceof SpellAbility) { // TODO check for Color Word Changes
+                        SpellAbility sp = (SpellAbility) o;
                         restrictedToColors.put(sp.getOriginalDescription(), sp);
                     }
                 }

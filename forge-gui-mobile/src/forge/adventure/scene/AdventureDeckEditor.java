@@ -418,7 +418,10 @@ public class AdventureDeckEditor extends FDeckEditor {
         protected void buildMenu(final FDropDownMenu menu, final PaperCard card) {
             super.buildMenu(menu, card);
 
-            if (!(parentScreen instanceof AdventureDeckEditor adventureEditor) || adventureEditor.getAutoSellPage() == null)
+            if (!(parentScreen instanceof AdventureDeckEditor))
+                return;
+            AdventureDeckEditor adventureEditor = (AdventureDeckEditor) parentScreen;
+            if (adventureEditor.getAutoSellPage() == null)
                 return;
 
             Localizer localizer = Forge.getLocalizer();
@@ -498,7 +501,10 @@ public class AdventureDeckEditor extends FDeckEditor {
         @Override
         public void buildDeckMenu(FPopupMenu menu) {
             super.buildDeckMenu(menu);
-            if (!(parentScreen instanceof AdventureDeckEditor adventureEditor) || adventureEditor.getAutoSellPage() == null)
+            if (!(parentScreen instanceof AdventureDeckEditor))
+                return;
+            AdventureDeckEditor adventureEditor = (AdventureDeckEditor) parentScreen;
+            if (adventureEditor.getAutoSellPage() == null)
                 return;
             menu.addItem(new FMenuItem(Forge.getLocalizer().getMessage("btnCopyCollectionToClipboard"), Forge.hdbuttons ? FSkinImage.HDEXPORT : FSkinImage.BLANK, e1 -> FDeckViewer.copyCollectionToClipboard(AdventurePlayer.current().getCards())));
             FMenuItem sellCurrentFilters = new FMenuItem(Forge.getLocalizer().getMessage("lblAutoSellCurrentFilters"), FSkinImage.QUEST_COINSTACK, e1 -> autoSellAllByFilter(adventureEditor.getAutoSellPage()));
@@ -582,7 +588,8 @@ public class AdventureDeckEditor extends FDeckEditor {
                 })
                 ));
             }
-            if (parentScreen instanceof AdventureDeckEditor adventureEditor && adventureEditor.getCatalogPage() != null) {
+            if (parentScreen instanceof AdventureDeckEditor && ((AdventureDeckEditor) parentScreen).getCatalogPage() != null) {
+                AdventureDeckEditor adventureEditor = (AdventureDeckEditor) parentScreen;
                 CatalogPage catalogPage = adventureEditor.getCatalogPage();
                 int autoSellCount = cardManager.getItemCount(card);
                 int amountInCollection = player.getCards().count(card);
@@ -608,8 +615,9 @@ public class AdventureDeckEditor extends FDeckEditor {
 
     public AdventureEventData getCurrentEvent() {
         IDeckController controller = getDeckController();
-        if (!(controller instanceof AdventureEventDeckController eventController))
+        if (!(controller instanceof AdventureEventDeckController))
             return null;
+        AdventureEventDeckController eventController = (AdventureEventDeckController) controller;
         return eventController.currentEvent;
     }
 
@@ -759,12 +767,13 @@ public class AdventureDeckEditor extends FDeckEditor {
     public void refresh() {
         FThreads.invokeInBackgroundThread(() -> {
             for (TabPage<FDeckEditor> page : tabPages) {
-                if (page instanceof CollectionAutoSellPage p)
-                    p.refresh();
-                else if (page instanceof CatalogPage p)
-                    p.scheduleRefresh();
-                else if (page instanceof CardManagerPage p)
-                    p.refresh();
+                if (page instanceof CollectionAutoSellPage) {
+                    ((CollectionAutoSellPage) page).refresh();
+                } else if (page instanceof CatalogPage) {
+                    ((CatalogPage) page).scheduleRefresh();
+                } else if (page instanceof CardManagerPage) {
+                    ((CardManagerPage) page).refresh();
+                }
             }
         });
     }

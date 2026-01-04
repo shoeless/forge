@@ -55,7 +55,8 @@ public class DraftPack extends ForwardingList<PaperCard> {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof DraftPack that)) return false;
+        if (!(o instanceof DraftPack)) return false;
+        DraftPack that = (DraftPack) o;
         if (!super.equals(o)) return false;
         return id == that.id && Objects.equals(cards, that.cards) && Objects.equals(awaitingGuess, that.awaitingGuess);
     }

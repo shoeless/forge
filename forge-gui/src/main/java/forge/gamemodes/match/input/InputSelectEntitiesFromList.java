@@ -17,6 +17,7 @@ import forge.player.PlayerControllerHuman;
 import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
 import forge.util.ITriggerEvent;
+import forge.util.IterableUtil;
 import forge.util.Localizer;
 import forge.util.TextUtil;
 import forge.util.collect.FCollection;
@@ -204,7 +205,7 @@ public class InputSelectEntitiesFromList<T extends GameEntity> extends InputSele
             massSelectMode = massSelectMode.next();
             updateMassSelectButton();
             // Remove all current selections
-            this.getSelected().forEach(selected -> {
+            IterableUtil.forEach(this.getSelected(), selected -> {
                 onSelectStateChanged(selected, false);
             });
             this.getSelected().clear();

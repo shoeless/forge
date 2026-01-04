@@ -94,7 +94,8 @@ public class DamageEachEffect extends DamageBaseEffect {
             }
         } else for (GameEntity ge : getTargetEntities(sa)) {
             // check before checking sources
-            if (ge instanceof Card c) {
+            if (ge instanceof Card) {
+                Card c = (Card) ge;
                 if (!c.isInPlay() || c.isPhasedOut()) {
                     continue;
                 }

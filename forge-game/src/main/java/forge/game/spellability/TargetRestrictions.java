@@ -21,8 +21,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.ObjectUtils;
-
 import com.google.common.collect.Lists;
 
 import forge.card.CardType;
@@ -372,7 +370,9 @@ public class TargetRestrictions {
      */
     public final boolean isMinTargetsChosen(final Card c, final SpellAbility sa) {
         int min = getMinTargets(c, sa);
-        if (min == 0 || (sa.isDividedAsYouChoose() && ObjectUtils.getIfNull(sa.getDividedValue(), 0) == 0)) {
+        // iOS compatibility: Replace ObjectUtils.getIfNull with null check
+        Integer dividedValue = sa.getDividedValue();
+        if (min == 0 || (sa.isDividedAsYouChoose() && (dividedValue != null ? dividedValue : 0) == 0)) {
             return true;
         }
         return min <= sa.getTargets().size();

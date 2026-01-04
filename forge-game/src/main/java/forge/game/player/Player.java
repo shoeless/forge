@@ -1874,7 +1874,7 @@ public class Player extends GameEntity implements Comparable<Player> {
             attackedThisTurn.put(e, creatures);
         }
         creatures.add(c);
-        attackedThisTurn.putIfAbsent(e, creatures);
+        // iOS compatibility: Removed putIfAbsent (Java 8 method) - already handled above
         if (e instanceof Player && !attackedPlayersThisCombat.contains(e)) {
             attackedPlayersThisCombat.add((Player) e);
         }
@@ -1891,7 +1891,7 @@ public class Player extends GameEntity implements Comparable<Player> {
     }
     public final void setAttackedPlayersMyLastTurn(Iterable<Player> players) {
         attackedPlayersLastTurn.clear();
-        players.forEach(attackedPlayersLastTurn::add);
+        IterableUtil.forEach(players, attackedPlayersLastTurn::add);
     }
 
     public final List<Player> getAttackedPlayersMyCombat() {
@@ -2862,7 +2862,9 @@ public class Player extends GameEntity implements Comparable<Player> {
         return damage == null ? 0 : damage;
     }
     public void addCommanderDamage(Card commander, int damage) {
-        commanderDamage.merge(commander, damage, Integer::sum);
+        // iOS compatibility: Replace Map.merge() (Java 8 method) with manual implementation
+        Integer current = commanderDamage.get(commander);
+        commanderDamage.put(commander, current == null ? damage : current + damage);
     }
 
     public ColorSet getCommanderColorID() {

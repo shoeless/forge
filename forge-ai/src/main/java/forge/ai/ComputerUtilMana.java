@@ -40,6 +40,7 @@ import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
+import forge.util.ComparatorUtil;
 import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
@@ -133,7 +134,8 @@ public class ComputerUtilMana {
         }
 
         // lower value means better choice
-        orderedCards.sort(Comparator.comparingInt(manaCardMap::get));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(orderedCards, ComparatorUtil.comparingInt(card -> manaCardMap.get(card)));
 
         if (DEBUG_MANA_PAYMENT) {
             System.out.print("Ordered Cards: " + orderedCards.size());
@@ -159,7 +161,8 @@ public class ComputerUtilMana {
             AiDeckStatistics stats = AiDeckStatistics.fromCards(hand);
             Integer[] orderedColorsIdx = {0, 1, 2, 3, 4};
             // order common colors to the front, increases chance AI can play a second spell after
-            Arrays.sort(orderedColorsIdx, Comparator.comparingInt(o -> stats.maxPips[(int) o]).reversed());
+            // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt().reversed()
+            Arrays.sort(orderedColorsIdx, ComparatorUtil.reversed(ComparatorUtil.comparingInt(o -> stats.maxPips[(int) o])));
             // iOS compatibility: Replace Arrays.stream().filter().map() with traditional for loop
             List<String> colorsList = new ArrayList<>();
             for (Integer idx : orderedColorsIdx) {
@@ -180,7 +183,8 @@ public class ComputerUtilMana {
                 System.out.println("Unsorted Abilities: " + newAbilities);
             }
 
-            newAbilities.sort((ability1, ability2) -> {
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(newAbilities, (ability1, ability2) -> {
                 int preOrder = orderedCards.indexOf(ability1.getHostCard()) - orderedCards.indexOf(ability2.getHostCard());
 
                 if (preOrder != 0) {
@@ -238,7 +242,8 @@ public class ComputerUtilMana {
                     final List<SpellAbility> prefSortedAbilities = new ArrayList<>(newAbilities);
                     final List<SpellAbility> otherSortedAbilities = new ArrayList<>(newAbilities);
 
-                    prefSortedAbilities.sort((ability1, ability2) -> {
+                    // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                    IterableUtil.sort(prefSortedAbilities, (ability1, ability2) -> {
                         if (ability1.getManaPart().mana(ability1).contains(preferredShard))
                             return -1;
                         else if (ability2.getManaPart().mana(ability2).contains(preferredShard))
@@ -246,7 +251,7 @@ public class ComputerUtilMana {
 
                         return 0;
                     });
-                    otherSortedAbilities.sort((ability1, ability2) -> {
+                    IterableUtil.sort(otherSortedAbilities, (ability1, ability2) -> {
                         if (ability1.getManaPart().mana(ability1).contains(preferredShard))
                             return 1;
                         else if (ability2.getManaPart().mana(ability2).contains(preferredShard))
@@ -288,13 +293,15 @@ public class ComputerUtilMana {
             List<SpellAbility> filteredList = Lists.newArrayList(maList);
             switch (manaSourceType) {
                 case "Snow":
-                    filteredList.sort((ab1, ab2) -> ab1.getHostCard() != null && ab1.getHostCard().isSnow()
+                    // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                    IterableUtil.sort(filteredList, (ab1, ab2) -> ab1.getHostCard() != null && ab1.getHostCard().isSnow()
                             && ab2.getHostCard() != null && !ab2.getHostCard().isSnow() ? -1 : 1);
                     maList = filteredList;
                     break;
                 case "Treasure":
                     // Try to spend only one Treasure if possible
-                    filteredList.sort((ab1, ab2) -> ab1.getHostCard() != null && ab1.getHostCard().getType().hasSubtype("Treasure")
+                    // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                    IterableUtil.sort(filteredList, (ab1, ab2) -> ab1.getHostCard() != null && ab1.getHostCard().getType().hasSubtype("Treasure")
                             && ab2.getHostCard() != null && !ab2.getHostCard().getType().hasSubtype("Treasure") ? -1 : 1);
                     SpellAbility first = filteredList.get(0);
                     if (first.getHostCard() != null && first.getHostCard().getType().hasSubtype("Treasure")) {
@@ -307,7 +314,8 @@ public class ComputerUtilMana {
                     break;
                 case "TreasureMax":
                     // Ok to spend as many Treasures as possible
-                    filteredList.sort((ab1, ab2) -> ab1.getHostCard() != null && ab1.getHostCard().getType().hasSubtype("Treasure")
+                    // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                    IterableUtil.sort(filteredList, (ab1, ab2) -> ab1.getHostCard() != null && ab1.getHostCard().getType().hasSubtype("Treasure")
                             && ab2.getHostCard() != null && !ab2.getHostCard().getType().hasSubtype("Treasure") ? -1 : 1);
                     maList = filteredList;
                     break;
@@ -1156,7 +1164,8 @@ public class ComputerUtilMana {
     private static ManaCostShard getNextShardToPay(ManaCostBeingPaid cost, Multimap<ManaCostShard, SpellAbility> sourcesForShards) {
         List<ManaCostShard> shardsToPay = Lists.newArrayList(cost.getDistinctShards());
         // optimize order so that the shards with less available sources are considered first
-        shardsToPay.sort(Comparator.comparingInt(shard -> sourcesForShards.get(shard).size()));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(shardsToPay, ComparatorUtil.comparingInt(shard -> sourcesForShards.get(shard).size()));
         // mind the priorities
         // * Pay mono-colored first
         // * Pay 2/C with matching colors

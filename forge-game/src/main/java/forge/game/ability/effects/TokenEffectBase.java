@@ -28,6 +28,7 @@ import forge.game.replacement.ReplacementType;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.Trigger;
 import forge.game.zone.ZoneType;
+import forge.util.IterableUtil;
 
 public abstract class TokenEffectBase extends SpellAbilityEffect {
 
@@ -117,7 +118,7 @@ public abstract class TokenEffectBase extends SpellAbilityEffect {
             for (int i = 0; i < cellAmount; i++) {
                 Card tok = new CardCopyService(prototype).copyCard(true);
                 // disconnect from prototype
-                tok.getStates().forEach(cs -> tok.getState(cs).resetOriginalHost(prototype));
+                IterableUtil.forEach(tok.getStates(), cs -> tok.getState(cs).resetOriginalHost(prototype));
                 // Crafty Cutpurse would change under which control it does enter,
                 // but it shouldn't change who creates the token
                 tok.setOwner(creator);

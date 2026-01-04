@@ -76,7 +76,8 @@ public class CardProperty {
             return found;
         } else if (property.equals("NamedByRememberedPlayer")) {
             for (final Object o : source.getRemembered()) {
-                if (o instanceof Player p) {
+                if (o instanceof Player) {
+                    Player p = (Player) o;
                     if (!card.sharesNameWith(p.getNamedCard())) {
                         return false;
                     }

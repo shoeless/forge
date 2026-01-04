@@ -18,6 +18,8 @@ import forge.game.zone.ZoneType;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
+import java.util.Comparator;
+import forge.util.ComparatorUtil;
 
 public class PumpAi extends PumpAiBase {
 
@@ -793,11 +795,18 @@ public class PumpAi extends PumpAiBase {
             }
             values.keySet().removeAll(toRemove);
 
-            data.put(opp, Collections.max(values.entrySet(), Map.Entry.comparingByValue()));
+            // iOS compatibility: Replace Map.Entry.comparingByValue() with anonymous Comparator
+            data.put(opp, Collections.max(values.entrySet(), new Comparator<Map.Entry<String, Integer>>() {
+                @Override
+                public int compare(Map.Entry<String, Integer> e1, Map.Entry<String, Integer> e2) {
+                    return e1.getValue().compareTo(e2.getValue());
+                }
+            }));
         }
 
         if (!data.isEmpty()) {
-            Map.Entry<Player, Map.Entry<String, Integer>> max = Collections.max(data.entrySet(), Comparator.comparingInt(o -> o.getValue().getValue()));
+            // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt()
+            Map.Entry<Player, Map.Entry<String, Integer>> max = Collections.max(data.entrySet(), ComparatorUtil.comparingInt(o -> o.getValue().getValue()));
 
             // filter list again by the opponent and a creature of the wanted name that can be targeted
             list = CardLists.filter(CardLists.filterControlledBy(list, max.getKey()),

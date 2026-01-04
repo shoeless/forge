@@ -67,7 +67,8 @@ public class StaticAbilityCantTarget {
      * @return true, if successful
      */
     public static boolean applyCantTargetAbility(final StaticAbility stAb, final GameEntity entity, final SpellAbility spellAbility) {
-        if (entity instanceof Card card) {
+        if (entity instanceof Card) {
+            Card card = (Card) entity;
             if (stAb.hasParam("AffectedZone")) {
                 // iOS compatibility: Replace stream().noneMatch() with traditional for loop
                 boolean foundZone = false;

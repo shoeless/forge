@@ -27,7 +27,6 @@ import forge.game.trigger.TriggerType;
 import forge.game.zone.ZoneType;
 import forge.util.*;
 import forge.util.collect.FCollection;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 
@@ -121,7 +120,7 @@ public abstract class SpellAbilityEffect {
             if (condDesc != null) {
                 sb.append(condDesc).append(" ");
             }
-            sb.append(condDesc != null && condDesc.endsWith(",") ? StringUtils.uncapitalize(baseDesc) : baseDesc);
+            sb.append(condDesc != null && condDesc.endsWith(",") ? TextUtil.uncapitalize(baseDesc) : baseDesc);
             if (afterDesc != null) {
                 sb.append(" ").append(afterDesc);
             }
@@ -237,7 +236,7 @@ public abstract class SpellAbilityEffect {
                 resultUnique = new CardCollection();
                 resultDuplicate = resultUnique;
             }
-            sa.getTargets().getTargetCards().forEach(resultDuplicate::add);
+            IterableUtil.forEach(sa.getTargets().getTargetCards(), resultDuplicate::add);
         } else {
             String[] def = sa.getParamOrDefault(definedParam, "Self").split(" & ");
             for (String d : def) {
@@ -287,7 +286,7 @@ public abstract class SpellAbilityEffect {
                 resultUnique = new PlayerCollection();
                 resultDuplicate = resultUnique;
             }
-            sa.getTargets().getTargetPlayers().forEach(resultDuplicate::add);
+            IterableUtil.forEach(sa.getTargets().getTargetPlayers(), resultDuplicate::add);
         } else {
             String[] def = sa.getParamOrDefault(definedParam, "You").split(" & ");
             for (String d : def) {
@@ -307,8 +306,8 @@ public abstract class SpellAbilityEffect {
             starter = AbilityUtils.getDefinedPlayers(sa.getHostCard(), sa.getParam("StartingWith"), sa).getFirst();
         }
         PlayerCollection ordered = game.getPlayersInTurnOrder(starter);
-        // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt
-        resultDuplicate.sort(forge.util.ComparatorUtil.comparingInt(p -> ordered.indexOf(p)));
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(resultDuplicate, forge.util.ComparatorUtil.comparingInt(p -> ordered.indexOf(p)));
         return resultUnique;
     }
 

@@ -392,7 +392,7 @@ public class CardFactory {
             c.addIntrinsicKeywords(face.getKeywords(), false);
         }
         if (face.getDraftActions() != null) {
-            face.getDraftActions().forEach(c::addDraftAction);
+            IterableUtil.forEach(face.getDraftActions(), c::addDraftAction);
         }
 
         c.setManaCost(face.getManaCost());
@@ -530,10 +530,10 @@ public class CardFactory {
         } else if (in.hasState(CardStateName.Secondary)) {
             result.add(in.getState(CardStateName.Original).copy(out, cause));
             result.add(in.getState(CardStateName.Secondary).copy(out, cause));
-        } else if (in.isTransformable() && cause instanceof SpellAbility sa && (
-                ApiType.CopyPermanent.equals(sa.getApi()) ||
-                ApiType.CopySpellAbility.equals(sa.getApi()) ||
-                ApiType.ReplaceToken.equals(sa.getApi()))) {
+        } else if (in.isTransformable() && cause instanceof SpellAbility && (
+                ApiType.CopyPermanent.equals(((SpellAbility) cause).getApi()) ||
+                ApiType.CopySpellAbility.equals(((SpellAbility) cause).getApi()) ||
+                ApiType.ReplaceToken.equals(((SpellAbility) cause).getApi()))) {
             // CopyPermanent can copy token
             result.add(in.getState(CardStateName.Original).copy(out, cause));
             result.add(in.getState(CardStateName.Backside).copy(out, cause));
@@ -671,7 +671,8 @@ public class CardFactory {
                 }
             }
 
-            if (cause.hasParam("GainThisAbility") && cause instanceof SpellAbility sa) {
+            if (cause.hasParam("GainThisAbility") && cause instanceof SpellAbility) {
+                SpellAbility sa = (SpellAbility) cause;
                 SpellAbility root = sa.getRootAbility();
 
                 // Aurora Shifter

@@ -3,6 +3,7 @@ package forge.game.ability.effects;
 import forge.game.ability.SpellAbilityEffect;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
+import forge.util.IterableUtil;
 import forge.util.Lang;
 
 import java.util.List;
@@ -23,6 +24,6 @@ public class AdvanceCrankEffect extends SpellAbilityEffect {
 
     @Override
     public void resolve(SpellAbility sa) {
-        getDefinedPlayersOrTargeted(sa).forEach(Player::advanceCrankCounter);
+        IterableUtil.forEach(getDefinedPlayersOrTargeted(sa), Player::advanceCrankCounter);
     }
 }

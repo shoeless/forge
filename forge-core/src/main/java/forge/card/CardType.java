@@ -94,13 +94,19 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
          * @return a GamePieceType appropriate for this core type.
          */
         public GamePieceType toGamePieceType() {
-            return switch (this) {
-            case Plane, Phenomenon -> GamePieceType.PLANAR;
-            case Scheme -> GamePieceType.SCHEME;
-            case Dungeon -> GamePieceType.DUNGEON;
-            case Vanguard -> GamePieceType.AVATAR;
-            default -> GamePieceType.CARD;
-            };
+            switch (this) {
+                case Plane:
+                case Phenomenon:
+                    return GamePieceType.PLANAR;
+                case Scheme:
+                    return GamePieceType.SCHEME;
+                case Dungeon:
+                    return GamePieceType.DUNGEON;
+                case Vanguard:
+                    return GamePieceType.AVATAR;
+                default:
+                    return GamePieceType.CARD;
+            }
         }
 
         @Override

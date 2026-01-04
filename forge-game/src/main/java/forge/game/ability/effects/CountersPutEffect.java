@@ -193,8 +193,8 @@ public class CountersPutEffect extends SpellAbilityEffect {
             Map<String, Object> params = Maps.newHashMap();
             params.put("CounterType", counterType);
 
-            activator.getController().chooseCardsForEffect(leastToughness, sa,
-                        Localizer.getInstance().getMessage("lblChooseACreatureWithLeastToughness"), 1, 1, false, params).forEach(tgtObjects::add);
+            IterableUtil.forEach(activator.getController().chooseCardsForEffect(leastToughness, sa,
+                        Localizer.getInstance().getMessage("lblChooseACreatureWithLeastToughness"), 1, 1, false, params), tgtObjects::add);
         } else if (sa.hasParam("Choices") && (counterType != null || putOnEachOther || putOnDefined)) {
             ZoneType choiceZone = ZoneType.Battlefield;
             if (sa.hasParam("ChoiceZone")) {
@@ -245,8 +245,8 @@ public class CountersPutEffect extends SpellAbilityEffect {
             if (sa.hasParam("DividedRandomly")) {
                 tgtObjects.addAll(choices);
             } else {
-                chooser.getController().chooseCardsForEffect(choices, sa, title, m, n,
-                                sa.hasParam("ChoiceOptional"), params).forEach(tgtObjects::add);
+                IterableUtil.forEach(chooser.getController().chooseCardsForEffect(choices, sa, title, m, n,
+                                sa.hasParam("ChoiceOptional"), params), tgtObjects::add);
             }
         } else {
             tgtObjects.addAll(getDefinedEntitiesOrTargeted(sa, "Defined"));
@@ -256,7 +256,8 @@ public class CountersPutEffect extends SpellAbilityEffect {
         if (sa.hasParam("DividedRandomly")) {
             CardCollection targets = new CardCollection();
             for (final GameEntity obj : tgtObjects) { // check if each target is still OK
-                if (obj instanceof Card tgtCard) {
+                if (obj instanceof Card) {
+                    Card tgtCard = (Card) obj;
                     Card gameCard = game.getCardState(tgtCard, null);
                     if (gameCard == null || !tgtCard.equalsWithGameTimestamp(gameCard)) {
                         tgtObjects.remove(obj);
@@ -287,7 +288,8 @@ public class CountersPutEffect extends SpellAbilityEffect {
             for (final GameEntity obj : tgtObjects) {
                 // check if the object is still in game or if it was moved
                 Card gameCard = null;
-                if (obj instanceof Card tgtCard) {
+                if (obj instanceof Card) {
+                    Card tgtCard = (Card) obj;
                     gameCard = game.getCardState(tgtCard, null);
                     // gameCard is LKI in that case, the card is not in game anymore
                     // or the timestamp did change
@@ -574,7 +576,8 @@ public class CountersPutEffect extends SpellAbilityEffect {
                     if (sa.isDividedAsYouChoose() && !sa.usesTargeting()) {
                         counterRemain = counterRemain - counterAmount;
                     }
-                } else if (obj instanceof Player pl) {
+                } else if (obj instanceof Player) {
+                    Player pl = (Player) obj;
                     // Add Counters to players!
                     pl.addCounter(counterType, counterAmount, placer, table);
                 }

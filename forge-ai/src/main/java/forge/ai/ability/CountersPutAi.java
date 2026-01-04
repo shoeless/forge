@@ -54,7 +54,8 @@ public class CountersPutAi extends CountersAi {
 
         // disable moving counters (unless a specialized AI logic supports it)
         for (final CostPart part : cost.getCostParts()) {
-            if (part instanceof CostRemoveCounter remCounter) {
+            if (part instanceof CostRemoveCounter) {
+                CostRemoveCounter remCounter = (CostRemoveCounter) part;
                 final CounterType counterType = remCounter.counter;
                 if (counterType.getName().equals(type) && !aiLogic.startsWith("MoveCounter")) {
                     return false;
@@ -1079,7 +1080,8 @@ public class CountersPutAi extends CountersAi {
         Player ai = sa.getActivatingPlayer();
         GameEntity e = (GameEntity) params.get("Target");
         // for Card try to select not useless counter
-        if (e instanceof Card c) {
+        if (e instanceof Card) {
+            Card c = (Card) e;
             if (c.getController().isOpponentOf(ai)) {
                 if (options.contains(CounterEnumType.M1M1) && !c.hasKeyword(Keyword.UNDYING)) {
                     return CounterEnumType.M1M1;
@@ -1096,7 +1098,8 @@ public class CountersPutAi extends CountersAi {
                     }
                 }
             }
-        } else if (e instanceof Player p) {
+        } else if (e instanceof Player) {
+            Player p = (Player) e;
             if (p.isOpponentOf(ai)) {
                 if (options.contains(CounterEnumType.POISON)) {
                     return CounterEnumType.POISON;

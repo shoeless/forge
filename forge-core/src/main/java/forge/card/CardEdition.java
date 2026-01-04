@@ -81,17 +81,23 @@ public final class CardEdition implements Comparable<CardEdition> {
         public static final EnumSet<Type> REPRINT_SET_TYPES = EnumSet.of(REPRINT, PROMO, COLLECTOR_EDITION);
 
         public String getBoosterBoxDefault() {
-            return switch (this) {
-                case CORE, EXPANSION -> "36";
-                default -> "0";
-            };
+            switch (this) {
+                case CORE:
+                case EXPANSION:
+                    return "36";
+                default:
+                    return "0";
+            }
         }
 
         public String getFatPackDefault() {
-            return switch (this) {
-                case CORE, EXPANSION -> "10";
-                default -> "0";
-            };
+            switch (this) {
+                case CORE:
+                case EXPANSION:
+                    return "10";
+                default:
+                    return "0";
+            }
         }
 
         public String toString(){

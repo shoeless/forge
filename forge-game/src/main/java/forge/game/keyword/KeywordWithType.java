@@ -33,10 +33,8 @@ public class KeywordWithType extends KeywordInstance<KeywordWithType> {
             }
         } else {
             descType = type = details;
-            boolean multiple = switch(getKeyword()) {
-                case AFFINITY -> true;
-                default -> false;
-            };
+            // iOS compatibility: Replace Java 14+ switch expression with traditional statement
+            boolean multiple = (getKeyword() == Keyword.AFFINITY);
             descType = Lang.getInstance().buildValidDesc(Arrays.asList(type.split(",")), multiple);
         }
 

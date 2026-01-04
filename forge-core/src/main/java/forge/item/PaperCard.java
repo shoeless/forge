@@ -727,7 +727,8 @@ public class PaperCard implements Comparable<IPaperCard>, InventoryItemFromSet, 
 
         @Override
         public boolean equals(Object o) {
-            if (!(o instanceof PaperCardFlags that)) return false;
+            if (!(o instanceof PaperCardFlags)) return false;
+            PaperCardFlags that = (PaperCardFlags) o;
             return noSellValue == that.noSellValue && Objects.equals(markedColors, that.markedColors);
         }
 

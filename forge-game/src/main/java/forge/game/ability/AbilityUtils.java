@@ -151,12 +151,12 @@ public class AbilityUtils {
             }
         } else if (defined.equals("ThisTargetedCard") && sa instanceof SpellAbility) { // do not add parent targeted
             if (((SpellAbility)sa).getTargets() != null) {
-                ((SpellAbility)sa).getTargets().getTargetCards().forEach(cards::add);
+                IterableUtil.forEach(((SpellAbility)sa).getTargets().getTargetCards(), cards::add);
             }
         } else if (defined.equals("ParentTarget") && sa instanceof SpellAbility) {
             final SpellAbility parent = ((SpellAbility)sa).getParentTargetingCard();
             if (parent != null) {
-                parent.getTargets().getTargetCards().forEach(cards::add);
+                IterableUtil.forEach(parent.getTargets().getTargetCards(), cards::add);
             }
         }  else if (defined.startsWith("Triggered") && sa instanceof SpellAbility) {
             final SpellAbility root = ((SpellAbility)sa).getRootAbility();
@@ -579,13 +579,13 @@ public class AbilityUtils {
                 final List<Player> players = new ArrayList<>();
                 final SpellAbility saTargeting = sa.getSATargetingPlayer();
                 if (null != saTargeting) {
-                    saTargeting.getTargets().getTargetPlayers().forEach(players::add);
+                    IterableUtil.forEach(saTargeting.getTargets().getTargetPlayers(), players::add);
                 }
                 val = playerXCount(players, calcX[1], card, ability);
             }
             else if (calcX[0].startsWith("ThisTargetedPlayer")) {
                 final List<Player> players = new ArrayList<>();
-                sa.getTargets().getTargetPlayers().forEach(players::add);
+                IterableUtil.forEach(sa.getTargets().getTargetPlayers(), players::add);
                 val = playerXCount(players, calcX[1], card, ability);
             }
             else if (calcX[0].startsWith("TargetedObjects")) {
@@ -951,7 +951,7 @@ public class AbilityUtils {
             }
         } else if (defined.equals("ThisTargetedPlayer") && sa instanceof SpellAbility) { // do not add parent targeted
             if (((SpellAbility)sa).getTargets() != null) {
-                ((SpellAbility)sa).getTargets().getTargetPlayers().forEach(players::add);
+                IterableUtil.forEach(((SpellAbility)sa).getTargets().getTargetPlayers(), players::add);
             }
         } else if (defined.equals("TargetedController")) {
             for (final Card c : getDefinedCards(card, "Targeted", sa)) {
@@ -3884,7 +3884,7 @@ public class AbilityUtils {
     public static int countCardTypesFromList(final Iterable<Card> list, boolean permanentTypes) {
         EnumSet<CardType.CoreType> types = EnumSet.noneOf(CardType.CoreType.class);
         for (Card c1 : list) {
-            c1.getType().getCoreTypes().forEach(types::add);
+            IterableUtil.forEach(c1.getType().getCoreTypes(), types::add);
         }
         if (permanentTypes) {
             // iOS compatibility: Replace Stream API with IterableUtil
@@ -3896,7 +3896,7 @@ public class AbilityUtils {
     public static int countSuperTypesFromList(final Iterable<Card> list) {
         EnumSet<CardType.Supertype> types = EnumSet.noneOf(CardType.Supertype.class);
         for (Card c1 : list) {
-            c1.getType().getSupertypes().forEach(types::add);
+            IterableUtil.forEach(c1.getType().getSupertypes(), types::add);
         }
 
         return types.size();
@@ -3905,8 +3905,8 @@ public class AbilityUtils {
     public static int countSubTypesFromList(final Iterable<Card> list) {
         Set<String> types = new HashSet<>();
         for (Card c1 : list) {
-            c1.getType().getSubtypes().forEach(types::add);
-            c1.getType().getCreatureTypes().forEach(types::add);
+            IterableUtil.forEach(c1.getType().getSubtypes(), types::add);
+            IterableUtil.forEach(c1.getType().getCreatureTypes(), types::add);
         }
 
         return types.size();

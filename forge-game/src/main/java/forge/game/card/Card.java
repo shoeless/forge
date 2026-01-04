@@ -2564,7 +2564,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 } else if (keyword.startsWith("DeckLimit")) {
                     final String[] k = keyword.split(":");
                     sbLong.append(k[2]).append("\r\n");
-                } else if (keyword.startsWith("Enchant") && inst instanceof KeywordWithType kwt) {
+                } else if (keyword.startsWith("Enchant") && inst instanceof KeywordWithType) {
+                    KeywordWithType kwt = (KeywordWithType) inst;
                     String desc = kwt.getTypeDescription();
                     sbLong.append("Enchant ").append(desc).append("\r\n");
                 } else if ((keyword.startsWith("Morph") || keyword.startsWith("Megamorph")
@@ -2634,7 +2635,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                         if (cost.isOnlyManaCost()) {
                             sbLong.append(" pay ");
                         }
-                        sbLong.append(StringUtils.uncapitalize(cost.toSimpleString()));
+                        sbLong.append(TextUtil.uncapitalize(cost.toSimpleString()));
                         sbLong.append(n + 1 == costs.length ? ".\r\n\r\n" : n + 2 == costs.length && costs.length > 2
                                 ? ", or " : n + 2 == costs.length ? " or " : ", ");
                     }
@@ -2773,7 +2774,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                     for (KeywordInterface keyw : keywords) {
                         String kw = keyw.getOriginal();
                         if (kw.equals(keyword)) {
-                            descStr.append(times == 0 ? "" : ", " + StringUtils.uncapitalize(keyword));
+                            descStr.append(times == 0 ? "" : ", " + TextUtil.uncapitalize(keyword));
                             times++;
                         }
                     }
@@ -2862,7 +2863,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                         keyword = keyword.replace("Strike", "strike");
                     }
                     sb.append(i !=0 && sb.length() !=0 ? ", " : "");
-                    sb.append(i > 0 && sb.length() !=0 ? StringUtils.uncapitalize(keyword) : keyword);
+                    sb.append(i > 0 && sb.length() !=0 ? TextUtil.uncapitalize(keyword) : keyword);
                 }
                 if (sbLong.length() > 0) {
                     sbLong.append("\r\n");
@@ -3339,7 +3340,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                         if (cost.isOnlyManaCost()) {
                             sbBefore.append(" pay ");
                         }
-                        sbBefore.append(StringUtils.uncapitalize(cost.toSimpleString()));
+                        sbBefore.append(TextUtil.uncapitalize(cost.toSimpleString()));
                         sbBefore.append(n + 1 == costs.length ? ".\r\n\r\n" : n + 2 == costs.length && costs.length > 2
                                 ? ", or " : n + 2 == costs.length ? " or " : ", ");
                     }
@@ -7188,7 +7189,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             return "No Enchant Keyword";
         }
         for (KeywordInterface ki : aura.getKeywords(Keyword.ENCHANT)) {
-            if (ki instanceof KeywordWithType kwt) {
+            if (ki instanceof KeywordWithType) {
+                KeywordWithType kwt = (KeywordWithType) ki;
                 String v = kwt.getValidType();
                 String desc = kwt.getTypeDescription();
                 if (!isValid(v.split(","), aura.getController(), aura, null) || (!v.contains("inZone") && !isInPlay())) {

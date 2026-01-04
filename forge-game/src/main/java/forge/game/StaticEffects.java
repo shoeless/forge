@@ -27,6 +27,7 @@ import forge.game.card.Card;
 import forge.game.card.CardCollection;
 import forge.game.staticability.StaticAbility;
 import forge.game.staticability.StaticAbilityLayer;
+import forge.util.IterableUtil;
 
 /**
  * <p>
@@ -44,7 +45,8 @@ public class StaticEffects {
     public final void clearStaticEffects(final Set<Card> affectedCards, Map<StaticAbilityLayer, Set<Card>> affectedPerLayer) {
         // remove all static effects
         for (final StaticEffect se : staticEffects.values()) {
-            se.remove(affectedPerLayer).forEach(affectedCards::add);
+            // iOS compatibility: Use IterableUtil.forEach() instead of forEach()
+            IterableUtil.forEach(se.remove(affectedPerLayer), affectedCards::add);
         }
         this.staticEffects.clear();
         updateCaches(affectedPerLayer);

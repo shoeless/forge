@@ -334,9 +334,11 @@ public class EventVisualizer extends IGameEventVisitor.Base<SoundEffectType> imp
     public String getScriptedSoundEffectName(final GameEvent evt) {
         Card c = null;
 
-        if (evt instanceof GameEventSpellResolved evSpell) {
+        if (evt instanceof GameEventSpellResolved) {
+            GameEventSpellResolved evSpell = (GameEventSpellResolved) evt;
             c = evSpell.spell().getHostCard();
-        } else if (evt instanceof GameEventZone evZone) {
+        } else if (evt instanceof GameEventZone) {
+            GameEventZone evZone = (GameEventZone) evt;
             if (evZone.zoneType() == ZoneType.Battlefield && evZone.mode() == EventValueChangeType.Added && evZone.card().isLand()) {
                 c = evZone.card(); // assuming a land is played or otherwise put on the battlefield
             }

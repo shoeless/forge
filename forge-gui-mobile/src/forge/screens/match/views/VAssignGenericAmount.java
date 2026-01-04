@@ -164,9 +164,11 @@ public class VAssignGenericAmount extends FDialog {
             max = max0;
             if (entity instanceof CardView) {
                 obj = add(new EffectSourcePanel((CardView)entity));
-            } else if (entity instanceof PlayerView player) {
+            } else if (entity instanceof PlayerView) {
+                PlayerView player = (PlayerView) entity;
                 obj = add(new MiscTargetPanel(player.getName(), MatchController.getPlayerAvatar(player), null));
-            } else if (entity instanceof MagicColor.Color color) {
+            } else if (entity instanceof MagicColor.Color) {
+                MagicColor.Color color = (MagicColor.Color) entity;
                 FSkinImageInterface manaSymbol = Forge.getAssets().manaImages().get(color.getShortName());
                 obj = add(new MiscTargetPanel("", manaSymbol, entity));
             } else {

@@ -254,10 +254,12 @@ public class Cost implements Serializable {
             } else {
                 CostPart cp = parseCostPart(part, tapCost, untapCost);
                 if (null != cp)
-                    if (cp instanceof CostPartMana p) {
+                    if (cp instanceof CostPartMana) {
+                        CostPartMana p = (CostPartMana) cp;
                         parsedMana = p;
                     } else {
-                        if (cp instanceof CostPartWithList p) {
+                        if (cp instanceof CostPartWithList) {
+                            CostPartWithList p = (CostPartWithList) cp;
                             p.setIntrinsic(intrinsic);
                         }
                         this.costParts.add(cp);
@@ -823,7 +825,7 @@ public class Cost implements Serializable {
                 cost.append(" and ");
             }
             if (bFlag) {
-                cost.append(StringUtils.uncapitalize(part.toString()));
+                cost.append(TextUtil.uncapitalize(part.toString()));
             } else {
                 cost.append(part.toString());
             }

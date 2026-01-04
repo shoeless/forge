@@ -748,7 +748,8 @@ public class AiController {
         List<SpellAbility> all = ComputerUtilAbility.getSpellAbilities(cards, player);
 
         try {
-            all.sort(ComputerUtilAbility.saEvaluator); // put best spells first
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(all, ComputerUtilAbility.saEvaluator); // put best spells first
             ComputerUtilAbility.sortCreatureSpells(all);
         } catch (IllegalArgumentException ex) {
             System.err.println(ex.getMessage());
@@ -834,7 +835,8 @@ public class AiController {
         final Card host = sa.getHostCard();
         Card altHost = host;
 
-        if (sa instanceof Spell sp) {
+        if (sa instanceof Spell) {
+            Spell sp = (Spell) sa;
             altHost = sp.canPlayFromHost();
             if (altHost == null) {
                 return AiPlayDecision.CantPlaySa;
@@ -1345,6 +1347,8 @@ public class AiController {
     }
 
     public List<SpellAbility> chooseSpellAbilityToPlay() {
+        System.err.println("AI: chooseSpellAbilityToPlay() ENTER - Phase: " + game.getPhaseHandler().getPhase());
+
         // Reset cached predicted combat, as it may be stale. It will be
         // re-created if needed and used for any AI logic that needs it.
         predictedCombat = null;
@@ -1355,6 +1359,7 @@ public class AiController {
         memory.clearMemorySet(AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_NEXT_SPELL);
 
         if (useSimulation) {
+            System.err.println("AI: chooseSpellAbilityToPlay() using simulation");
             return singleSpellAbilityList(simPicker.chooseSpellAbilityToPlay(null));
         }
 
@@ -1362,10 +1367,12 @@ public class AiController {
                 player.getCardsIn(ZoneType.Hand), CardPredicates.hasSVar("PlayBeforeLandDrop")
         );
         if (!playBeforeLand.isEmpty()) {
+            System.err.println("AI: checking PlayBeforeLandDrop cards: " + playBeforeLand.size());
             SpellAbility wantToPlayBeforeLand = chooseSpellAbilityToPlayFromList(
                     ComputerUtilAbility.getSpellAbilities(playBeforeLand, player), false
             );
             if (wantToPlayBeforeLand != null) {
+                System.err.println("AI: playing before land: " + wantToPlayBeforeLand);
                 return singleSpellAbilityList(wantToPlayBeforeLand);
             }
         }
@@ -1375,14 +1382,16 @@ public class AiController {
             landsWannaPlay = filterLandsToPlay(landsWannaPlay);
             Log.debug("Computer " + game.getPhaseHandler().getPhase().nameForUi);
             if (landsWannaPlay != null && !landsWannaPlay.isEmpty()) {
+                System.err.println("AI: lands available to play: " + landsWannaPlay.size());
                 // TODO search for other land it might want to play?
                 Card land = chooseBestLandToPlay(landsWannaPlay);
                 if (land != null && (!game.getPhaseHandler().is(PhaseType.MAIN1) || !isSafeToHoldLandDropForMain2(land))) {
                     final List<SpellAbility> abilities = land.getAllPossibleAbilities(player, true);
                     // skip non Land Abilities
-                    abilities.removeIf(sa -> !sa.isLandAbility());
+                    IterableUtil.removeIf(abilities, sa -> !sa.isLandAbility());
 
                     if (!abilities.isEmpty()) {
+                        System.err.println("AI: playing land: " + land);
                         // TODO extend this logic to evaluate MDFC with both sides land
                         return abilities;
                     }
@@ -1390,7 +1399,10 @@ public class AiController {
             }
         }
 
-        return singleSpellAbilityList(getSpellAbilityToPlay());
+        System.err.println("AI: calling getSpellAbilityToPlay()...");
+        SpellAbility result = getSpellAbilityToPlay();
+        System.err.println("AI: getSpellAbilityToPlay() returned: " + (result == null ? "null (pass priority)" : result));
+        return singleSpellAbilityList(result);
     }
 
     private boolean isSafeToHoldLandDropForMain2(Card landToPlay) {
@@ -1508,6 +1520,7 @@ public class AiController {
     }
 
     private SpellAbility getSpellAbilityToPlay() {
+        System.err.println("AI: getSpellAbilityToPlay() ENTER");
         if (skipped != null) {
             //FIXME: this is for failed SA to skip temporarily, don't know why AI computation for mana fails, maybe due to auto mana compute?
             for (SpellAbility sa : skipped) {
@@ -1516,6 +1529,7 @@ public class AiController {
             }
         }
         CardCollection cards = ComputerUtilAbility.getAvailableCards(game, player);
+        System.err.println("AI: available cards: " + cards.size());
         cards = ComputerUtilCard.dedupeCards(cards);
         List<SpellAbility> saList = Lists.newArrayList();
 
@@ -1558,7 +1572,7 @@ public class AiController {
             saList = ComputerUtilAbility.getSpellAbilities(cards, player);
         }
 
-        saList.removeIf(spellAbility -> {
+        IterableUtil.removeIf(saList, spellAbility -> {
             // don't include removedAI cards if somehow the AI can play the ability or gain control of unsupported card
             // TODO allow when experimental profile?
             return spellAbility.isLandAbility() || (spellAbility.getHostCard() != null && ComputerUtilCard.isCardRemAIDeck(spellAbility.getHostCard()));
@@ -1575,9 +1589,12 @@ public class AiController {
         //update LivingEndPlayer
         useLivingEnd = IterableUtil.any(player.getZone(ZoneType.Library), CardPredicates.nameEquals("Living End"));
 
+        System.err.println("AI: calling chooseSpellAbilityToPlayFromList with " + saList.size() + " abilities");
         SpellAbility chosenSa = chooseSpellAbilityToPlayFromList(saList, true);
+        System.err.println("AI: chooseSpellAbilityToPlayFromList returned: " + (chosenSa == null ? "null" : chosenSa.getHostCard()));
 
         if (topOwnedByAI && !mustRespond && chosenSa != ComputerUtilAbility.getFirstCopySASpell(saList)) {
+            System.err.println("AI: returning null (not copying own spell)");
             return null; // not planning to copy the spell and not marked as something the AI would respond to
         }
 
@@ -1585,12 +1602,18 @@ public class AiController {
     }
 
     private SpellAbility chooseSpellAbilityToPlayFromList(final List<SpellAbility> all, boolean skipCounter) {
-        if (all == null || all.isEmpty())
+        System.err.println("AI: chooseSpellAbilityToPlayFromList() ENTER, skipCounter=" + skipCounter + ", size=" + (all == null ? "null" : all.size()));
+        if (all == null || all.isEmpty()) {
+            System.err.println("AI: chooseSpellAbilityToPlayFromList() - empty list, returning null");
             return null;
+        }
 
         try {
-            all.sort(ComputerUtilAbility.saEvaluator); // put best spells first
+            System.err.println("AI: sorting spell abilities...");
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(all, ComputerUtilAbility.saEvaluator); // put best spells first
             ComputerUtilAbility.sortCreatureSpells(all);
+            System.err.println("AI: sorting complete");
         } catch (IllegalArgumentException ex) {
             System.err.println(ex.getMessage());
             String assertex = ComparatorUtil.verifyTransitivity(ComputerUtilAbility.saEvaluator, all);
@@ -1600,10 +1623,14 @@ public class AiController {
         // in case of infinite loop reset below would not be reached
         timeoutReached = false;
 
+        System.err.println("AI: creating FutureTask to evaluate " + all.size() + " spell abilities");
         FutureTask<SpellAbility> future = new FutureTask<>(() -> {
+            System.err.println("AI: FutureTask started");
             //avoid ComputerUtil.aiLifeInDanger in loops as it slows down a lot.. call this outside loops will generally be fast...
             boolean isLifeInDanger = useLivingEnd && ComputerUtil.aiLifeInDanger(player, true, 0);
+            int evalCount = 0;
             for (final SpellAbility sa : ComputerUtilAbility.getOriginalAndAltCostAbilities(all, player)) {
+                evalCount++;
                 // Don't add Counterspells to the "normal" playcard lookups
                 if (skipCounter && sa.getApi() == ApiType.Counter) {
                     continue;
@@ -1617,7 +1644,7 @@ public class AiController {
                 if (sa.getHostCard().hasKeyword(Keyword.STORM)
                         && sa.getApi() != ApiType.Counter // AI would suck at trying to deliberately proc a Storm counterspell
                         && player.getZone(ZoneType.Hand).contains(
-                                Predicate.not(CardPredicates.LANDS.or(CardPredicates.hasKeyword("Storm")))
+                                CardPredicates.LANDS.or(CardPredicates.hasKeyword("Storm")).negate()
                     )) {
                     if (game.getView().getStormCount() < this.getIntProperty(AiProps.MIN_COUNT_FOR_STORM_SPELLS)) {
                         // skip evaluating Storm unless we reached the minimum Storm count
@@ -1677,18 +1704,24 @@ public class AiController {
                 if (opinion != AiPlayDecision.WillPlay)
                     continue;
 
+                System.err.println("AI: FutureTask found playable SA after " + evalCount + " evals: " + sa.getHostCard());
                 return sa;
             }
 
+            System.err.println("AI: FutureTask finished - no playable SA found after " + evalCount + " evals");
             return null;
         });
 
         Thread t = new Thread(future);
         t.start();
+        System.err.println("AI: waiting for FutureTask with timeout " + game.getAITimeout() + "s");
         try {
             // instead of computing all available concurrently just add a simple timeout depending on the user prefs
-            return future.get(game.getAITimeout(), TimeUnit.SECONDS);
+            SpellAbility result = future.get(game.getAITimeout(), TimeUnit.SECONDS);
+            System.err.println("AI: FutureTask completed, result: " + (result == null ? "null" : result.getHostCard()));
+            return result;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            System.err.println("AI: FutureTask TIMEOUT or ERROR: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             try {
                 e.printStackTrace();
                 t.stop();
@@ -2367,7 +2400,8 @@ public class AiController {
 
             if (!umbraArmor.isEmpty()) {
                 // sort them by cmc
-                umbraArmor.sort(Comparator.comparing(CardTraitBase::getHostCard, Comparator.comparing(Card::getCMC)));
+                // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                IterableUtil.sort(umbraArmor, ComparatorUtil.comparing(re -> re.getHostCard().getCMC()));
                 return umbraArmor.get(0);
             }
         } else if (mode.equals(ReplacementType.Draw)) {

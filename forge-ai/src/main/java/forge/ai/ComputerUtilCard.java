@@ -72,7 +72,9 @@ public class ComputerUtilCard {
      * @param list
      */
     public static void sortByEvaluateCreature(final CardCollection list) {
-        list.sort(getCachedCreatureComparator().reversed());
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        // Note: reversed() to match upstream behavior (descending order)
+        IterableUtil.sort(list, Collections.reverseOrder(ComputerUtilCard.EvaluateCreatureComparator));
     }
 
     /**
@@ -85,8 +87,9 @@ public class ComputerUtilCard {
      */
     public static Card getBestArtifactAI(final List<Card> list) {
         // get biggest Artifact
+        // iOS compatibility: Use ComparatorUtil instead of Comparator.comparing()
         return IterableUtil.max(IterableUtil.filter(list, CardPredicates.ARTIFACTS),
-                Comparator.comparing(Card::getCMC));
+                ComparatorUtil.comparingInt(Card::getCMC));
     }
 
     /**
@@ -97,8 +100,9 @@ public class ComputerUtilCard {
      */
     public static Card getBestPlaneswalkerAI(final List<Card> list) {
         // no AI logic, just return most expensive
+        // iOS compatibility: Use ComparatorUtil instead of Comparator.comparing()
         return IterableUtil.max(IterableUtil.filter(list, CardPredicates.PLANESWALKERS),
-                Comparator.comparing(Card::getCMC));
+                ComparatorUtil.comparingInt(Card::getCMC));
     }
 
     /**
@@ -109,8 +113,9 @@ public class ComputerUtilCard {
      */
     public static Card getWorstPlaneswalkerAI(final List<Card> list) {
         // no AI logic, just return least expensive
+        // iOS compatibility: Use ComparatorUtil instead of Comparator.comparing()
         return IterableUtil.min(IterableUtil.filter(list, CardPredicates.PLANESWALKERS),
-                Comparator.comparing(Card::getCMC));
+                ComparatorUtil.comparingInt(Card::getCMC));
     }
 
     public static Card getBestPlaneswalkerToDamage(final List<Card> pws) {
@@ -181,7 +186,8 @@ public class ComputerUtilCard {
             filtered = IterableUtil.filter(filtered, c -> c.canBeTargetedBy(spell));
         }
         // get biggest Enchantment
-        return IterableUtil.max(filtered, Comparator.comparing(Card::getCMC));
+        // iOS compatibility: Use ComparatorUtil instead of Comparator.comparing()
+        return IterableUtil.max(filtered, ComparatorUtil.comparingInt(Card::getCMC));
     }
 
     /**
@@ -518,7 +524,8 @@ public class ComputerUtilCard {
                 return null;
             }
 
-            cc.sort(CardLists.CmcComparatorInv);
+            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+            IterableUtil.sort(cc, CardLists.CmcComparatorInv);
 
             Card cheapest = cc.getLast();
             if (cheapest.hasSVar("DoNotDiscardIfAble")) {
@@ -938,7 +945,8 @@ public class ComputerUtilCard {
             if (color.hasGreen()) map.get(4).setValue(map.get(4).getValue() + 1);
         }
 
-        map.sort(Comparator.<Pair<Byte, Integer>>comparingInt(Pair::getValue).reversed());
+        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+        IterableUtil.sort(map, ComparatorUtil.reversed(ComparatorUtil.comparingInt(p -> p.getValue())));
 
         // will this part be once dropped?
         List<String> result = new ArrayList<>(cntColors);

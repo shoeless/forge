@@ -325,10 +325,12 @@ public class FControlGameEventHandler extends IGameEventVisitor.Base<Void> {
     public Void visit(final GameEventCardAttachment event) {
         final Game game = event.equipment().getGame();
         final Zone zEq = game.getZoneOf(event.equipment());
-        if (event.oldEntity() instanceof Card oldCard) {
+        if (event.oldEntity() instanceof Card) {
+            Card oldCard = (Card) event.oldEntity();
             updateZone(game.getZoneOf(oldCard));
         }
-        if (event.newTarget() instanceof Card newCard) {
+        if (event.newTarget() instanceof Card) {
+            Card newCard = (Card) event.newTarget();
             updateZone(game.getZoneOf(newCard));
         }
         updateZone(zEq);

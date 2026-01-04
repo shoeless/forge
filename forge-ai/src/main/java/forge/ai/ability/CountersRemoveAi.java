@@ -346,7 +346,8 @@ public class CountersRemoveAi extends SpellAbilityAi {
         GameEntity target = (GameEntity) params.get("Target");
         CounterType type = (CounterType) params.get("CounterType");
 
-        if (target instanceof Card targetCard) {
+        if (target instanceof Card) {
+            Card targetCard = (Card) target;
             if (targetCard.getController().isOpponentOf(player)) {
                 return !ComputerUtil.isNegativeCounter(type, targetCard) ? max : min;
             } else {
@@ -357,7 +358,8 @@ public class CountersRemoveAi extends SpellAbilityAi {
 
                 return ComputerUtil.isNegativeCounter(type, targetCard) ? max : min;
             }
-        } else if (target instanceof Player targetPlayer) {
+        } else if (target instanceof Player) {
+            Player targetPlayer = (Player) target;
             if (targetPlayer.isOpponentOf(player)) {
                 return !type.is(CounterEnumType.POISON) ? max : min;
             } else {

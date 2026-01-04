@@ -133,7 +133,7 @@ public final class FModel {
     private static final Supplier<IStorage<QuestWorld>> worlds = Suppliers.memoize(() -> {
         final Map<String, QuestWorld> standardWorlds = new QuestWorld.Reader(ForgeConstants.QUEST_WORLD_DIR + "worlds.txt").readAll();
         final Map<String, QuestWorld> customWorlds = new QuestWorld.Reader(ForgeConstants.USER_QUEST_WORLD_DIR + "customworlds.txt").readAll();
-        customWorlds.values().forEach(world -> world.setCustom(true));
+        IterableUtil.forEach(customWorlds.values(), world -> world.setCustom(true));
         standardWorlds.putAll(customWorlds);
         final IStorage<QuestWorld> w = new StorageBase<>("Quest worlds", null, standardWorlds);
         return w;
@@ -527,12 +527,23 @@ public final class FModel {
 
     public static AchievementCollection getAchievements(GameType gameType) {
         // Translate gameType to appropriate type if needed
-        return switch (gameType) {
-            case Constructed, Draft, Sealed, Quest, PlanarConquest, Puzzle, Adventure -> achievements.get().get(gameType);
-            case AdventureEvent -> achievements.get().get(GameType.Adventure);
-            case QuestDraft -> achievements.get().get(GameType.Quest);
-            default -> achievements.get().get(GameType.Constructed);
-        };
+        // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+        switch (gameType) {
+            case Constructed:
+            case Draft:
+            case Sealed:
+            case Quest:
+            case PlanarConquest:
+            case Puzzle:
+            case Adventure:
+                return achievements.get().get(gameType);
+            case AdventureEvent:
+                return achievements.get().get(GameType.Adventure);
+            case QuestDraft:
+                return achievements.get().get(GameType.Quest);
+            default:
+                return achievements.get().get(GameType.Constructed);
+        }
     }
 
     public static IStorage<CardBlock> getBlocks() {

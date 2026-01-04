@@ -290,7 +290,8 @@ public abstract class SpellAbilityAi {
         for (T ent : options) {
             if (ent instanceof Player) {
                 hasPlayer = true;
-            } else if (ent instanceof Card card) {
+            } else if (ent instanceof Card) {
+                Card card = (Card) ent;
                 hasCard = true;
                 if (card.isPlaneswalker() || card.isBattle()) {
                     hasAttackableCard = true;

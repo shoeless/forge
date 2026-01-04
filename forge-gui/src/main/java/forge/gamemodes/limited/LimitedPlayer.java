@@ -770,8 +770,11 @@ public class LimitedPlayer {
 
     public void reduceArchdemonOfPalianoCurse() {
         if (hasArchdemonCurse()) {
-            archdemonFavors.replaceAll(integer -> integer - 1);
-            archdemonFavors.removeIf(integer -> integer <= 0);
+            // iOS compatibility: Replace List.replaceAll() (Java 8 method) with traditional loop
+            for (int i = 0; i < archdemonFavors.size(); i++) {
+                archdemonFavors.set(i, archdemonFavors.get(i) - 1);
+            }
+            IterableUtil.removeIf(archdemonFavors, integer -> integer <= 0);
             if (archdemonFavors.isEmpty()) {
                 playerFlags &= ~ArchdemonOfPalianoCurse;
             }

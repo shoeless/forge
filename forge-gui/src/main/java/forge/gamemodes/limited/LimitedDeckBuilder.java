@@ -593,10 +593,10 @@ public class LimitedDeckBuilder extends DeckGeneratorBase {
             if (ai.getRemRandomDecks()) {
                 final List<PaperCard> comboCards = new ArrayList<>();
                 if (ai.getDeckNeeds() != null && ai.getDeckNeeds().isValid()) {
-                    ai.getDeckNeeds().filter(deckList).forEach(comboCards::add);
+                    IterableUtil.forEach(ai.getDeckNeeds().filter(deckList), comboCards::add);
                 }
                 if (ai.getDeckHints() != null && ai.getDeckHints().isValid()) {
-                    ai.getDeckHints().filter(deckList).forEach(comboCards::add);
+                    IterableUtil.forEach(ai.getDeckHints().filter(deckList), comboCards::add);
                 }
                 if (comboCards.isEmpty()) {
                     if (logToConsole) {

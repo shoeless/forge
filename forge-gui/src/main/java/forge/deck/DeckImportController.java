@@ -693,33 +693,47 @@ public class DeckImportController {
     }
 
     public String getTokenMessage(DeckRecognizer.Token token) {
-        return switch (token.getType()) {
-            case LEGAL_CARD, LIMITED_CARD, CARD_FROM_NOT_ALLOWED_SET, CARD_FROM_INVALID_SET,
-                 CARD_NOT_IN_INVENTORY, FREE_CARD_NOT_IN_INVENTORY ->
-                    String.format("%s x %s %s", token.getQuantity(), token.getText(), getTokenFoilLabel(token));
+        switch (token.getType()) {
+            case LEGAL_CARD:
+            case LIMITED_CARD:
+            case CARD_FROM_NOT_ALLOWED_SET:
+            case CARD_FROM_INVALID_SET:
+            case CARD_NOT_IN_INVENTORY:
+            case FREE_CARD_NOT_IN_INVENTORY:
+                return String.format("%s x %s %s", token.getQuantity(), token.getText(), getTokenFoilLabel(token));
             // Card Warning Msgs
-            case UNKNOWN_CARD, UNSUPPORTED_CARD ->
-                    token.getQuantity() > 0 ? String.format("%s x %s", token.getQuantity(), token.getText())
-                            : token.getText();
-            case UNSUPPORTED_DECK_SECTION ->
-                    String.format("%s: %s", Localizer.getInstance().getMessage("lblWarningMsgPrefix"),
-                            Localizer.getInstance()
-                                    .getMessage("lblWarnDeckSectionNotAllowedInEditor", token.getText(),
-                                            this.currentGameType.name()));
-
+            case UNKNOWN_CARD:
+            case UNSUPPORTED_CARD:
+                return token.getQuantity() > 0 ? String.format("%s x %s", token.getQuantity(), token.getText())
+                        : token.getText();
+            case UNSUPPORTED_DECK_SECTION:
+                return String.format("%s: %s", Localizer.getInstance().getMessage("lblWarningMsgPrefix"),
+                        Localizer.getInstance()
+                                .getMessage("lblWarnDeckSectionNotAllowedInEditor", token.getText(),
+                                        this.currentGameType.name()));
             // Special Case of Card moved into another section (e.g. Commander from Sideboard)
-            case WARNING_MESSAGE -> String.format("%s: %s", Localizer.getInstance()
+            case WARNING_MESSAGE:
+                return String.format("%s: %s", Localizer.getInstance()
                     .getMessage("lblWarningMsgPrefix"), token.getText());
-
             // Placeholders
-            case DECK_SECTION_NAME -> String.format("%s: %s", Localizer.getInstance().getMessage("lblDeckSection"),
+            case DECK_SECTION_NAME:
+                return String.format("%s: %s", Localizer.getInstance().getMessage("lblDeckSection"),
                     token.getText());
-            case CARD_RARITY -> String.format("%s: %s", Localizer.getInstance().getMessage("lblRarity"),
+            case CARD_RARITY:
+                return String.format("%s: %s", Localizer.getInstance().getMessage("lblRarity"),
                     token.getText());
-            case CARD_TYPE, CARD_CMC, MANA_COLOUR, COMMENT, UNKNOWN_TEXT -> token.getText();
-            case DECK_NAME -> String.format("%s: %s", Localizer.getInstance().getMessage("lblDeckName"),
+            case CARD_TYPE:
+            case CARD_CMC:
+            case MANA_COLOUR:
+            case COMMENT:
+            case UNKNOWN_TEXT:
+                return token.getText();
+            case DECK_NAME:
+                return String.format("%s: %s", Localizer.getInstance().getMessage("lblDeckName"),
                     token.getText());
-        };
+            default:
+                return token.getText();
+        }
     }
 
     public String getTokenStatusMessage(DeckRecognizer.Token token) {
@@ -727,19 +741,25 @@ public class DeckImportController {
             return "";
 
         final Localizer localizer = Localizer.getInstance();
-        return switch (token.getType()) {
-            case LIMITED_CARD -> String.format("%s: %s", localizer.getMessage("lblWarningMsgPrefix"),
+        switch (token.getType()) {
+            case LIMITED_CARD:
+                return String.format("%s: %s", localizer.getMessage("lblWarningMsgPrefix"),
                     localizer.getMessage("lblWarnLimitedCard",
                             TextUtil.capitalize(token.getLimitedCardType().name()), getGameFormatLabel()));
-            case CARD_FROM_NOT_ALLOWED_SET ->
-                    localizer.getMessage("lblErrNotAllowedCard", getGameFormatLabel());
-            case CARD_FROM_INVALID_SET -> localizer.getMessage("lblErrCardEditionDate");
-            case UNSUPPORTED_CARD -> localizer.getMessage("lblErrUnsupportedCard", this.currentGameType);
-            case UNKNOWN_CARD -> String.format("%s: %s", localizer.getMessage("lblWarningMsgPrefix"),
+            case CARD_FROM_NOT_ALLOWED_SET:
+                return localizer.getMessage("lblErrNotAllowedCard", getGameFormatLabel());
+            case CARD_FROM_INVALID_SET:
+                return localizer.getMessage("lblErrCardEditionDate");
+            case UNSUPPORTED_CARD:
+                return localizer.getMessage("lblErrUnsupportedCard", this.currentGameType);
+            case UNKNOWN_CARD:
+                return String.format("%s: %s", localizer.getMessage("lblWarningMsgPrefix"),
                     localizer.getMessage("lblWarnUnknownCardMsg"));
-            case CARD_NOT_IN_INVENTORY -> localizer.getMessage("lblWarnNotInInventory");
-            default -> "";
-        };
+            case CARD_NOT_IN_INVENTORY:
+                return localizer.getMessage("lblWarnNotInInventory");
+            default:
+                return "";
+        }
     }
 
 

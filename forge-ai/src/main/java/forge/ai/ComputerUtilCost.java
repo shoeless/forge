@@ -3,7 +3,6 @@ package forge.ai;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import forge.util.function.Predicate;
 
 import forge.game.GameObject;
 import org.apache.commons.lang3.ObjectUtils;
@@ -46,7 +45,8 @@ public class ComputerUtilCost {
             return true;
         }
         for (final CostPart part : cost.getCostParts()) {
-            if (part instanceof CostPutCounter addCounter) {
+            if (part instanceof CostPutCounter) {
+                CostPutCounter addCounter = (CostPutCounter) part;
                 final CounterType type = addCounter.getCounter();
 
                 if (type.is(CounterEnumType.M1M1)) {
@@ -72,7 +72,8 @@ public class ComputerUtilCost {
         }
         final AiCostDecision decision = new AiCostDecision(sa.getActivatingPlayer(), sa, false);
         for (final CostPart part : cost.getCostParts()) {
-            if (part instanceof CostRemoveCounter remCounter) {
+            if (part instanceof CostRemoveCounter) {
+                CostRemoveCounter remCounter = (CostRemoveCounter) part;
                 final CounterType type = remCounter.counter;
                 if (!part.payCostFromSource()) {
                     if (type.is(CounterEnumType.P1P1)) {
@@ -99,7 +100,8 @@ public class ComputerUtilCost {
                         && !source.hasKeyword(Keyword.UNDYING)) {
                     return false;
                 }
-            } else if (part instanceof CostRemoveAnyCounter remCounter) {
+            } else if (part instanceof CostRemoveAnyCounter) {
+                CostRemoveAnyCounter remCounter = (CostRemoveAnyCounter) part;
                 PaymentDecision pay = decision.visit(remCounter);
                 return pay != null;
             }
@@ -124,7 +126,8 @@ public class ComputerUtilCost {
         CardCollection hand = new CardCollection(ai.getCardsIn(ZoneType.Hand));
 
         for (final CostPart part : cost.getCostParts()) {
-            if (part instanceof CostDiscard disc) {
+            if (part instanceof CostDiscard) {
+                CostDiscard disc = (CostDiscard) part;
                 final String type = disc.getType();
                 final CardCollection typeList;
                 int num;
@@ -178,7 +181,8 @@ public class ComputerUtilCost {
             return true;
         }
         for (final CostPart part : cost.getCostParts()) {
-            if (part instanceof CostDamage pay) {
+            if (part instanceof CostDamage) {
+                CostDamage pay = (CostDamage) part;
                 int realDamage = ComputerUtilCombat.predictDamageTo(ai, pay.getAbilityAmount(sa), source, false);
                 if (ai.getLife() - realDamage < remainingLife
                         && realDamage > 0 && !ai.cantLoseForZeroOrLessLife()
@@ -210,7 +214,8 @@ public class ComputerUtilCost {
             return true;
         }
         for (final CostPart part : cost.getCostParts()) {
-            if (part instanceof CostPayLife payLife) {
+            if (part instanceof CostPayLife) {
+                CostPayLife payLife = (CostPayLife) part;
                 int amount = payLife.getAbilityAmount(sourceAbility);
 
                 // check if there's override for the remainingLife threshold
@@ -280,7 +285,8 @@ public class ComputerUtilCost {
             return true;
         }
         for (final CostPart part : cost.getCostParts()) {
-            if (part instanceof CostSacrifice sac) {
+            if (part instanceof CostSacrifice) {
+                CostSacrifice sac = (CostSacrifice) part;
                 final int amount = AbilityUtils.calculateAmount(source, sac.getAmount(), sourceAbility);
 
                 if (sac.payCostFromSource() && source.isCreature()) {
@@ -329,7 +335,8 @@ public class ComputerUtilCost {
             return true;
         }
         for (final CostPart part : cost.getCostParts()) {
-            if (part instanceof CostSacrifice sac) {
+            if (part instanceof CostSacrifice) {
+                CostSacrifice sac = (CostSacrifice) part;
                 if (sac.payCostFromSource()) {
                     if (!important) {
                         return false;
@@ -706,7 +713,7 @@ public class ComputerUtilCost {
     public static CardCollection paymentChoicesWithoutTargets(Iterable<Card> choices, SpellAbility source, Player ai) {
         if (source.usesTargeting()) {
             final CardCollectionView targets = source.getTargets().getTargetCards();
-            choices = IterableUtil.filter(choices, Predicate.not(CardPredicates.isController(ai).and(targets::contains)));
+            choices = IterableUtil.filter(choices, CardPredicates.isController(ai).and(targets::contains).negate());
         }
         return new CardCollection(choices);
     }

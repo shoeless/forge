@@ -438,7 +438,8 @@ public class RollDiceEffect extends SpellAbilityEffect {
             naturalRolls.add(roll);
         }
 
-        naturalRolls.sort(null);
+        // iOS compatibility: Use Collections.sort() instead of List.sort()
+        Collections.sort(naturalRolls);
 
         // Ignore lowest rolls
         if (ignore > 0) {

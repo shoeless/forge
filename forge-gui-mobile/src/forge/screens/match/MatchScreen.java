@@ -402,7 +402,8 @@ public class MatchScreen extends FScreen {
             if (Forge.isLandscapeMode() && (!GuiBase.isAndroid() || Forge.hasGamepad()) && !CardZoom.isOpen() && potentialListener != null) {
                 for (FDisplayObject object : potentialListener) {
                     if (object != null) {
-                        if (object instanceof FCardPanel cardPanel) {
+                        if (object instanceof FCardPanel) {
+                            FCardPanel cardPanel = (FCardPanel) object;
                             try {
                                 if (cardPanel.isHovered()) {
                                     CardView cardView = cardPanel.getCard();
@@ -838,18 +839,29 @@ public class MatchScreen extends FScreen {
 
     FSkinTexture getBG() {
         if (Forge.isMobileAdventureMode) {
-            return switch (GameScene.instance().getAdventurePlayerLocation(false, true)) {
-                case "green" -> FSkinTexture.ADV_BG_FOREST;
-                case "black" -> FSkinTexture.ADV_BG_SWAMP;
-                case "red" -> FSkinTexture.ADV_BG_MOUNTAIN;
-                case "blue" -> FSkinTexture.ADV_BG_ISLAND;
-                case "white" -> FSkinTexture.ADV_BG_PLAINS;
-                case "waste" -> FSkinTexture.ADV_BG_WASTE;
-                case "cave" -> FSkinTexture.ADV_BG_CAVE;
-                case "dungeon" -> FSkinTexture.ADV_BG_DUNGEON;
-                case "castle" -> FSkinTexture.ADV_BG_CASTLE;
-                default -> FSkinTexture.ADV_BG_COMMON;
-            };
+            String location = GameScene.instance().getAdventurePlayerLocation(false, true);
+            switch (location) {
+                case "green":
+                    return FSkinTexture.ADV_BG_FOREST;
+                case "black":
+                    return FSkinTexture.ADV_BG_SWAMP;
+                case "red":
+                    return FSkinTexture.ADV_BG_MOUNTAIN;
+                case "blue":
+                    return FSkinTexture.ADV_BG_ISLAND;
+                case "white":
+                    return FSkinTexture.ADV_BG_PLAINS;
+                case "waste":
+                    return FSkinTexture.ADV_BG_WASTE;
+                case "cave":
+                    return FSkinTexture.ADV_BG_CAVE;
+                case "dungeon":
+                    return FSkinTexture.ADV_BG_DUNGEON;
+                case "castle":
+                    return FSkinTexture.ADV_BG_CASTLE;
+                default:
+                    return FSkinTexture.ADV_BG_COMMON;
+            }
         }
         return FSkinTexture.BG_MATCH;
     }

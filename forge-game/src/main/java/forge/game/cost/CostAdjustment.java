@@ -531,43 +531,41 @@ public class CostAdjustment {
         }
 
         if (st.hasParam("Type")) {
-            switch (st.getParam("Type")) {
-                case "Spell" -> {
-                    if (!sa.isSpell()) {
-                        return false;
-                    }
-                    if (st.hasParam("OnlyFirstSpell")) {
-                        if (activator == null) {
-                            return false;
-                        }
-                        List<Card> list;
-                        if (st.hasParam("ValidCard")) {
-                            list = CardUtil.getThisTurnCast(st.getParam("ValidCard"), hostCard, st, controller);
-                        } else {
-                            list = game.getStack().getSpellsCastThisTurn();
-                        }
-
-                        if (st.hasParam("ValidSpell")) {
-                            list = CardLists.filterAsList(list, CardPredicates.castSA(
-                                    SpellAbilityPredicates.isValid(st.getParam("ValidSpell").split(","), controller, hostCard, st))
-                            );
-                        }
-
-                        if (!CardLists.filterControlledBy(list, activator).isEmpty()) return false;
-                    }
+            // iOS compatibility: Replace Java 14+ switch expression with traditional switch
+            String type = st.getParam("Type");
+            if ("Spell".equals(type)) {
+                if (!sa.isSpell()) {
+                    return false;
                 }
-                case "Ability" -> {
-                    if (!sa.isActivatedAbility() || sa.isReplacementAbility()) {
+                if (st.hasParam("OnlyFirstSpell")) {
+                    if (activator == null) {
                         return false;
                     }
+                    List<Card> list;
+                    if (st.hasParam("ValidCard")) {
+                        list = CardUtil.getThisTurnCast(st.getParam("ValidCard"), hostCard, st, controller);
+                    } else {
+                        list = game.getStack().getSpellsCastThisTurn();
+                    }
+
+                    if (st.hasParam("ValidSpell")) {
+                        list = CardLists.filterAsList(list, CardPredicates.castSA(
+                                SpellAbilityPredicates.isValid(st.getParam("ValidSpell").split(","), controller, hostCard, st))
+                        );
+                    }
+
+                    if (!CardLists.filterControlledBy(list, activator).isEmpty()) return false;
                 }
-                case "Foretell" -> {
-                    if (!sa.isForetelling()) {
-                        return false;
-                    }
-                    if (st.hasParam("FirstForetell") && activator.getNumForetoldThisTurn() > 0) {
-                        return false;
-                    }
+            } else if ("Ability".equals(type)) {
+                if (!sa.isActivatedAbility() || sa.isReplacementAbility()) {
+                    return false;
+                }
+            } else if ("Foretell".equals(type)) {
+                if (!sa.isForetelling()) {
+                    return false;
+                }
+                if (st.hasParam("FirstForetell") && activator.getNumForetoldThisTurn() > 0) {
+                    return false;
                 }
             }
 

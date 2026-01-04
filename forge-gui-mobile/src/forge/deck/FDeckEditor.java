@@ -136,8 +136,9 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
                 controller.newDeck();
                 return controller;
             }
-            if(!(controller instanceof FileDeckGroupController fileController))
+            if(!(controller instanceof FileDeckGroupController))
                 return initDeckController(newDecks.getHumanDeck());
+            FileDeckGroupController fileController = (FileDeckGroupController) controller;
             fileController.setDeckGroup(newDecks);
             return controller;
         }
@@ -395,28 +396,30 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
 
     protected static DeckSectionPage createPageForExtraSection(DeckSection deckSection, DeckEditorConfig editorConfig) {
         CardManager cm = new CardManager(false);
-        return switch (deckSection) {
-            case Avatar, Commander -> new DeckSectionPage(cm, deckSection, ItemManagerConfig.COMMANDER_SECTION);
-            case Schemes -> new DeckSectionPage(cm, deckSection, ItemManagerConfig.SCHEME_DECK_EDITOR);
-            case Planes -> new DeckSectionPage(cm, deckSection, ItemManagerConfig.PLANAR_DECK_EDITOR);
-            case Conspiracy ->
-                    new DeckSectionPage(cm, deckSection, editorConfig.isLimited() ? ItemManagerConfig.DRAFT_CONSPIRACY : ItemManagerConfig.CONSPIRACY_DECKS);
-            case Dungeon -> new DeckSectionPage(cm, deckSection, ItemManagerConfig.DUNGEON_DECKS);
-            case Attractions -> {
+        switch (deckSection) {
+            case Avatar:
+            case Commander:
+                return new DeckSectionPage(cm, deckSection, ItemManagerConfig.COMMANDER_SECTION);
+            case Schemes:
+                return new DeckSectionPage(cm, deckSection, ItemManagerConfig.SCHEME_DECK_EDITOR);
+            case Planes:
+                return new DeckSectionPage(cm, deckSection, ItemManagerConfig.PLANAR_DECK_EDITOR);
+            case Conspiracy:
+                return new DeckSectionPage(cm, deckSection, editorConfig.isLimited() ? ItemManagerConfig.DRAFT_CONSPIRACY : ItemManagerConfig.CONSPIRACY_DECKS);
+            case Dungeon:
+                return new DeckSectionPage(cm, deckSection, ItemManagerConfig.DUNGEON_DECKS);
+            case Attractions:
                 if (editorConfig.isLimited())
-                    yield new DeckSectionPage(cm, deckSection, ItemManagerConfig.ATTRACTION_DECK_EDITOR_LIMITED);
-                yield new DeckSectionPage(cm, deckSection, ItemManagerConfig.ATTRACTION_DECK_EDITOR);
-            }
-            case Contraptions -> {
+                    return new DeckSectionPage(cm, deckSection, ItemManagerConfig.ATTRACTION_DECK_EDITOR_LIMITED);
+                return new DeckSectionPage(cm, deckSection, ItemManagerConfig.ATTRACTION_DECK_EDITOR);
+            case Contraptions:
                 if (editorConfig.isLimited())
-                    yield new DeckSectionPage(cm, deckSection, ItemManagerConfig.CONTRAPTION_DECK_EDITOR_LIMITED);
-                yield new DeckSectionPage(cm, deckSection, ItemManagerConfig.CONTRAPTION_DECK_EDITOR);
-            }
-            default -> {
+                    return new DeckSectionPage(cm, deckSection, ItemManagerConfig.CONTRAPTION_DECK_EDITOR_LIMITED);
+                return new DeckSectionPage(cm, deckSection, ItemManagerConfig.CONTRAPTION_DECK_EDITOR);
+            default:
                 System.out.printf("Editor (%s) added an unsupported extra deck section - %s%n", deckSection, editorConfig.getGameType());
-                yield new DeckSectionPage(cm, deckSection);
-            }
-        };
+                return new DeckSectionPage(cm, deckSection);
+        }
     }
 
     public static FImage iconFromDeckSection(DeckSection deckSection) {
@@ -512,7 +515,8 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
             if (tabPage instanceof CatalogPage && catalogPage == null) {
                 catalogPage = (CatalogPage) tabPage;
             }
-            else if (tabPage instanceof DeckSectionPage deckSectionPage) {
+            else if (tabPage instanceof DeckSectionPage) {
+                DeckSectionPage deckSectionPage = (DeckSectionPage) tabPage;
                 pagesBySection.put(deckSectionPage.deckSection, deckSectionPage);
                 switch (deckSectionPage.deckSection) {
                     case Main:
@@ -1418,7 +1422,8 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
                     labelAction = "lblMove";
                 labelSection = getMoveLabel((DeckSectionPage) destination, sampleCard, false);
             }
-            else if(destination instanceof DeckSectionPage deckSectionPage) {
+            else if(destination instanceof DeckSectionPage) {
+                DeckSectionPage deckSectionPage = (DeckSectionPage) destination;
                 //Moving from a card pool to a named section, e.g. "Add to sideboard"
                 if(deckSectionPage.deckSection == DeckSection.Commander || deckSectionPage.deckSection == DeckSection.Avatar)
                     labelAction = "lblSet";

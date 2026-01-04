@@ -153,7 +153,9 @@ public class PlayAi extends SpellAbilityAi {
         final CardStateName state;
         if (sa.hasParam("CastTransformed")) {
             state = CardStateName.Backside;
-            options.forEach(c -> c.changeToState(CardStateName.Backside));
+            for (Card c : options) {
+                c.changeToState(CardStateName.Backside);
+            }
         } else {
             state = CardStateName.Original; 
         }
@@ -209,7 +211,9 @@ public class PlayAi extends SpellAbilityAi {
         });
 
         if (sa.hasParam("CastTransformed")) {
-            options.forEach(c -> c.changeToState(CardStateName.Original));
+            for (Card c : options) {
+                c.changeToState(CardStateName.Original);
+            }
         }
 
         final Card best = ComputerUtilCard.getBestAI(tgtCards);

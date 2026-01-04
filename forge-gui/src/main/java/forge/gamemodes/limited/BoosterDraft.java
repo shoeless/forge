@@ -448,13 +448,8 @@ public class BoosterDraft implements IBoosterDraft {
                 futures.clear();
             }
             // iOS compatibility: Replace stream().collect(Collectors.toList()) with traditional for loop
-            for (CompletableFuture<CustomLimited> future : queue) {
-                try {
-                    customs.add(future.get());
-                } catch (Exception e) {
-                    // Handle any exceptions from future.get()
-                    e.printStackTrace();
-                }
+            for (CustomLimited custom : queue) {
+                customs.add(custom);
             }
         }
         return customs;
@@ -622,7 +617,9 @@ public class BoosterDraft implements IBoosterDraft {
 
             toPass.put(passingPack, passToPlayer);
         }
-        toPass.forEach((pack, player) -> player.receiveOpenedPack(pack));
+        for (Map.Entry<DraftPack, LimitedPlayer> entry : toPass.entrySet()) {
+            entry.getValue().receiveOpenedPack(entry.getKey());
+        }
 
         if(ForgePreferences.DEV_MODE) {
             // iOS compatibility: Replace stream().mapToInt().toArray() with traditional for loop
@@ -663,7 +660,7 @@ public class BoosterDraft implements IBoosterDraft {
     @Override
     public boolean isRoundOver() {
         // iOS compatibility: Replace stream().allMatch() with traditional for loop
-        for (DraftPlayer p : players) {
+        for (LimitedPlayer p : players) {
             if (!p.packQueue.isEmpty()) {
                 return false;
             }

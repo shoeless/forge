@@ -289,7 +289,8 @@ public abstract class GameEntity implements GameObject, IIdentifiable {
             return "No Enchant Keyword";
         }
         for (KeywordInterface ki : aura.getKeywords(Keyword.ENCHANT)) {
-            if (ki instanceof KeywordWithType kwt) {
+            if (ki instanceof KeywordWithType) {
+                KeywordWithType kwt = (KeywordWithType) ki;
                 String v = kwt.getValidType();
                 String desc = kwt.getTypeDescription();
                 if (!isValid(v.split(","), aura.getController(), aura, null)) {

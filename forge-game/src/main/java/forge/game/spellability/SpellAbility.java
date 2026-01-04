@@ -1089,7 +1089,7 @@ public abstract class SpellAbility extends CardTraitBase implements ISpellAbilit
                 }
                 sb.append(payCosts.toString());
                 sb.append(" or ").append(altOnlyMana ? alternateCost.toString() :
-                        StringUtils.uncapitalize(alternateCost.toString()));
+                        TextUtil.uncapitalize(alternateCost.toString()));
                 sb.append(equip && !altOnlyMana ? "." : "");
             } else {
                 sb.append(payCosts.toString());
@@ -1579,7 +1579,8 @@ public abstract class SpellAbility extends CardTraitBase implements ISpellAbilit
                 }
             }
 
-            if (entity instanceof GameEntity e) {
+            if (entity instanceof GameEntity) {
+                GameEntity e = (GameEntity) entity;
                 if (!e.isValid(tr.getValidTgts(), getActivatingPlayer(), getHostCard(), this)) {
                     return false;
                 }
@@ -1588,7 +1589,8 @@ public abstract class SpellAbility extends CardTraitBase implements ISpellAbilit
                 }
             }
 
-            if (entity instanceof Card c) {
+            if (entity instanceof Card) {
+                Card c = (Card) entity;
                 if (c.getZone() != null && !tr.getZone().contains(c.getZone().getZoneType())) {
                     return false;
                 }
