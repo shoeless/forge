@@ -63,16 +63,23 @@ public class DebuffAi extends SpellAbilityAi {
             List<Card> cards = AbilityUtils.getDefinedCards(source, sa.getParam("Defined"), sa);
 
             final Combat combat = game.getCombat();
-            if (cards.stream().anyMatch(c -> {
-                if (c.getController().equals(sa.getActivatingPlayer()) || combat == null)
-                    return false;
+            // iOS compatibility: Replace stream().anyMatch() with traditional for loop
+            boolean foundValidCard = false;
+            for (Card c : cards) {
+                if (c.getController().equals(sa.getActivatingPlayer()) || combat == null) {
+                    continue;
+                }
 
                 if (!combat.isBlocking(c) && !combat.isAttacking(c)) {
-                    return false;
+                    continue;
                 }
                 // don't add duplicate negative keywords
-                return sa.hasParam("Keywords") && c.hasAnyKeyword(Arrays.asList(sa.getParam("Keywords").split(" & ")));
-            })) {
+                if (sa.hasParam("Keywords") && c.hasAnyKeyword(Arrays.asList(sa.getParam("Keywords").split(" & ")))) {
+                    foundValidCard = true;
+                    break;
+                }
+            }
+            if (foundValidCard) {
                 return new AiAbilityDecision(100, AiPlayDecision.WillPlay);
             } else {
                 return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);

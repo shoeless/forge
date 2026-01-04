@@ -2,7 +2,6 @@ package forge.game;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -573,8 +572,14 @@ public abstract class CardTraitBase implements GameObject, IHasCardView, IHasSVa
         result.add(getHostCard());
         return result;
     }
-    protected Optional<IHasSVars> findSVar(final String name) {
-        return getSVarFallback(name).stream().filter(f -> f.hasSVar(name)).findFirst();
+    protected IHasSVars findSVar(final String name) {
+        // iOS compatibility: Replace stream().filter().findFirst() and Optional with traditional loop
+        for (IHasSVars f : getSVarFallback(name)) {
+            if (f.hasSVar(name)) {
+                return f;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -582,12 +587,15 @@ public abstract class CardTraitBase implements GameObject, IHasCardView, IHasSVa
         if (sVars.containsKey(name)) {
             return sVars.get(name);
         }
-        return findSVar(name).map(o -> o.getSVar(name)).orElse("");
+        // iOS compatibility: Replace Optional.map().orElse() with null check
+        IHasSVars svarHolder = findSVar(name);
+        return svarHolder != null ? svarHolder.getSVar(name) : "";
     }
 
     @Override
     public boolean hasSVar(final String name) {
-        return sVars.containsKey(name) || findSVar(name).isPresent();
+        // iOS compatibility: Replace Optional.isPresent() with null check
+        return sVars.containsKey(name) || findSVar(name) != null;
     }
 
     public Integer getSVarInt(final String name) {

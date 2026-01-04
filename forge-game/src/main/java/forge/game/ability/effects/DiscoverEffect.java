@@ -13,6 +13,7 @@ import forge.game.cost.CostPart;
 import forge.game.cost.CostReveal;
 import forge.game.player.Player;
 import forge.game.player.PlayerCollection;
+import forge.util.IterableUtil;
 
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
@@ -90,9 +91,9 @@ public class DiscoverEffect extends SpellAbilityEffect {
                     List<SpellAbility> sas = AbilityUtils.getBasicSpellsFromPlayEffect(found, p);
 
                     // filter out land abilities due to MDFC or similar
-                    sas.removeIf(SpellAbility::isLandAbility);
+                    IterableUtil.removeIf(sas, SpellAbility::isLandAbility);
                     // the spell must also have a mana value equal to or less than the discover number
-                    sas.removeIf(sp -> sp.getPayCosts().getTotalMana().getCMC() > num);
+                    IterableUtil.removeIf(sas, sp -> sp.getPayCosts().getTotalMana().getCMC() > num);
 
                     if (sas.isEmpty()) { // shouldn't happen!
                         System.err.println("DiscoverEffect Error: " + host + " found " + found + " but couldn't play sa");

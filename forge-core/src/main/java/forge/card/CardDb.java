@@ -74,6 +74,22 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             latestFirst = latestSetFirst;
         }
 
+        @Override
+        public String toString() {
+            switch (this) {
+                case LATEST_ART_ALL_EDITIONS:
+                    return "Latest Art All Editions";
+                case LATEST_ART_CORE_EXPANSIONS_REPRINT_ONLY:
+                    return "Latest Art Core Expansions";
+                case ORIGINAL_ART_ALL_EDITIONS:
+                    return "Original Art All Editions";
+                case ORIGINAL_ART_CORE_EXPANSIONS_REPRINT_ONLY:
+                    return "Original Art Core Expansions";
+                default:
+                    return name();
+            }
+        }
+
         private static final EnumSet<Type> ALLOWED_SET_TYPES = EnumSet.of(Type.CORE, Type.EXPANSION, Type.REPRINT);
 
         public boolean accept(CardEdition ed) {
@@ -83,7 +99,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     }
 
     // Placeholder to setup default art Preference - to be moved from Static Data!
-    private CardArtPreference defaultCardArtPreference;
+    private CardArtPreference defaultCardArtPreference = CardArtPreference.LATEST_ART_ALL_EDITIONS;
 
     public static class CardRequest {
         public String cardName;

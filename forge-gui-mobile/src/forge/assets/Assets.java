@@ -517,7 +517,12 @@ public class Assets implements Disposable {
                 textureSize = textureSize + (textureSize / 3);
             memoryPerFile.put(fileName, calcTextureDataSize(textureSize, textureData.getFormat()));
 
-            return memoryPerFile.values().stream().mapToInt(Integer::intValue).sum() + calcFonts() + calcCounterFonts()
+            // iOS compatibility: Replace stream().mapToInt().sum() with traditional for loop
+            int memorySum = 0;
+            for (Integer value : memoryPerFile.values()) {
+                memorySum += value;
+            }
+            return memorySum + calcFonts() + calcCounterFonts()
                 + calculateObjectMaps(fallback_skins()) + calculateObjectMaps(tmxMap());
         }
 

@@ -560,9 +560,17 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         endTempShowCards();
 
         //If any were on the saved cranked list before but aren't cranked now, remove them from the saved list.
-        cranked.stream().filter(v -> !views.contains(v)).map(CardView::getId).forEach(savedCrankedIDs::remove);
+        // iOS compatibility: Replace stream().filter().map().forEach() with traditional for loop
+        for (CardView v : cranked) {
+            if (!views.contains(v)) {
+                savedCrankedIDs.remove(v.getId());
+            }
+        }
         //Add any that were cranked this time to the saved list.
-        views.stream().map(CardView::getId).forEach(savedCrankedIDs::add);
+        // iOS compatibility: Replace stream().map().forEach() with traditional for loop
+        for (CardView v : views) {
+            savedCrankedIDs.add(v.getId());
+        }
 
         List<Card> choices = new CardCollection();
         gameCacheChoose.addToList(views, choices);
@@ -1867,7 +1875,12 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
             return getGui().one(message, choices).getColorMask();
         }
 
-        final int idxChosen = InputConfirm.confirm(this, CardView.get(c), message, true, choices.stream().map(MagicColor.Color::getTranslatedName).collect(Collectors.toList()))
+        // iOS compatibility: Replace stream().map().collect() with traditional for loop
+        List<String> translatedNames = new ArrayList<>();
+        for (MagicColor.Color color : choices) {
+            translatedNames.add(color.getTranslatedName());
+        }
+        final int idxChosen = InputConfirm.confirm(this, CardView.get(c), message, true, translatedNames)
                 ? 0 : 1;
         return choices.get(idxChosen).getColorMask();
     }
@@ -1948,16 +1961,32 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         if (possibleReplacers.size() == 1) {
             return first;
         }
-        final List<String> res = possibleReplacers.stream().map(ReplacementEffect::toString).collect(Collectors.toList());
+        // iOS compatibility: Replace stream().map().collect() with traditional for loop
+        List<String> res = new ArrayList<>();
+        for (ReplacementEffect re : possibleReplacers) {
+            res.add(re.toString());
+        }
         final String firstStr = res.get(0);
         final String prompt = localizer.getMessage("lblChooseFirstApplyReplacementEffect");
         for (int i = 1; i < res.size(); i++) {
             // prompt user if there are multiple different options
             if (!res.get(i).equals(firstStr)) {
-                if (!GuiBase.isNetworkplay()) //non network game don't need serialization
+                if (!GuiBase.isNetworkplay()) { //non network game don't need serialization
                     return getGui().one(prompt, possibleReplacers);
-                ReplacementEffectView rev = getGui().one(prompt, possibleReplacers.stream().map(ReplacementEffect::getView).collect(Collectors.toList()));
-                return possibleReplacers.stream().filter(re -> re.getId() == rev.getId()).findAny().orElse(first);
+                }
+                // iOS compatibility: Replace stream().map().collect() with traditional for loop
+                List<ReplacementEffectView> views = new ArrayList<>();
+                for (ReplacementEffect re : possibleReplacers) {
+                    views.add(re.getView());
+                }
+                ReplacementEffectView rev = getGui().one(prompt, views);
+                // iOS compatibility: Replace stream().filter().findAny() with traditional for loop
+                for (ReplacementEffect re : possibleReplacers) {
+                    if (re.getId() == rev.getId()) {
+                        return re;
+                    }
+                }
+                return first;
             }
         }
         // return first option without prompting if all options are the same
@@ -1970,15 +1999,31 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         if (possibleStatics.size() == 1 || !isFullControl(FullControlFlag.ChooseCostOrder)) {
             return first;
         }
-        final List<String> sts = possibleStatics.stream().map(StaticAbility::toString).collect(Collectors.toList());
+        // iOS compatibility: Replace stream().map().collect() with traditional for loop
+        List<String> sts = new ArrayList<>();
+        for (StaticAbility st : possibleStatics) {
+            sts.add(st.toString());
+        }
         final String firstStr = sts.get(0);
         for (int i = 1; i < sts.size(); i++) {
             // prompt user if there are multiple different options
             if (!sts.get(i).equals(firstStr)) {
-                if (!GuiBase.isNetworkplay()) //non network game don't need serialization
+                if (!GuiBase.isNetworkplay()) { //non network game don't need serialization
                     return getGui().one(prompt, possibleStatics);
-                StaticAbilityView stv = getGui().one(prompt, possibleStatics.stream().map(StaticAbility::getView).collect(Collectors.toList()));
-                return possibleStatics.stream().filter(st -> st.getId() == stv.getId()).findAny().orElse(first);
+                }
+                // iOS compatibility: Replace stream().map().collect() with traditional for loop
+                List<StaticAbilityView> views = new ArrayList<>();
+                for (StaticAbility st : possibleStatics) {
+                    views.add(st.getView());
+                }
+                StaticAbilityView stv = getGui().one(prompt, views);
+                // iOS compatibility: Replace stream().filter().findAny() with traditional for loop
+                for (StaticAbility st : possibleStatics) {
+                    if (st.getId() == stv.getId()) {
+                        return st;
+                    }
+                }
+                return first;
             }
         }
         // return first option without prompting if all options are the same

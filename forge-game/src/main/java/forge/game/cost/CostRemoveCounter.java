@@ -30,7 +30,6 @@ import forge.util.Lang;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * The Class CostRemoveCounter.
@@ -182,7 +181,7 @@ public class CostRemoveCounter extends CostPart {
     @Override
     public boolean payAsDecided(Player ai, PaymentDecision decision, SpellAbility ability, final boolean effect) {
         int removed = 0;
-        for (Map.Entry<GameEntity, Map<CounterType, Integer>> e : decision.counterTable.row(Optional.empty()).entrySet()) {
+        for (Map.Entry<GameEntity, Map<CounterType, Integer>> e : decision.counterTable.row(null).entrySet()) {
             for (Map.Entry<CounterType, Integer> v : e.getValue().entrySet()) {
                 removed += v.getValue();
                 e.getKey().subtractCounter(v.getKey(), v.getValue(), ai);

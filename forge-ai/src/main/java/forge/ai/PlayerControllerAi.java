@@ -212,8 +212,19 @@ public class PlayerControllerAi extends PlayerController {
             if (!definedSideboardPlan && MyRandom.getRandom().nextInt(100) < sbChancePerCard) {
                 continue;
             }
-            long inMain = main.stream().filter(pc -> pc.getCardName().equals(ent.getKey().getName())).count();
-            long inSide = sideboard.stream().filter(pc -> pc.getCardName().equals(ent.getValue().getName())).count();
+            // iOS compatibility: Replace stream().filter().count() with traditional for loop
+            long inMain = 0;
+            for (PaperCard pc : main) {
+                if (pc.getCardName().equals(ent.getKey().getName())) {
+                    inMain++;
+                }
+            }
+            long inSide = 0;
+            for (PaperCard pc : sideboard) {
+                if (pc.getCardName().equals(ent.getValue().getName())) {
+                    inSide++;
+                }
+            }
             while (inMain-- > 0 && inSide-- > 0) {
                 sideboard.remove(ent.getValue());
                 sideboard.add(ent.getKey());

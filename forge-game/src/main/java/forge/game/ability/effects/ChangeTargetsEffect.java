@@ -3,6 +3,7 @@ package forge.game.ability.effects;
 import java.util.ArrayList;
 import java.util.List;
 import forge.util.function.Predicate;
+import forge.util.IterableUtil;
 
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -106,7 +107,7 @@ public class ChangeTargetsEffect extends SpellAbilityEffect {
                             int div = changingTgtSA.getTotalDividedValue();
                             List<GameEntity> candidates = changingTgtSA.getTargetRestrictions().getAllCandidates(changingTgtSA, true);
                             if (sa.hasParam("RandomTargetRestriction")) {
-                                candidates.removeIf(c -> !c.isValid(sa.getParam("RandomTargetRestriction").split(","), activator, sa.getHostCard(), sa));
+                                IterableUtil.removeIf(candidates, c -> !c.isValid(sa.getParam("RandomTargetRestriction").split(","), activator, sa.getHostCard(), sa));
                             }
                             // CR 115.7a If a target can't be changed to another legal target, the original target is unchanged
                             if (candidates.isEmpty()) {

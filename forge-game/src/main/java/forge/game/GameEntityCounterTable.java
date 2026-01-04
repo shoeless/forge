@@ -1,7 +1,6 @@
 package forge.game;
 
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -19,14 +18,15 @@ import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
 import forge.util.MapUtil;
 
-public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, GameEntity, Map<CounterType, Integer>> {
+// iOS compatibility: Replaced Optional<Player> with nullable Player (null = "any player")
+public class GameEntityCounterTable extends ForwardingTable<Player, GameEntity, Map<CounterType, Integer>> {
 
-    private Table<Optional<Player>, GameEntity, Map<CounterType, Integer>> dataMap = HashBasedTable.create();
+    private Table<Player, GameEntity, Map<CounterType, Integer>> dataMap = HashBasedTable.create();
 
     public GameEntityCounterTable() {
     }
 
-    public GameEntityCounterTable(Table<Optional<Player>, GameEntity, Map<CounterType, Integer>> counterTable) {
+    public GameEntityCounterTable(Table<Player, GameEntity, Map<CounterType, Integer>> counterTable) {
         putAll(counterTable);
     }
 
@@ -35,23 +35,23 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
      * @see com.google.common.collect.ForwardingTable#delegate()
      */
     @Override
-    protected Table<Optional<Player>, GameEntity, Map<CounterType, Integer>> delegate() {
+    protected Table<Player, GameEntity, Map<CounterType, Integer>> delegate() {
         return dataMap;
     }
 
     public Integer put(Player putter, GameEntity object, CounterType type, Integer value) {
-        Optional<Player> o = Optional.ofNullable(putter);
-        Map<CounterType, Integer> map = get(o, object);
+        // iOS compatibility: putter can be null (means "any player")
+        Map<CounterType, Integer> map = get(putter, object);
         if (map == null) {
             map = Maps.newHashMap();
-            put(o, object, map);
+            put(putter, object, map);
         }
         return map.put(type, ObjectUtils.firstNonNull(map.get(type), 0) + value);
     }
 
     public int get(Player putter, GameEntity object, CounterType type) {
-        Optional<Player> o = Optional.ofNullable(putter);
-        Map<CounterType, Integer> map = get(o, object);
+        // iOS compatibility: putter can be null (means "any player")
+        Map<CounterType, Integer> map = get(putter, object);
         if (map == null || !map.containsKey(type)) {
             return 0;
         }
@@ -77,7 +77,8 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
             result.putAll(ge.getCounters());
             return result;
         }
-        Map<CounterType, Integer> alreadyRemoved = column(ge).get(Optional.<Player>empty());
+        // iOS compatibility: null instead of Optional.empty()
+        Map<CounterType, Integer> alreadyRemoved = column(ge).get(null);
         for (Map.Entry<CounterType, Integer> e : ge.getCounters().entrySet()) {
             // iOS compatibility: Replace getOrDefault (Java 8 Map method)
             int rest = e.getValue() - MapUtil.getOrDefault(alreadyRemoved, e.getKey(), 0);
@@ -91,7 +92,8 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
     public Map<GameEntity, Integer> filterTable(CounterType type, String valid, Card host, CardTraitBase sa) {
         Map<GameEntity, Integer> result = Maps.newHashMap();
 
-        for (Map.Entry<GameEntity, Map<Optional<Player>, Map<CounterType, Integer>>> gm : columnMap().entrySet()) {
+        // iOS compatibility: Player instead of Optional<Player>
+        for (Map.Entry<GameEntity, Map<Player, Map<CounterType, Integer>>> gm : columnMap().entrySet()) {
             if (gm.getKey().isValid(valid, host.getController(), host, sa)) {
                 for (Map<CounterType, Integer> cm : gm.getValue().values()) {
                     Integer old = ObjectUtils.firstNonNull(result.get(gm.getKey()), 0);
@@ -109,12 +111,14 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
         if (isEmpty()) {
             return;
         }
-        for (Cell<Optional<Player>, GameEntity, Map<CounterType, Integer>> c : cellSet()) {
+        // iOS compatibility: Player instead of Optional<Player>
+        for (Cell<Player, GameEntity, Map<CounterType, Integer>> c : cellSet()) {
             if (c.getValue().isEmpty()) {
                 continue;
             }
             final Map<AbilityKey, Object> runParams = AbilityKey.newMap();
-            runParams.put(AbilityKey.Source, c.getRowKey().get());
+            // iOS compatibility: getRowKey() is now nullable Player
+            runParams.put(AbilityKey.Source, c.getRowKey());
             runParams.put(AbilityKey.Object, c.getColumnKey());
             runParams.put(AbilityKey.CounterMap, c.getValue());
             game.getTriggerHandler().runTrigger(TriggerType.CounterPlayerAddedAll, runParams, false);
@@ -134,8 +138,9 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
             return false;
         }
         GameEntityCounterTable result = new GameEntityCounterTable();
-        for (Map.Entry<GameEntity, Map<Optional<Player>, Map<CounterType, Integer>>> gm : columnMap().entrySet()) {
-            Map<Optional<Player>, Map<CounterType, Integer>> values = gm.getValue();
+        // iOS compatibility: Player instead of Optional<Player>
+        for (Map.Entry<GameEntity, Map<Player, Map<CounterType, Integer>>> gm : columnMap().entrySet()) {
+            Map<Player, Map<CounterType, Integer>> values = gm.getValue();
 
             // ETB Counters are already handled in the Move Event
             if (!etb) {
@@ -152,7 +157,7 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
                 case NotReplaced:
                     break;
                 case Updated: {
-                    values = (Map<Optional<Player>, Map<CounterType, Integer>>) repParams.get(AbilityKey.CounterMap);
+                    values = (Map<Player, Map<CounterType, Integer>>) repParams.get(AbilityKey.CounterMap);
                     break;
                 }
                 default:
@@ -173,7 +178,8 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
             }
 
             // Apply counter after replacement effect
-            for (Map.Entry<Optional<Player>, Map<CounterType, Integer>> e : values.entrySet()) {
+            // iOS compatibility: Player instead of Optional<Player>, using nullable Player
+            for (Map.Entry<Player, Map<CounterType, Integer>> e : values.entrySet()) {
                 boolean remember = cause != null && cause.hasParam("RememberPut");
                 for (Map.Entry<CounterType, Integer> ec : e.getValue().entrySet()) {
                     Integer value = ec.getValue();
@@ -183,7 +189,8 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
                     if (cause != null && cause.hasParam("MaxFromEffect")) {
                         value = Math.min(value, Integer.parseInt(cause.getParam("MaxFromEffect")) - gm.getKey().getCounters(ec.getKey()));
                     }
-                    gm.getKey().addCounterInternal(ec.getKey(), value, e.getKey().orElse(null), true, result, runParams);
+                    // iOS compatibility: e.getKey() is now nullable Player (null = "any player")
+                    gm.getKey().addCounterInternal(ec.getKey(), value, e.getKey(), true, result, runParams);
                     if (remember && ec.getValue() > 0) {
                         cause.getHostCard().addRemembered(gm.getKey());
                     }

@@ -39,6 +39,7 @@ import forge.game.staticability.StaticAbilityPanharmonicon;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
 import forge.util.FileSection;
+import forge.util.Visitor;
 import io.sentry.Breadcrumb;
 import io.sentry.Sentry;
 
@@ -129,10 +130,8 @@ public class TriggerHandler {
         } catch (Exception e) {
             String msg = "TriggerHandler:parseTrigger failed to parse";
 
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Card", host.getName());
-            bread.setData("Trigger", trigParse);
-            Sentry.addBreadcrumb(bread);
+            // Log for debugging
+                System.err.println(msg);
 
             //rethrow
             throw new RuntimeException("Error in Trigger for Card: " + host.getName(), e);
@@ -155,12 +154,7 @@ public class TriggerHandler {
                 }
             }
         } catch (Exception e) {
-            String msg = "TriggerHandler:parseTrigger failed to parse";
-
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Card", host.getName());
-            bread.setData("Params", mapParams.toString());
-            Sentry.addBreadcrumb(bread);
+            System.err.println("TriggerHandler:parseTrigger failed to parse");
 
             //rethrow
             throw new RuntimeException("Error in Trigger for Card: " + host.getName(), e);

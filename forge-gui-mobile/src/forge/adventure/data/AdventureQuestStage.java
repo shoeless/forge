@@ -110,11 +110,11 @@ public class AdventureQuestStage implements Serializable {
             return;
         }
         if (!allowInactivePOI) {
-            validPOIs.removeIf(q -> !q.getActive()); //inactive POIs do not appear on map until conditions are met to activate them
+            IterableUtil.removeIf(validPOIs, q -> !q.getActive()); //inactive POIs do not appear on map until conditions are met to activate them
         }
         for (String tag : POITags) {
             // iOS compatibility: Replace Arrays.stream().noneMatch() with traditional for loop
-            validPOIs.removeIf(poi -> {
+            IterableUtil.removeIf(validPOIs, poi -> {
                 boolean hasTag = false;
                 for (String questTag : poi.getData().questTags) {
                     if (tag.equals(questTag)) {
@@ -271,11 +271,11 @@ public class AdventureQuestStage implements Serializable {
         {
             validPOIs = Current.world().getAllPointOfInterest();
             if (!allowInactivePOI) {
-                validPOIs.removeIf(q -> !q.getActive()); //inactive POIs do not appear on map until conditions are met to activate them
+                IterableUtil.removeIf(validPOIs, q -> !q.getActive()); //inactive POIs do not appear on map until conditions are met to activate them
             }
             for (String tag : POITags) {
                 // iOS compatibility: Replace Arrays.stream().noneMatch() with traditional for loop
-                validPOIs.removeIf(poi -> {
+                IterableUtil.removeIf(validPOIs, poi -> {
                     boolean hasTag = false;
                     for (String questTag : poi.getData().questTags) {
                         if (tag.equals(questTag)) {

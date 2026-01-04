@@ -453,12 +453,23 @@ public class DeckgenUtil {
         }
         try {
             if (useGeneticAI) {
-                if (!selection.isEmpty())
-                    deck = geneticAI.stream()
-                            .filter(deckProxy -> deckProxy.getColorIdentity().sharesColorWith(ColorSet.fromNames(colors.toCharArray())))
-                            .collect(StreamUtil.random()).get().getDeck();
-                else
+                if (!selection.isEmpty()) {
+                    // iOS compatibility: Replace stream().filter().collect(StreamUtil.random()) with traditional for loop + Aggregates.random()
+                    List<DeckProxy> filtered = new ArrayList<>();
+                    ColorSet targetColorSet = ColorSet.fromNames(colors.toCharArray());
+                    for (DeckProxy deckProxy : geneticAI) {
+                        if (deckProxy.getColorIdentity().sharesColorWith(targetColorSet)) {
+                            filtered.add(deckProxy);
+                        }
+                    }
+                    if (!filtered.isEmpty()) {
+                        deck = Aggregates.random(filtered).getDeck();
+                    } else {
+                        deck = Aggregates.random(geneticAI).getDeck();
+                    }
+                } else {
                     deck = Aggregates.random(geneticAI).getDeck();
+                }
 
             } else {
                 Predicate<DeckProxy> predicate = deckProxy -> deckProxy.getMainSize() <= 60;

@@ -267,8 +267,10 @@ public class ImageUtil {
             cardCollectorNumber = cardCollectorNumber.substring(0, cardCollectorNumber.length() - 1);
         }
 
-        return String.format("%s/%s/%s?format=image&version=%s%s", editionCode, encodeUtf8(cardCollectorNumber),
-                langCode, versionParam, faceParam);
+        // Correct Scryfall format: {setCode}/{collectorNumber}?format=image&version={version}
+        // Do not include langCode in the path
+        return String.format("%s/%s?format=image&version=%s%s",
+                editionCode, encodeUtf8(cardCollectorNumber), versionParam, faceParam);
     }
 
     public static String getScryfallTokenDownloadUrl(String collectorNumber, String setCode, String langCode, String faceParam) {
@@ -280,8 +282,10 @@ public class ImageUtil {
             faceParam = "&face=back";
             collectorNumber = collectorNumber.substring(0, collectorNumber.length() - 1);
         }
-        return String.format("%s/%s/%s?format=image&version=%s%s", setCode, encodeUtf8(collectorNumber),
-                langCode, versionParam, faceParam);
+        // Correct Scryfall format: {setCode}/{collectorNumber}?format=image&version={version}
+        // Do not include langCode in the path
+        return String.format("%s/%s?format=image&version=%s%s", setCode, encodeUtf8(collectorNumber),
+                versionParam, faceParam);
     }
 
     private static String encodeUtf8(String s) {

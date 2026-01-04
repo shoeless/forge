@@ -117,15 +117,33 @@ public class TargetChoices extends ForwardingList<GameObject> implements Cloneab
     }
 
     public final boolean isTargetingAnyCard() {
-        return targets.stream().anyMatch(Card.class::isInstance);
+        // iOS compatibility: Replace stream().anyMatch() with traditional loop
+        for (GameObject target : targets) {
+            if (target instanceof Card) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public final boolean isTargetingAnyPlayer() {
-        return targets.stream().anyMatch(Player.class::isInstance);
+        // iOS compatibility: Replace stream().anyMatch() with traditional loop
+        for (GameObject target : targets) {
+            if (target instanceof Player) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public final boolean isTargetingAnySpell() {
-        return targets.stream().anyMatch(SpellAbility.class::isInstance);
+        // iOS compatibility: Replace stream().anyMatch() with traditional loop
+        for (GameObject target : targets) {
+            if (target instanceof SpellAbility) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public final Card getFirstTargetedCard() {

@@ -1060,13 +1060,29 @@ public class Forge implements ApplicationListener {
     @Override
     public void resize(int width, int height) {
         try {
+            System.err.println("DEBUG resize: width=" + width + " height=" + height + " (was " + screenWidth + "x" + screenHeight + ")");
+            System.err.println("DEBUG resize: isLandscapeMode BEFORE=" + isLandscapeMode());
+
+            // iOS fix: Update screen dimensions on rotation so isLandscapeMode() works correctly
+            screenWidth = width;
+            screenHeight = height;
+
+            System.err.println("DEBUG resize: isLandscapeMode AFTER=" + isLandscapeMode());
+            System.err.println("DEBUG resize: calling setSize on currentScreen");
+
             if (currentScreen != null) {
                 currentScreen.setSize(width, height);
+                System.err.println("DEBUG resize: currentScreen.setSize complete");
             } else if (splashScreen != null) {
                 splashScreen.setSize(width, height);
+                System.err.println("DEBUG resize: splashScreen.setSize complete");
             }
-            if (currentScene != null)
+            if (currentScene != null) {
                 currentScene.resize(width, height);
+                System.err.println("DEBUG resize: currentScene.resize complete");
+            }
+
+            System.err.println("DEBUG resize: complete");
         } catch (Exception ex) {
             //graphics.end();
             //check if sentry is enabled, if not it will call the gui interface but here we end the graphics so we only send it via sentry..
@@ -1194,8 +1210,6 @@ public class Forge implements ApplicationListener {
         }
         keyInputAdapter.onInputEnd();
         keyInputAdapter = null;
-        MainInputProcessor.keyTyped = false;
-        MainInputProcessor.lastKeyTyped = '\0';
         Gdx.input.setOnscreenKeyboardVisible(false);
         return true;
     }
@@ -1253,8 +1267,7 @@ public class Forge implements ApplicationListener {
     public static float mouseMovedY = 0;
     private static class MainInputProcessor extends FGestureAdapter {
         private static final List<FDisplayObject> potentialListeners = new ArrayList<>();
-        private static char lastKeyTyped;
-        private static boolean keyTyped, shiftKeyDown;
+        private static boolean shiftKeyDown;
 
         @Override
         public boolean keyDown(int keyCode) {
@@ -1309,7 +1322,6 @@ public class Forge implements ApplicationListener {
 
         @Override
         public boolean keyUp(int keyCode) {
-            keyTyped = false; //reset on keyUp
             if (keyCode == Keys.SHIFT_LEFT || keyCode == Keys.SHIFT_RIGHT) {
                 shiftKeyDown = false;
             }
@@ -1331,12 +1343,7 @@ public class Forge implements ApplicationListener {
         public boolean keyTyped(char ch) {
             if (keyInputAdapter != null) {
                 if (ch >= ' ' && ch <= '~') { //only process this event if character is printable
-                    //prevent firing this event more than once for the same character on the same key down, otherwise it fires too often
-                    if (lastKeyTyped != ch || !keyTyped) {
-                        keyTyped = true;
-                        lastKeyTyped = ch;
-                        return keyInputAdapter.keyTyped(ch);
-                    }
+                    return keyInputAdapter.keyTyped(ch);
                 }
             }
             return false;

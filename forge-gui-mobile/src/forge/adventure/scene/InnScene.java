@@ -12,6 +12,7 @@ import forge.adventure.util.AdventureEventController;
 import forge.adventure.util.Controls;
 import forge.adventure.util.Current;
 import forge.model.CardBlock;
+import forge.util.IterableUtil;
 
 /**
  * Scene for the Inn in towns
@@ -164,7 +165,8 @@ public class InnScene extends UIScene {
     }
 
     public static void replaceLocalEvent(AdventureEventController.EventFormat format, CardBlock cardBlock) {
-        AdventurePlayer.current().getEvents().removeIf((data) -> data.sourceID.equals(localPointOfInterestId) && data.eventOrigin == localObjectId);
+        // iOS compatibility: Use IterableUtil.removeIf instead of List.removeIf
+        IterableUtil.removeIf(AdventurePlayer.current().getEvents(), (data) -> data.sourceID.equals(localPointOfInterestId) && data.eventOrigin == localObjectId);
         AdventureEventController controller = AdventureEventController.instance();
         localEvent = controller.createEvent(format, cardBlock, localPointOfInterestId);
         if(localEvent != null)

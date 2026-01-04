@@ -71,6 +71,13 @@ import forge.util.ImageUtil;
 public class ImageCache {
     private static ImageCache imageCache;
     private Supplier<HashSet<String>> missingIconKeys = Suppliers.memoize(HashSet::new);
+
+    // iOS fix: Keep Pixmaps alive - iOS Texture requires Pixmap to stay in memory
+    // Don't dispose Pixmaps - let GC handle them when memory is low
+    private static final java.util.HashMap<Texture, Pixmap> pixmapCache = new java.util.HashMap<Texture, Pixmap>();
+
+    // iOS fix: Cache for downloaded image textures (bypassing AssetManager)
+    private static final java.util.HashMap<String, Texture> downloadedTextureCache = new java.util.HashMap<String, Texture>();
     public int counter = 0;
     private int maxCardCapacity = 300; //default card capacity
     private EvictingQueue<String> q;
@@ -113,6 +120,42 @@ public class ImageCache {
         if (syncQ == null)
             syncQ = Queues.synchronizedQueue(getQ());
         return syncQ;
+    }
+
+    /**
+     * iOS fix: Convert absolute path to relative path for libGDX compatibility.
+     * libGDX's AssetManager on iOS requires relative paths from the local directory.
+     * On iOS, files are in Documents/ but libGDX local base is Library/local/,
+     * so we need to construct a relative path like ../../Documents/...
+     */
+    private String toRelativePath(String absolutePath) {
+        // Extract the portion after the app container UUID
+        // Path format: .../Application/UUID/Documents/cache/pics/...
+        // We want: ../../Documents/cache/pics/...
+
+        int documentsIndex = absolutePath.indexOf("/Documents/");
+        if (documentsIndex != -1) {
+            // Found Documents directory - construct relative path from Library/local
+            String relativePath = "../../Documents" + absolutePath.substring(documentsIndex + "/Documents".length());
+            System.err.println("DEBUG: Path conversion successful:");
+            System.err.println("  Absolute: " + absolutePath);
+            System.err.println("  Relative: " + relativePath);
+            return relativePath;
+        }
+
+        int libraryIndex = absolutePath.indexOf("/Library/");
+        if (libraryIndex != -1) {
+            // File is in Library somewhere - might already be accessible
+            String relativePath = absolutePath.substring(absolutePath.indexOf("/Library/") + "/Library/".length());
+            System.err.println("DEBUG: Path in Library:");
+            System.err.println("  Absolute: " + absolutePath);
+            System.err.println("  Relative: " + relativePath);
+            return relativePath;
+        }
+
+        System.err.println("DEBUG: Path conversion failed - no Documents or Library");
+        System.err.println("  Path: " + absolutePath);
+        return absolutePath;
     }
 
     public Texture getDefaultImage() {
@@ -305,7 +348,20 @@ public class ImageCache {
     private Texture getAsset(File file) {
         if (file == null)
             return null;
-        return Forge.getAssets().manager().get(file.getPath(), Texture.class, false);
+
+        String absolutePath = file.getPath();
+        String path = toRelativePath(absolutePath);
+
+        // iOS fix: Check downloaded texture cache first (for images in Documents)
+        if (absolutePath.contains("/Documents/cache")) {
+            Texture cached = downloadedTextureCache.get(absolutePath);
+            if (cached != null) {
+                System.err.println("DEBUG: Using cached texture for: " + absolutePath);
+                return cached;
+            }
+        }
+
+        return Forge.getAssets().manager().get(path, Texture.class, false);
     }
 
     private Texture loadAsset(String imageKey, File file, boolean others) {
@@ -314,29 +370,93 @@ public class ImageCache {
         Texture check = getAsset(file);
         if (check != null)
             return check;
+
+        // iOS fix: Convert absolute path to relative path for AssetManager
+        String absolutePath = file.getPath();
+        String fileName = toRelativePath(absolutePath);
+        System.err.println("DEBUG: loadAsset converting path:");
+        System.err.println("  Absolute: " + absolutePath);
+        System.err.println("  Relative: " + fileName);
+
+        // iOS fix: For downloaded images (in Documents/cache), bypass AssetManager
+        // Read file as bytes and create Pixmap directly (libGDX iOS can't load from FileHandle in Documents)
+        boolean isDownloadedImage = absolutePath.contains("/Documents/cache");
+        Texture directTexture = null;
+
+        if (isDownloadedImage) {
+            System.err.println("DEBUG: Loading downloaded image directly (bypassing AssetManager)");
+            System.err.println("DEBUG: Reading file as bytes: " + absolutePath);
+            try {
+                java.io.File imageFile = new java.io.File(absolutePath);
+                System.err.println("DEBUG: File exists: " + imageFile.exists());
+                System.err.println("DEBUG: File size: " + imageFile.length() + " bytes");
+
+                if (imageFile.exists()) {
+                    // Read file as byte array
+                    byte[] imageBytes = new byte[(int) imageFile.length()];
+                    java.io.FileInputStream fis = new java.io.FileInputStream(imageFile);
+                    int bytesRead = fis.read(imageBytes);
+                    fis.close();
+                    System.err.println("DEBUG: Read " + bytesRead + " bytes from file");
+
+                    // Create Pixmap from bytes
+                    // iOS memory optimization: Convert to RGB565 format (2 bytes/pixel instead of 4)
+                    Pixmap tempPixmap = new Pixmap(imageBytes, 0, imageBytes.length);
+                    Pixmap pixmap = new Pixmap(tempPixmap.getWidth(), tempPixmap.getHeight(), Pixmap.Format.RGB565);
+                    pixmap.drawPixmap(tempPixmap, 0, 0);
+                    tempPixmap.dispose();
+
+                    System.err.println("DEBUG: Full-res Pixmap created (RGB565): " + pixmap.getWidth() + "x" + pixmap.getHeight());
+
+                    // Create Texture from Pixmap (no mipmaps for faster upload)
+                    directTexture = new Texture(pixmap, false);
+
+                    // iOS fix: Store Pixmap - iOS Texture needs Pixmap to stay alive
+                    // Rely on GC to clean up when memory is low
+                    pixmapCache.put(directTexture, pixmap);
+
+                    // iOS fix: Cache the texture so we don't reload the same image!
+                    downloadedTextureCache.put(absolutePath, directTexture);
+                    System.err.println("DEBUG: Texture loaded successfully! " + directTexture.getWidth() + "x" + directTexture.getHeight());
+                    System.err.println("DEBUG: Texture cache size: " + downloadedTextureCache.size());
+                } else {
+                    System.err.println("DEBUG: File does not exist!");
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to load downloaded image from bytes: " + absolutePath);
+                System.err.println("Error: " + e.getMessage());
+                e.printStackTrace(System.err);
+            }
+        }
+
         if (!others) {
             //update first before clearing
-            getSyncQ().add(file.getPath());
-            getCardsLoaded().add(file.getPath());
+            getSyncQ().add(fileName);
+            getCardsLoaded().add(fileName);
             unloadCardTextures(false);
         }
-        String fileName = file.getPath();
-        //load to assetmanager
-        try {
-            if (Forge.getAssets().manager().get(fileName, Texture.class, false) == null) {
-                Forge.getAssets().manager().load(fileName, Texture.class, Forge.getAssets().getTextureFilter());
-                Forge.getAssets().manager().finishLoadingAsset(fileName);
-                counter += 1;
+
+        // Only use AssetManager for bundled assets (not downloaded images)
+        if (!isDownloadedImage) {
+            //load to assetmanager
+            try {
+                if (Forge.getAssets().manager().get(fileName, Texture.class, false) == null) {
+                    Forge.getAssets().manager().load(fileName, Texture.class, Forge.getAssets().getTextureFilter());
+                    Forge.getAssets().manager().finishLoadingAsset(fileName);
+                    counter += 1;
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to load image: " + fileName);
+                System.err.println("Error details: " + e.getMessage());
+                e.printStackTrace(System.err);
             }
-        } catch (Exception e) {
-            System.err.println("Failed to load image: " + fileName);
         }
 
         //return loaded assets
         if (others) {
-            return Forge.getAssets().manager().get(fileName, Texture.class, false);
+            return directTexture != null ? directTexture : Forge.getAssets().manager().get(fileName, Texture.class, false);
         } else {
-            Texture cardTexture = Forge.getAssets().manager().get(fileName, Texture.class, false);
+            Texture cardTexture = directTexture != null ? directTexture : Forge.getAssets().manager().get(fileName, Texture.class, false);
             //if full bordermasking is enabled, update the border color
             if (cardTexture != null) {
                 String setCode = imageKey.split("/")[0].trim().toUpperCase();

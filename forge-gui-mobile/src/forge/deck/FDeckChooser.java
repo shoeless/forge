@@ -7,7 +7,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import forge.util.function.Consumer;
 
 import forge.game.GameFormat;
@@ -197,7 +196,13 @@ public class FDeckChooser extends FScreen {
                 try {
                     if (isAi && !isGeneratedDeck(selectedDeckType) && Forge.autoAIDeckSelection) {
                         btnRandom.setEnabled(false);
-                        AIDecks = lstDecks.getPool().toFlatList().parallelStream().filter(deckProxy -> deckProxy.getAI().inMainDeck == 0).collect(Collectors.toList());
+                        // iOS compatibility: Replace parallelStream with simple loop
+                        AIDecks = new ArrayList<>();
+                        for (DeckProxy deckProxy : lstDecks.getPool().toFlatList()) {
+                            if (deckProxy.getAI().inMainDeck == 0) {
+                                AIDecks.add(deckProxy);
+                            }
+                        }
                         size = AIDecks.size();
                     }
                     if (size > 10)

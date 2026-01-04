@@ -218,7 +218,7 @@ public class AdventureDeckEditor extends FDeckEditor {
                 if (event.cardBlock.getLandSet() != null)
                     return java.util.Collections.singletonList(event.cardBlock.getLandSet());
                 List<CardEdition> eventSets = new ArrayList<>(event.cardBlock.getSets());
-                eventSets.removeIf(ed -> !ed.hasBasicLands());
+                IterableUtil.removeIf(eventSets, ed -> !ed.hasBasicLands());
                 if (!eventSets.isEmpty())
                     return eventSets;
             }
@@ -1034,7 +1034,12 @@ public class AdventureDeckEditor extends FDeckEditor {
         @Override
         protected List<FDisplayObject> layoutHeaderElements(float height, float availableWidth) {
             List<FDisplayObject> out = super.layoutHeaderElements(height, availableWidth);
-            float remainingWidth = availableWidth - (float) out.stream().mapToDouble(FDisplayObject::getWidth).sum();
+            // iOS compatibility: Replace stream().mapToDouble().sum() with traditional for loop
+            double widthSum = 0.0;
+            for (FDisplayObject obj : out) {
+                widthSum += obj.getWidth();
+            }
+            float remainingWidth = availableWidth - (float) widthSum;
             float width = Math.max(remainingWidth / 4, Math.min(height * 4, remainingWidth)); // Will push out name label if it has to.
             lblGold.setSize(width, height);
             out.add(lblGold);

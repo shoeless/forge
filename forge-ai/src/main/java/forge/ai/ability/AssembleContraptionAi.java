@@ -73,16 +73,20 @@ public class AssembleContraptionAi extends SpellAbilityAi {
     private Card getGoodReassembleTarget(Player ai, SpellAbility sa) {
         List<GameEntity> targets = sa.getTargetRestrictions().getAllCandidates(sa, true);
         int nextSprocket = (ai.getCrankCounter() % 3) + 1;
-        return targets.stream()
-                .filter(e -> {
-                    if(!(e instanceof Card))
-                        return false;
-                    Card c = (Card) e;
-                    if(c.getController().isOpponentOf(ai))
-                        return true;
-                    return c.isContraption() && c.getSprocket() != nextSprocket;
-                }).map(c -> (Card) c)
-                .findFirst().orElse(null);
+        // iOS compatibility: Replace stream().filter().map().findFirst() with traditional for loop
+        for (GameEntity e : targets) {
+            if (!(e instanceof Card)) {
+                continue;
+            }
+            Card c = (Card) e;
+            if (c.getController().isOpponentOf(ai)) {
+                return c;
+            }
+            if (c.isContraption() && c.getSprocket() != nextSprocket) {
+                return c;
+            }
+        }
+        return null;
     }
 
     @Override

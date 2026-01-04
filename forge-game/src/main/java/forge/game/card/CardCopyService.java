@@ -10,8 +10,6 @@ import forge.game.ability.ApiType;
 import forge.game.ability.effects.DetachedCardEffect;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 
 import java.util.List;
 import java.util.Map;
@@ -216,12 +214,8 @@ public class CardCopyService {
             return cachedCard;
         }
 
-        String msg = "CardUtil:getLKICopy copy object";
-        Breadcrumb bread = new Breadcrumb(msg);
-        bread.setData("Card", copyFrom.getName());
-        bread.setData("CardState", copyFrom.getCurrentStateName().toString());
-        bread.setData("Player", copyFrom.getController().getName());
-        Sentry.addBreadcrumb(bread);
+        // Log for debugging
+        System.err.println("CardUtil:getLKICopy copy object");
 
         final Card newCopy;
         if(copyFrom instanceof DetachedCardEffect)

@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import forge.util.function.Consumer;
 import forge.util.function.Function;
 import forge.util.function.Predicate;
 
@@ -672,5 +673,52 @@ public final class IterableUtil {
      */
     public static <T> void sort(final java.util.List<T> list, final java.util.Comparator<T> comparator) {
         java.util.Collections.sort(list, comparator);
+    }
+
+    /**
+     * Performs the given action for each element of the iterable.
+     * iOS-compatible replacement for Iterable.forEach() which is a Java 8 default method not available on RoboVM.
+     *
+     * @param <T> element type
+     * @param iterable the iterable whose elements are to be processed
+     * @param action the action to be performed for each element
+     */
+    public static <T> void forEach(final Iterable<T> iterable, final Consumer<? super T> action) {
+        for (T element : iterable) {
+            action.accept(element);
+        }
+    }
+
+    /**
+     * Removes all elements that match the given predicate from the collection.
+     * iOS-compatible replacement for Collection.removeIf() which is a Java 8 default method not available on RoboVM.
+     *
+     * @param <T> element type
+     * @param collection the collection from which to remove elements
+     * @param filter the predicate which returns true for elements to be removed
+     * @return true if any elements were removed
+     */
+    public static <T> boolean removeIf(final Collection<T> collection, final Predicate<? super T> filter) {
+        boolean removed = false;
+        final Iterator<T> iterator = collection.iterator();
+        while (iterator.hasNext()) {
+            if (filter.test(iterator.next())) {
+                iterator.remove();
+                removed = true;
+            }
+        }
+        return removed;
+    }
+
+    public static <T> boolean retainIf(final Collection<T> collection, final Predicate<? super T> filter) {
+        boolean removed = false;
+        final Iterator<T> iterator = collection.iterator();
+        while (iterator.hasNext()) {
+            if (!filter.test(iterator.next())) {
+                iterator.remove();
+                removed = true;
+            }
+        }
+        return removed;
     }
 }

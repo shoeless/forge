@@ -283,7 +283,15 @@ public class NewGameScene extends MenuScene {
             GamePlayerUtil.getGuiPlayer().setName(selectedName.getText());
             SoundSystem.instance.changeBackgroundTrack();
             WorldStage.getInstance().enterSpawnPOI();
-            if (AdventurePlayer.current().getQuests().stream().noneMatch(q -> q.getID() == 28)) {
+            // iOS compatibility: Replace stream().noneMatch() with traditional for loop
+            boolean hasQuest28 = false;
+            for (forge.adventure.data.AdventureQuestData quest : AdventurePlayer.current().getQuests()) {
+                if (quest.getID() == 28) {
+                    hasQuest28 = true;
+                    break;
+                }
+            }
+            if (!hasQuest28) {
                 AdventurePlayer.current().addQuest("28", true); //Temporary link to Shandalar main questline
             }
             Forge.switchScene(GameScene.instance());

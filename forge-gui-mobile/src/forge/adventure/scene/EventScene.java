@@ -238,7 +238,16 @@ public class EventScene extends MenuScene implements IAfterMatch {
                 scrollContainer.add(avatar).pad(5).size(16).fillY();
                 scrollContainer.add().width(16);
 
-                boolean notEliminated = !currentEvent.eventStatus.equals(AdventureEventController.EventStatus.Started) || !currentEvent.matches.containsKey(currentEvent.currentRound) || currentEvent.matches.get(currentEvent.currentRound).stream().anyMatch(q -> q.p1.equals(participant) || q.p2.equals(participant));
+                // iOS compatibility: Replace stream().anyMatch() with traditional for loop
+                boolean notEliminated = !currentEvent.eventStatus.equals(AdventureEventController.EventStatus.Started) || !currentEvent.matches.containsKey(currentEvent.currentRound);
+                if (!notEliminated) {
+                    for (AdventureEventData.AdventureEventMatch match : currentEvent.matches.get(currentEvent.currentRound)) {
+                        if (match.p1.equals(participant) || match.p2.equals(participant)) {
+                            notEliminated = true;
+                            break;
+                        }
+                    }
+                }
                 TextraLabel participantName = Controls.newTextraLabel((notEliminated ? "" : "[RED]") + participant.getName());
                 participantName.setWrap(true);
 

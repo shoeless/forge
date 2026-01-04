@@ -364,7 +364,7 @@ public class AttackConstraints {
                 bestMatch.requirements += playerReq.getRight();
                 usedAttackers.add(bestMatch.attacker);
                 // recalculate remaining requirements
-                playerReqs.removeIf(s -> s.contains(playerReq.getLeft()));
+                IterableUtil.removeIf(playerReqs, s -> s.contains(playerReq.getLeft()));
                 sortedPlayerReqs.clear();
                 sortedPlayerReqs.addAll(Iterables.concat(playerReqs));
             } else {

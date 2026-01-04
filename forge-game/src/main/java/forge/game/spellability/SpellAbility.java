@@ -2674,7 +2674,12 @@ public abstract class SpellAbility extends CardTraitBase implements ISpellAbilit
         return ObjectUtils.firstNonNull(this.optionalKeywordAmount.get(kw.getKeyword(), Pair.of(kw.getIdx(), staticId)), 0);
     }
     public int getOptionalKeywordAmount(Keyword kw) {
-        return this.optionalKeywordAmount.row(kw).values().stream().mapToInt(i->i).sum();
+        // iOS compatibility: Replace stream().mapToInt().sum() with traditional loop
+        int sum = 0;
+        for (Integer value : this.optionalKeywordAmount.row(kw).values()) {
+            sum += value;
+        }
+        return sum;
     }
     public void setOptionalKeywordAmount(KeywordInterface kw, int amount) {
         long staticId = kw.getStatic() == null ? 0 : kw.getStatic().getId();

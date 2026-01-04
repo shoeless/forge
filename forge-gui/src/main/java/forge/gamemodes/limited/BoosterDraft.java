@@ -44,7 +44,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import forge.util.function.Predicate;
 import forge.util.function.Supplier;
-import java.util.stream.Collectors;
+// iOS compatibility: Collectors not available, removed import
 
 /**
  * Booster Draft Format.
@@ -447,8 +447,15 @@ public class BoosterDraft implements IBoosterDraft {
                 CompletableFuture.allOf(futuresArray).join();
                 futures.clear();
             }
-            // stream().toList() causes crash on Android 8-13, use Collectors.toList()
-            customs.addAll(queue.stream().collect(Collectors.toList()));
+            // iOS compatibility: Replace stream().collect(Collectors.toList()) with traditional for loop
+            for (CompletableFuture<CustomLimited> future : queue) {
+                try {
+                    customs.add(future.get());
+                } catch (Exception e) {
+                    // Handle any exceptions from future.get()
+                    e.printStackTrace();
+                }
+            }
         }
         return customs;
     }
@@ -618,8 +625,15 @@ public class BoosterDraft implements IBoosterDraft {
         toPass.forEach((pack, player) -> player.receiveOpenedPack(pack));
 
         if(ForgePreferences.DEV_MODE) {
-            int[] packCounts = players.stream().mapToInt((p) -> p.packQueue.size()).toArray();
-            int[] unopenedPackCounts = players.stream().mapToInt((p) -> p.unopenedPacks.size()).toArray();
+            // iOS compatibility: Replace stream().mapToInt().toArray() with traditional for loop
+            int[] packCounts = new int[players.size()];
+            for (int i = 0; i < players.size(); i++) {
+                packCounts[i] = players.get(i).packQueue.size();
+            }
+            int[] unopenedPackCounts = new int[players.size()];
+            for (int i = 0; i < players.size(); i++) {
+                unopenedPackCounts[i] = players.get(i).unopenedPacks.size();
+            }
             debugPrint("Packs passed. Remaining Opened: " + Arrays.toString(packCounts) + "; Unopened: " + Arrays.toString(unopenedPackCounts));
         }
     }
@@ -648,7 +662,13 @@ public class BoosterDraft implements IBoosterDraft {
 
     @Override
     public boolean isRoundOver() {
-        return players.stream().allMatch((p) -> p.packQueue.isEmpty());
+        // iOS compatibility: Replace stream().allMatch() with traditional for loop
+        for (DraftPlayer p : players) {
+            if (!p.packQueue.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override

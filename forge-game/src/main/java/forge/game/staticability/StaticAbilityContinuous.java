@@ -174,7 +174,7 @@ public final class StaticAbilityContinuous {
                 final String hostCardControllerUID = Integer.toString(hostCard.getController().getId());
 
                 // update keywords with Chosen parts
-                addKeywords.removeIf(input -> {
+                IterableUtil.removeIf(addKeywords, input -> {
                     if (!hostCard.hasChosenColor() && input.contains("ChosenColor")) {
                         return true;
                     }
@@ -376,7 +376,7 @@ public final class StaticAbilityContinuous {
                 addTypes = Lists.newArrayList(Arrays.asList(params.get("AddType").split(" & ")));
                 List<String> newTypes = Lists.newArrayList();
 
-                addTypes.removeIf(input -> {
+                IterableUtil.removeIf(addTypes, input -> {
                     if (input.equals("ChosenType") && !hostCard.hasChosenType()) {
                         return true;
                     }
@@ -416,7 +416,7 @@ public final class StaticAbilityContinuous {
             if (params.containsKey("RemoveType")) {
                 removeTypes = Lists.newArrayList(Arrays.asList(params.get("RemoveType").split(" & ")));
 
-                removeTypes.removeIf(input -> {
+                IterableUtil.removeIf(removeTypes, input -> {
                     if (input.equals("ChosenType") && !hostCard.hasChosenType()) {
                         return true;
                     }
@@ -714,7 +714,7 @@ public final class StaticAbilityContinuous {
                     newKeywords = Lists.newArrayList(addKeywords);
                     final List<String> extraKeywords = Lists.newArrayList();
 
-                    newKeywords.removeIf(input -> {
+                    IterableUtil.removeIf(newKeywords, input -> {
                         // replace one Keyword with list of keywords
                         if (input.contains("CardColors") || input.contains("cardColors")) {
                             for (MagicColor.Color color : affectedCard.getColor()) {

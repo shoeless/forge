@@ -31,6 +31,7 @@ import forge.toolbox.FCardPanel;
 import forge.toolbox.FContainer;
 import forge.toolbox.FDisplayObject;
 import forge.toolbox.FScrollPane;
+import forge.util.IterableUtil;
 import forge.util.Utils;
 import forge.util.collect.FCollectionView;
 import org.apache.commons.text.WordUtils;
@@ -1018,7 +1019,8 @@ public class VPlayerPanel extends FContainer {
         @Override
         public void setDisplayVisible(boolean visible) {
             if (!visible)
-                displayAreas.values().forEach(d -> d.setVisible(false));
+                // iOS compatibility: Replace forEach() with IterableUtil.forEach()
+                IterableUtil.forEach(displayAreas.values(), d -> d.setVisible(false));
             else
                 getDisplayArea().setVisible(true);
             updateTab();
@@ -1026,17 +1028,20 @@ public class VPlayerPanel extends FContainer {
 
         @Override
         public void setDisplayBounds(float x, float y, float width, float height) {
-            displayAreas.values().forEach(d -> d.setBounds(x, y, width, height));
+            // iOS compatibility: Replace forEach() with IterableUtil.forEach()
+            IterableUtil.forEach(displayAreas.values(), d -> d.setBounds(x, y, width, height));
         }
 
         @Override
         public void setRotate180(boolean rotate180) {
-            displayAreas.values().forEach(d -> d.setRotate180(rotate180));
+            // iOS compatibility: Replace forEach() with IterableUtil.forEach()
+            IterableUtil.forEach(displayAreas.values(), d -> d.setRotate180(rotate180));
         }
 
         @Override
         public void update() {
-            displayAreas.values().forEach(VDisplayArea::update);
+            // iOS compatibility: Replace forEach() with IterableUtil.forEach()
+            IterableUtil.forEach(displayAreas.values(), VDisplayArea::update);
             updateTab();
         }
 

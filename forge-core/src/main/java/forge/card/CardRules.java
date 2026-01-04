@@ -71,7 +71,7 @@ public final class CardRules implements ICardCharacteristics {
             specializedParts.put(CardStateName.SpecializeG, faces[6]);
         }
 
-        // iOS compatibility: Replace Arrays.stream() with traditional for loop
+        // iOS compatibility: Use traditional for loop instead of Stream API
         allFaces = new ArrayList<>();
         for (ICardFace face : faces) {
             if (face != null) {
@@ -490,7 +490,7 @@ public final class CardRules implements ICardCharacteristics {
     /* package */ String findOrCreateVariantForFlavorName(String flavorName, String suggestedVariantName) {
         Objects.requireNonNull(flavorName);
         String[] nameParts = flavorName.trim().split("\\s*//\\s*");
-        // Normalize this just in case (iOS-compatible: String.join not available)
+        // Normalize this just in case (iOS compatibility: String.join not available, use traditional loop)
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < nameParts.length; i++) {
             if (i > 0) sb.append(" // ");

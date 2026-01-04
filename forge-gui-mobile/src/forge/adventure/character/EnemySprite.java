@@ -39,7 +39,6 @@ import forge.util.MyRandom;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * EnemySprite
@@ -447,11 +446,20 @@ public class EnemySprite extends CharacterSprite implements Steerable<Vector2> {
         //Collect custom rewards for chaos battles
 
         if (data.copyPlayerDeck && Current.latestDeck() != null) {
-            List<PaperCard> paperCardList = Current.latestDeck().getMain().toFlatList().stream()
-                    .filter(paperCard -> !paperCard.isVeryBasicLand())
-                    .collect(Collectors.toList());
+            // iOS compatibility: Replace stream().filter().collect() with traditional for loop
+            List<PaperCard> paperCardList = new ArrayList<>();
+            for (PaperCard paperCard : Current.latestDeck().getMain().toFlatList()) {
+                if (!paperCard.isVeryBasicLand()) {
+                    paperCardList.add(paperCard);
+                }
+            }
 
-            int uniqueRules = paperCardList.stream().map(PaperCard::getRules).collect(Collectors.toSet()).size();
+            // iOS compatibility: Replace stream().map().collect() with traditional for loop
+            java.util.Set<forge.card.CardRules> rulesSet = new java.util.HashSet<>();
+            for (PaperCard card : paperCardList) {
+                rulesSet.add(card.getRules());
+            }
+            int uniqueRules = rulesSet.size();
 
             if (uniqueRules < 4 || paperCardList.size() < 10) {
                 // Player trying to cheese doppleganger and farm cards. Sorry, the fun police have arrived
@@ -468,26 +476,38 @@ public class EnemySprite extends CharacterSprite implements Steerable<Vector2> {
 
             if (AdventurePlayer.current().isFantasyMode()) {
                 //random uncommons from deck
-                List<PaperCard> uncommonCards = paperCardList.stream()
-                        .filter(paperCard -> paperCard.getRarity() == CardRarity.Uncommon || paperCard.getRarity() == CardRarity.Special)
-                        .collect(Collectors.toList());
+                // iOS compatibility: Replace stream().filter().collect() with traditional for loop
+                List<PaperCard> uncommonCards = new ArrayList<>();
+                for (PaperCard paperCard : paperCardList) {
+                    if (paperCard.getRarity() == CardRarity.Uncommon || paperCard.getRarity() == CardRarity.Special) {
+                        uncommonCards.add(paperCard);
+                    }
+                }
                 if (!uncommonCards.isEmpty()) {
                     rewards.add(new Reward(Aggregates.random(uncommonCards)));
                     rewards.add(new Reward(Aggregates.random(uncommonCards)));
                 }
                 //random commons from deck
-                List<PaperCard> commmonCards = paperCardList.stream()
-                        .filter(paperCard -> paperCard.getRarity() == CardRarity.Common)
-                        .collect(Collectors.toList());
+                // iOS compatibility: Replace stream().filter().collect() with traditional for loop
+                List<PaperCard> commmonCards = new ArrayList<>();
+                for (PaperCard paperCard : paperCardList) {
+                    if (paperCard.getRarity() == CardRarity.Common) {
+                        commmonCards.add(paperCard);
+                    }
+                }
                 if (!commmonCards.isEmpty()) {
                     rewards.add(new Reward(Aggregates.random(commmonCards)));
                     rewards.add(new Reward(Aggregates.random(commmonCards)));
                     rewards.add(new Reward(Aggregates.random(commmonCards)));
                 }
                 //random rare from deck
-                List<PaperCard> rareCards = paperCardList.stream()
-                        .filter(paperCard -> paperCard.getRarity() == CardRarity.Rare || paperCard.getRarity() == CardRarity.MythicRare)
-                        .collect(Collectors.toList());
+                // iOS compatibility: Replace stream().filter().collect() with traditional for loop
+                List<PaperCard> rareCards = new ArrayList<>();
+                for (PaperCard paperCard : paperCardList) {
+                    if (paperCard.getRarity() == CardRarity.Rare || paperCard.getRarity() == CardRarity.MythicRare) {
+                        rareCards.add(paperCard);
+                    }
+                }
                 if (!rareCards.isEmpty()) {
                     rewards.add(new Reward(Aggregates.random(rareCards)));
                     rewards.add(new Reward(Aggregates.random(rareCards)));

@@ -2,7 +2,7 @@
   <executableName>${app.executable}</executableName>
   <mainClass>${app.mainclass}</mainClass>
   <os>ios</os>
-  <arch>arm64</arch>
+  <arch>arm64-simulator</arch>
   <resources>
     <resource>
       <directory>../forge-gui</directory>

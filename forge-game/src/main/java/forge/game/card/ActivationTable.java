@@ -10,13 +10,13 @@ import forge.game.staticability.StaticAbility;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.List;
-import java.util.Optional;
 
-public class ActivationTable extends ForwardingTable<SpellAbility, Optional<StaticAbility>, List<Player>> {
-    Table<SpellAbility, Optional<StaticAbility>, List<Player>> dataTable = HashBasedTable.create();
+// iOS compatibility: Replaced Optional<StaticAbility> with nullable StaticAbility
+public class ActivationTable extends ForwardingTable<SpellAbility, StaticAbility, List<Player>> {
+    Table<SpellAbility, StaticAbility, List<Player>> dataTable = HashBasedTable.create();
 
     @Override
-    protected Table<SpellAbility, Optional<StaticAbility>, List<Player>> delegate() {
+    protected Table<SpellAbility, StaticAbility, List<Player>> delegate() {
         return dataTable;
     }
 
@@ -38,7 +38,7 @@ public class ActivationTable extends ForwardingTable<SpellAbility, Optional<Stat
         SpellAbility original = getOriginal(sa);
 
         if (original != null) {
-            Optional<StaticAbility> st = Optional.ofNullable(root.getGrantorStatic());
+            StaticAbility st = root.getGrantorStatic();
 
             List<Player> activators = get(original, st);
             if (activators == null) {
@@ -56,7 +56,7 @@ public class ActivationTable extends ForwardingTable<SpellAbility, Optional<Stat
     public List<Player> getActivators(SpellAbility sa) {
         SpellAbility root = sa.getRootAbility();
         SpellAbility original = getOriginal(sa);
-        Optional<StaticAbility> st = Optional.ofNullable(root.getGrantorStatic());
+        StaticAbility st = root.getGrantorStatic();
 
         if (contains(original, st)) {
             return get(original, st);

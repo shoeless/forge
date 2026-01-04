@@ -37,7 +37,6 @@ import forge.util.Utils;
 import java.util.*;
 import java.util.Map.Entry;
 import forge.util.function.Function;
-import java.util.stream.IntStream;
 
 import static forge.assets.FSkin.getDefaultSkinFile;
 
@@ -810,7 +809,10 @@ public class ImageView<T extends InventoryItem> extends ItemView<T> {
     @Override
     public void selectAll() {
         clearSelection();
-        IntStream.range(0, getCount()).forEach(selectedIndices.get()::add);
+        // iOS compatibility: Replace IntStream.range().forEach() with traditional for loop
+        for (int i = 0; i < getCount(); i++) {
+            selectedIndices.get().add(i);
+        }
         updateSelection();
         onSelectionChange();
     }

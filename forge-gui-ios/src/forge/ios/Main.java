@@ -28,10 +28,15 @@ import forge.Forge;
 import forge.interfaces.IDeviceAdapter;
 
 public class Main extends IOSApplication.Delegate {
+    private static int initCounter = 0;
+    private static final Object initLock = new Object();
 
     // Static initializer runs when class is loaded, before main()
     static {
-        System.err.println("FORGE: Static initializer starting");
+        synchronized (initLock) {
+            initCounter++;
+            System.err.println("FORGE: Static initializer starting (count=" + initCounter + ")");
+        }
         try {
             // Create a custom timezone without file system access
             NSTimeZone systemTimeZone = NSTimeZone.getSystemTimeZone();
@@ -60,9 +65,11 @@ public class Main extends IOSApplication.Delegate {
             } catch (Throwable ignored) {
                 // If even the fallback fails, continue anyway
             }
+            System.err.println("FORGE: Static initializer completed (count=" + initCounter + ")");
         }
-        System.err.println("FORGE: Static initializer completed");
     }
+
+    private static int createAppCounter = 0;
 
     private void copyEssentialResources(final String assetsDir) {
         System.err.println("FORGE: copyEssentialResources() starting");
@@ -146,7 +153,10 @@ public class Main extends IOSApplication.Delegate {
 
     @Override
     protected IOSApplication createApplication() {
-        System.err.println("FORGE: createApplication() starting");
+        synchronized (initLock) {
+            createAppCounter++;
+            System.err.println("FORGE: createApplication() starting (count=" + createAppCounter + ")");
+        }
         try {
             // Use the app bundle as assetsDir so resources are read directly from there
             // This avoids copying files and hitting watchdog timeout

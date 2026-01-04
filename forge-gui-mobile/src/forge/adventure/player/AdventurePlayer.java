@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Null;
 import com.github.tommyettinger.textra.TextraLabel;
 import com.google.common.collect.Lists;
+import forge.util.IterableUtil;
 
 import forge.Forge;
 import forge.adventure.data.*;
@@ -1233,7 +1234,13 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
     }
 
     public void removeItem(String name) {
-        inventoryItems.stream().filter(itemData -> name.equalsIgnoreCase(itemData.name)).findFirst().ifPresent(this::removeItem);
+        // iOS compatibility: Replace stream().filter().findFirst().ifPresent() with traditional for loop
+        for (ItemData itemData : inventoryItems) {
+            if (name.equalsIgnoreCase(itemData.name)) {
+                removeItem(itemData);
+                break;
+            }
+        }
     }
 
     public void removeItem(ItemData item) {
@@ -1296,11 +1303,24 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
     }
 
     public boolean hasItem(String name) {
-        return inventoryItems.stream().anyMatch(itemData -> name.equalsIgnoreCase(itemData.name));
+        // iOS compatibility: Replace stream().anyMatch() with traditional for loop
+        for (ItemData itemData : inventoryItems) {
+            if (name.equalsIgnoreCase(itemData.name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public int countItem(String name) {
-        return (int) inventoryItems.stream().filter(Objects::nonNull).filter(i -> i.name.equals(name)).count();
+        // iOS compatibility: Replace stream().filter().filter().count() with traditional for loop
+        int count = 0;
+        for (ItemData i : inventoryItems) {
+            if (i != null && i.name.equals(name)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public boolean addItem(String name) {
@@ -1317,7 +1337,7 @@ public class AdventurePlayer implements Serializable, SaveFileContent {
     }
 
     public void removeAllQuestItems(){
-        inventoryItems.removeIf(data -> data != null && data.questItem);
+        IterableUtil.removeIf(inventoryItems, data -> data != null && data.questItem);
     }
 
     public boolean addBooster(Deck booster) {

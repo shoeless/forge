@@ -3,7 +3,6 @@ package forge.game.ability.effects;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -34,7 +33,7 @@ public class ReplaceCounterEffect extends SpellAbilityEffect {
         @SuppressWarnings("unchecked")
         Map<AbilityKey, Object> originalParams = (Map<AbilityKey, Object>) sa.getReplacingObject(AbilityKey.OriginalParams);
         @SuppressWarnings("unchecked")
-        Map<Optional<Player>, Map<CounterType, Integer>> counterTable = (Map<Optional<Player>, Map<CounterType, Integer>>) sa.getReplacingObject(AbilityKey.CounterMap);
+        Map<Player, Map<CounterType, Integer>> counterTable = (Map<Player, Map<CounterType, Integer>>) sa.getReplacingObject(AbilityKey.CounterMap);
 
         if (counterTable.size() > 1 && sa.hasParam("ChooseCounter")) {
             // ChooseCounter is for ones that only adds one counter, when that is coming from multiple sources, the affected player needs to choose
@@ -44,16 +43,16 @@ public class ReplaceCounterEffect extends SpellAbilityEffect {
 
             // for some effects, the Player -> CounterType Table needs to be flip into a CounterType -> [Player] list for the player to select
             Multimap<CounterType, Player> playerMap = HashMultimap.create();
-            for (Map.Entry<Optional<Player>, Map<CounterType, Integer>> e : counterTable.entrySet()) {
+            for (Map.Entry<Player, Map<CounterType, Integer>> e : counterTable.entrySet()) {
                 for (CounterType ct : e.getValue().keySet()) {
-                    playerMap.put(ct, e.getKey().orElse(null));
+                    playerMap.put(ct, e.getKey());
                 }
             }
 
             // there shouldn't be a case where one of the players is null, and the other is not
 
             for (Map.Entry<CounterType, Collection<Player>> e : playerMap.asMap().entrySet()) {
-                Optional<Player> p = Optional.ofNullable(chooser.getController().chooseSingleEntityForEffect(new PlayerCollection(e.getValue()), sa, "Choose Player for " + e.getKey().getName(), null));
+                Player p = chooser.getController().chooseSingleEntityForEffect(new PlayerCollection(e.getValue()), sa, "Choose Player for " + e.getKey().getName(), null);
 
                 sa.setReplacingObject(AbilityKey.CounterNum, counterTable.get(p).get(e.getKey()));
                 int value = AbilityUtils.calculateAmount(card, sa.getParam("Amount"), sa);
@@ -64,8 +63,8 @@ public class ReplaceCounterEffect extends SpellAbilityEffect {
                 }
             }
         } else {
-            for (Map.Entry<Optional<Player>, Map<CounterType, Integer>> e : counterTable.entrySet()) {
-                if (!sa.matchesValidParam("ValidSource", e.getKey().orElse(null))) {
+            for (Map.Entry<Player, Map<CounterType, Integer>> e : counterTable.entrySet()) {
+                if (!sa.matchesValidParam("ValidSource", e.getKey())) {
                     continue;
                 }
 

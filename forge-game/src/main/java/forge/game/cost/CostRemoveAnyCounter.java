@@ -29,7 +29,6 @@ import forge.game.zone.ZoneType;
 
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 
 /**
  * The Class CostRemoveAnyCounter.
@@ -124,7 +123,7 @@ public class CostRemoveAnyCounter extends CostPart {
     @Override
     public boolean payAsDecided(Player ai, PaymentDecision decision, SpellAbility ability, final boolean effect) {
         int removed = 0;
-        for (Entry<GameEntity, Map<CounterType, Integer>> e : decision.counterTable.row(Optional.empty()).entrySet()) {
+        for (Entry<GameEntity, Map<CounterType, Integer>> e : decision.counterTable.row(null).entrySet()) {
             for (Entry<CounterType, Integer> v : e.getValue().entrySet()) {
                 removed += v.getValue();
                 e.getKey().subtractCounter(v.getKey(), v.getValue(), ai);

@@ -652,7 +652,7 @@ public class CountersPutEffect extends SpellAbilityEffect {
         table.replaceCounterEffect(game, sa, true);
 
         if (sa.hasParam("RemovePhase")) {
-            for (Map.Entry<GameEntity, Map<CounterType, Integer>> e : table.row(Optional.of(placer)).entrySet()) {
+            for (Map.Entry<GameEntity, Map<CounterType, Integer>> e : table.row(placer).entrySet()) {
                 for (Map.Entry<CounterType, Integer> ce : e.getValue().entrySet()) {
                     addRemovePhaseTrigger(card, sa, sa.getParam("RemovePhase"), e.getKey(), ce.getKey(), ce.getValue());
                 }

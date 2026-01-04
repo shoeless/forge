@@ -55,7 +55,8 @@ public class StaticAbilityAlternativeCost {
                 if (!stAb.getHostCard().isImmutable()) {
                     Set<ZoneType> zones = stAb.getActiveZone();
                     if (zones != null && zones.size() == 1) {
-                        newSA.getRestrictions().setZone(zones.stream().findFirst().get());
+                        // iOS compatibility: Replace stream().findFirst() with iterator
+                        newSA.getRestrictions().setZone(zones.iterator().next());
                     }
                 }
 

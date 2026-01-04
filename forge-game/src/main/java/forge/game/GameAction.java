@@ -55,8 +55,6 @@ import forge.item.PaperCard;
 import forge.util.*;
 import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jgrapht.alg.cycle.SzwarcfiterLauerSimpleCycles;
 import org.jgrapht.graph.DefaultDirectedGraph;
@@ -759,16 +757,10 @@ public class GameAction {
                 default -> moveTo(c.getOwner().getZone(name), c, cause); // sideboard will also get there
             };
         } catch (Exception e) {
-            String msg = "GameAction:moveTo: Exception occurred";
-
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Card", c.getName());
-            bread.setData("SA", cause.toString());
-            bread.setData("ZoneType", name.name());
-            bread.setData("Player", c.getOwner());
-            Sentry.addBreadcrumb(bread);
-
-            throw new RuntimeException("Error in GameAction moveTo " + c.getName() + " to Player Zone " + name.name(), e);
+            // Include all details in exception message to avoid duplicate logging
+            String msg = String.format("GameAction:moveTo: Error moving card %s to zone %s (Owner: %s, SA: %s)",
+                    c.getName(), name.name(), c.getOwner(), cause.toString());
+            throw new RuntimeException(msg, e);
         }
     }
 

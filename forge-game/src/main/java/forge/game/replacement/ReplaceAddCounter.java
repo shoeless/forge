@@ -1,7 +1,6 @@
 package forge.game.replacement;
 
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -81,10 +80,10 @@ public class ReplaceAddCounter extends ReplacementEffect {
 
     public boolean hasAnyInCounterMap(Map<AbilityKey, Object> runParams) {
         @SuppressWarnings("unchecked")
-        Map<Optional<Player>, Map<CounterType, Integer>> counterMap = (Map<Optional<Player>, Map<CounterType, Integer>>) runParams.get(AbilityKey.CounterMap);
+        Map<Player, Map<CounterType, Integer>> counterMap = (Map<Player, Map<CounterType, Integer>>) runParams.get(AbilityKey.CounterMap);
 
-        for (Map.Entry<Optional<Player>, Map<CounterType, Integer>> e : counterMap.entrySet()) {
-            if (!matchesValidParam("ValidSource", e.getKey().orElse(null))) {
+        for (Map.Entry<Player, Map<CounterType, Integer>> e : counterMap.entrySet()) {
+            if (!matchesValidParam("ValidSource", e.getKey())) {
                 continue;
             }
             if (hasParam("ValidCounterType")) {

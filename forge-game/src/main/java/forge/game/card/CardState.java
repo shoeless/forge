@@ -352,10 +352,8 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         } catch (Exception e) {
             String msg = "CardState:addIntrinsicKeyword: failed to parse Keyword";
 
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Card", card.getName());
-            bread.setData("Keyword", s);
-            Sentry.addBreadcrumb(bread);
+            // Log for debugging
+                System.err.println(msg);
 
             //rethrow
             throw new RuntimeException("Error in Keyword " + s + " for card " + card.getName(), e);

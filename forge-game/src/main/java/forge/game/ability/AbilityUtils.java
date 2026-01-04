@@ -36,8 +36,6 @@ import forge.game.zone.ZoneType;
 import forge.util.*;
 import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -1382,12 +1380,8 @@ public class AbilityUtils {
     private static void resolveApiAbility(final SpellAbility sa, final Game game) {
         final Card card = sa.getHostCard();
 
-        String msg = "AbilityUtils:resolveApiAbility: try to resolve API ability";
-        Breadcrumb bread = new Breadcrumb(msg);
-        bread.setData("Api", sa.getApi().toString());
-        bread.setData("Card", card.getName());
-        bread.setData("SA", sa.toString());
-        Sentry.addBreadcrumb(bread);
+        // Log for debugging
+        System.err.println("AbilityUtils:resolveApiAbility: try to resolve API ability");
 
         if (!sa.isWrapper() && sa.isKeyword(Keyword.GIFT)) {
             game.getTriggerHandler().runTrigger(TriggerType.GiveGift, AbilityKey.mapFromPlayer(sa.getActivatingPlayer()), false);

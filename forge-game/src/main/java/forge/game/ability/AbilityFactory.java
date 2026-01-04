@@ -32,8 +32,6 @@ import forge.game.zone.ZoneType;
 import forge.util.FileSection;
 import forge.util.IterableUtil;
 import forge.util.MapUtil;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 
 import java.util.List;
 import java.util.Map;
@@ -148,18 +146,10 @@ public final class AbilityFactory {
         try {
             return getAbility(mapParams, type, state, sVarHolder);
         } catch (Error | Exception ex) {
-            String msg = "AbilityFactory:getAbility: crash when trying to create ability ";
-
-            // iOS compatibility: Sentry is not available on iOS, skip breadcrumb logging
-            try {
-                Breadcrumb bread = new Breadcrumb(msg);
-                bread.setData("Card", state.getName());
-                bread.setData("Ability", abString);
-                Sentry.addBreadcrumb(bread);
-            } catch (NoClassDefFoundError ignored) {
-                // Sentry not available (e.g., on iOS), skip breadcrumb logging
-            }
-            throw new RuntimeException(msg + " of card: " + state.getName(), ex);
+            // Include all details in exception message to avoid duplicate logging
+            String msg = String.format("AbilityFactory:getAbility: crash when trying to create ability of card: %s, Ability: %s",
+                    state.getName(), abString);
+            throw new RuntimeException(msg, ex);
         }
     }
 

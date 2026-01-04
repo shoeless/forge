@@ -89,7 +89,7 @@ public class ReplacementHandler {
 
             // need to apply Counters to check its future state on the battlefield
             @SuppressWarnings("unchecked")
-            Map<Optional<Player>, Map<CounterType, Integer>> etbCounters = (Map<Optional<Player>, Map<CounterType, Integer>>) runParams.get(AbilityKey.CounterMap);
+            Map<Player, Map<CounterType, Integer>> etbCounters = (Map<Player, Map<CounterType, Integer>>) runParams.get(AbilityKey.CounterMap);
             affectedLKI.putEtbCounters(etbCounters);
             preList.add(affectedLKI);
             game.getAction().checkStaticAbilities(false, Sets.newHashSet(), preList);

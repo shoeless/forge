@@ -10,7 +10,7 @@ import forge.item.PaperCard;
 import forge.item.PaperCardPredicates;
 import forge.util.IterableUtil;
 import forge.util.MapUtil;
-import forge.util.StreamUtil;
+// iOS compatibility: StreamUtil removed, using Aggregates.random() instead
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Collections;
@@ -194,7 +194,14 @@ public class LimitedPlayerAI extends LimitedPlayer {
     public LimitedPlayer handleIllusionaryInformant() {
         // Always choose the next pack I will open
         // What do I do with this information? Great question. I have no idea.
-        LimitedPlayer peekAt = draft.getAllPlayers().stream().filter((s) -> s != this).collect(StreamUtil.random()).orElse(null);
+        // iOS compatibility: Replace stream().filter().collect(StreamUtil.random()) with Aggregates.random()
+        List<LimitedPlayer> otherPlayers = new ArrayList<>();
+        for (LimitedPlayer player : draft.getAllPlayers()) {
+            if (player != this) {
+                otherPlayers.add(player);
+            }
+        }
+        LimitedPlayer peekAt = otherPlayers.isEmpty() ? null : Aggregates.random(otherPlayers);
         // Not really sure what the AI does with this information. But its' known now.
         //peekAt.getLastPick();
         return peekAt;

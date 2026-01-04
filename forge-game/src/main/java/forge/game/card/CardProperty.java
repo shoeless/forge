@@ -2023,7 +2023,13 @@ public class CardProperty {
             }
             List<String> typeList = Lists.newArrayList(types.split(","));
 
-            return card.getType().getCreatureTypes().stream().anyMatch(typeList::contains);
+            // iOS compatibility: Replace stream().anyMatch() with traditional for loop
+            for (String creatureType : card.getType().getCreatureTypes()) {
+                if (typeList.contains(creatureType)) {
+                    return true;
+                }
+            }
+            return false;
         } else if (property.startsWith("Triggered")) {
             if (spellAbility instanceof SpellAbility) {
                 final String key = property.substring(9);

@@ -99,7 +99,7 @@ final class CardFace implements ICardFace, Cloneable {
             this.attractionLights = null;
             return;
         }
-        // iOS compatibility: Replace Arrays.stream() with traditional for loop
+        // iOS compatibility: Use traditional for loop instead of Stream API
         Set<Integer> lights = new HashSet<>();
         for (String s : value.split(" ")) {
             lights.add(Integer.parseInt(s));

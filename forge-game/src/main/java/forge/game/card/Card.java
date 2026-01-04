@@ -58,12 +58,11 @@ import forge.trackable.Tracker;
 import forge.util.*;
 import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
+import forge.util.IterableUtil;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -2038,7 +2037,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         return count;
     }
 
-    public final void putEtbCounters(Map<Optional<Player>, Map<CounterType, Integer>> etbCounters) {
+    public final void putEtbCounters(Map<Player, Map<CounterType, Integer>> etbCounters) {
         if (etbCounters == null) {
             return;
         }
@@ -2876,12 +2875,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                     i++;
                 }
             } catch (Exception e) {
-                String msg = "Card:keywordToText: crash in Keyword parsing";
-
-                Breadcrumb bread = new Breadcrumb(msg);
-                bread.setData("Card", this.getName());
-                bread.setData("Keyword", keyword);
-                Sentry.addBreadcrumb(bread);
+                System.err.println("Card:keywordToText: crash in Keyword parsing");
 
                 throw new RuntimeException("Error in Card " + this.getName() + " with Keyword " + keyword, e);
             }
@@ -3409,12 +3403,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                     sbBefore.append(k[2]).append("\r\n");
                 }
             } catch (Exception e) {
-                String msg = "Card:abilityTextInstantSorcery: crash in Keyword parsing";
-
-                Breadcrumb bread = new Breadcrumb(msg);
-                bread.setData("Card", this.getName());
-                bread.setData("Keyword", keyword);
-                Sentry.addBreadcrumb(bread);
+                System.err.println("Card:abilityTextInstantSorcery: crash in Keyword parsing");
 
                 throw new RuntimeException("Error in Card " + this.getName() + " with Keyword " + keyword, e);
             }
@@ -3576,7 +3565,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             if (ck.isRemoveNonMana()) {
                 // List only has nonMana
                 if (null == mana) {
-                    list.removeIf(sa -> !sa.isManaAbility());
+                    IterableUtil.removeIf(list, sa -> !sa.isManaAbility());
                 } else if (false == mana) {
                     list.clear();
                 }

@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.IntStream;
 
 import com.badlogic.gdx.math.Rectangle;
 
@@ -155,7 +154,10 @@ public final class ItemListView<T extends InventoryItem> extends ItemView<T> {
     @Override
     public void selectAll() {
         selectedIndices.clear();
-        IntStream.range(0, getCount()).forEach(selectedIndices::add);
+        // iOS compatibility: Replace IntStream.range().forEach() with traditional for loop
+        for (int i = 0; i < getCount(); i++) {
+            selectedIndices.add(i);
+        }
         onSelectionChange();
     }
 

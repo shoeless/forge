@@ -97,28 +97,40 @@ public class AiCardMemory {
 
     /**
      * Checks if at least one card of the given name was remembered in the given memory set.
-     * 
+     *
      * @param cardName
      *            the card name
-     * @param set the memory set that is to be checked 
+     * @param set the memory set that is to be checked
      * @return true, if at least one card with the given name is remembered in the given memory set
      */
     public boolean isRememberedCardByName(String cardName, MemorySet set) {
-        return getMemorySet(set).stream().anyMatch(c -> c.getName().equals(cardName));
+        // iOS compatibility: Replace stream().anyMatch() with traditional for loop
+        for (Card c : getMemorySet(set)) {
+            if (c.getName().equals(cardName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * Checks if at least one card of the given name was remembered in the given memory set such
      * that its owner is the given player.
-     * 
+     *
      * @param cardName
      *            the card name
-     * @param set the memory set that is to be checked 
+     * @param set the memory set that is to be checked
      * @param owner the owner of the card
      * @return true, if at least one card with the given name is remembered in the given memory set
      */
     public boolean isRememberedCardByName(String cardName, MemorySet set, Player owner) {
-        return getMemorySet(set).stream().anyMatch(c -> c.getName().equals(cardName) && c.getOwner().equals(owner));
+        // iOS compatibility: Replace stream().anyMatch() with traditional for loop
+        for (Card c : getMemorySet(set)) {
+            if (c.getName().equals(cardName) && c.getOwner().equals(owner)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

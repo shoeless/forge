@@ -284,7 +284,13 @@ public class FChoiceList<T> extends FList<T> implements ActivateHandler {
 
     public void setSelectedItems(Collection<T> items) {
         selectedIndices.clear();
-        items.stream().mapToInt(this::getIndexOf).filter(i -> i >= 0).forEach(selectedIndices::add);
+        // iOS compatibility: Replace stream().mapToInt().filter().forEach() with traditional loop
+        for (T item : items) {
+            int index = getIndexOf(item);
+            if (index >= 0) {
+                selectedIndices.add(index);
+            }
+        }
         if(!items.isEmpty())
             scrollIntoView(getIndexOf(items.iterator().next()));
         onSelectionChange();

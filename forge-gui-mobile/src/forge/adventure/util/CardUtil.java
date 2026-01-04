@@ -30,7 +30,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import forge.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static forge.adventure.data.RewardData.generateAllCards;
 
@@ -399,7 +398,14 @@ public class CardUtil {
                     List<PaperCard> packContents = new UnOpenedProduct(template).get();
                     if (packContents.size() < 18 | packContents.size() > 25)
                         continue;
-                    if (packContents.stream().filter(x -> x.getName().equals(targetName)).count() >= 3)
+                    // iOS compatibility: Replace stream().filter().count() with traditional for loop
+                    int targetNameCount = 0;
+                    for (PaperCard card : packContents) {
+                        if (card.getName().equals(targetName)) {
+                            targetNameCount++;
+                        }
+                    }
+                    if (targetNameCount >= 3)
                         packCandidates.putIfAbsent(template.getEdition(), packContents);
                 }
                 List<PaperCard> selectedPack;
@@ -793,8 +799,13 @@ public class CardUtil {
         List<PaperCard> cardPool = Config.instance().getSettingData().useAllCardVariants
                 ? FModel.getMagicDb().getCommonCards().getAllCards(cardName)
                 : FModel.getMagicDb().getCommonCards().getUniqueCardsNoAlt(cardName);
-        List<PaperCard> validCards = cardPool.stream()
-                .filter(input -> input.getEdition().equals(edition)).collect(Collectors.toList());
+        // iOS compatibility: Replace stream().filter().collect() with traditional for loop
+        List<PaperCard> validCards = new ArrayList<>();
+        for (PaperCard card : cardPool) {
+            if (card.getEdition().equals(edition)) {
+                validCards.add(card);
+            }
+        }
 
         if (validCards.isEmpty()) {
             System.err.println("Unexpected behavior: tried to call getCardByNameAndEdition for card " + cardName

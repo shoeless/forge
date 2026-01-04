@@ -16,6 +16,7 @@ import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
 import forge.util.*;
 import forge.util.collect.FCollection;
+import forge.util.IterableUtil;
 
 import java.util.Iterator;
 import java.util.List;
@@ -71,7 +72,7 @@ public class CopySpellAbilityEffect extends SpellAbilityEffect {
 
         List<SpellAbility> tgtSpells = getTargetSpells(sa);
 
-        tgtSpells.removeIf(SpellAbility::cantBeCopied);
+        IterableUtil.removeIf(tgtSpells, SpellAbility::cantBeCopied);
 
         if (tgtSpells.isEmpty() || amount == 0) {
             return;

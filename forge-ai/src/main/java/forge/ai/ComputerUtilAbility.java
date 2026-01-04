@@ -140,7 +140,15 @@ public class ComputerUtilAbility {
                 list = activator.getController().chooseOptionalCosts(sa, list);
                 if (!list.isEmpty()) {
                     // still check base spell first in case of Promise Gift
-                    if (list.stream().anyMatch(ocv -> ocv.getType().equals(OptionalCost.PromiseGift))) {
+                    // iOS compatibility: Replace stream().anyMatch() with traditional for loop
+                    boolean hasPromiseGift = false;
+                    for (OptionalCostValue ocv : list) {
+                        if (ocv.getType().equals(OptionalCost.PromiseGift)) {
+                            hasPromiseGift = true;
+                            break;
+                        }
+                    }
+                    if (hasPromiseGift) {
                         result.add(sa);
                     }
                     result.add(GameActionUtil.addOptionalCosts(sa, list));

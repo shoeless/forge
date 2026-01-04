@@ -1,6 +1,7 @@
 package forge.game.ability.effects;
 
 import java.util.*;
+import forge.util.IterableUtil;
 
 import forge.card.CardDb;
 import forge.card.CardStateName;
@@ -312,11 +313,11 @@ public class PlayEffect extends SpellAbilityEffect {
             List<SpellAbility> sas = AbilityUtils.getSpellsFromPlayEffect(tgtCard, controller, state, !altCost);
             if (sa.hasParam("ValidSA")) {
                 final String valid[] = sa.getParam("ValidSA").split(",");
-                sas.removeIf(sp -> !sp.isValid(valid, controller , source, sa));
+                IterableUtil.removeIf(sas, sp -> !sp.isValid(valid, controller , source, sa));
             }
 
             if (altCostManaCost) {
-                sas.removeIf(sp -> sp.getPayCosts().getCostMana().getMana().isNoCost());
+                IterableUtil.removeIf(sas, sp -> sp.getPayCosts().getCostMana().getMana().isNoCost());
             }
 
             if (hasTotalCMCLimit) {

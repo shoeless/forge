@@ -197,6 +197,7 @@ public class Match {
     }
 
     private static void preparePlayerZone(Player player, final ZoneType zoneType, CardPool section, boolean canRandomFoil) {
+        System.err.println("DEBUG preparePlayerZone: Player " + player.getName() + " zone=" + zoneType + " cards in pool=" + section.countAll());
         PlayerZone library = player.getZone(zoneType);
         List<Card> newLibrary = new ArrayList<>();
         for (final Entry<PaperCard, Integer> stackOfCards : section) {
@@ -214,6 +215,7 @@ public class Match {
             }
         }
         library.setCards(newLibrary);
+        System.err.println("DEBUG preparePlayerZone: Set " + newLibrary.size() + " cards in " + player.getName() + "'s " + zoneType);
     }
 
     private void prepareAllZones(final Game game) {
@@ -290,6 +292,7 @@ public class Match {
             }
 
             Deck toCheck = psc.getDeck();
+            System.err.println("DEBUG prepareAllZones: Player " + psc.getPlayer().getName() + " deck=" + (toCheck != null ? toCheck.getName() : "NULL"));
             if (toCheck == null) {
                 try {
                     System.err.println(psc.getPlayer().getName() + " Deck is NULL...");
@@ -298,6 +301,9 @@ public class Match {
                     if (val > 0)
                         toCheck.getMain().add("Wastes", val);
                 } catch (Exception ignored) {}
+            }
+            if (toCheck != null) {
+                System.err.println("DEBUG prepareAllZones: Deck " + toCheck.getName() + " has " + toCheck.getMain().countAll() + " cards in main");
             }
             Pair<Deck, List<PaperCard>> myDeck = toCheck.getValid();
             player.setDraftNotes(myDeck.getLeft().getDraftNotes());

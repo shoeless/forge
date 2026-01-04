@@ -16,8 +16,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.io.File;
 import java.util.*;
 import forge.util.function.Predicate;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Pattern;
 
 /**
@@ -779,10 +777,11 @@ public class StaticData {
         return preferences_avails;
     }
     public Pair<Integer, Integer> audit(StringBuffer noImageFound, StringBuffer cardNotImplemented) {
-        Queue<String> EDITION_Q = new ConcurrentLinkedQueue<>();
-        Queue<String> NIF_Q = new ConcurrentLinkedQueue<>();
-        Queue<String> CNI_Q = new ConcurrentLinkedQueue<>();
-        Queue<String> TOKEN_Q = new ConcurrentLinkedQueue<>();
+        // iOS compatibility: Use regular collections instead of concurrent ones (synchronous execution)
+        Queue<String> EDITION_Q = new LinkedList<>();
+        Queue<String> NIF_Q = new LinkedList<>();
+        Queue<String> CNI_Q = new LinkedList<>();
+        Queue<String> TOKEN_Q = new LinkedList<>();
         boolean nifHeader = false;
         boolean cniHeader = false;
         final Pattern funnyCardCollectorNumberPattern = Pattern.compile("^F★?\\d+★?");
@@ -791,7 +790,6 @@ public class StaticData {
                 continue;
 
             Map<String, Pair<Boolean, Integer>> cardCount = new HashMap<>();
-            List<CompletableFuture<?>> futures = new ArrayList<>();
             for (CardEdition.EditionEntry c : e.getObtainableCards()) {
                 int amount = 1;
 
@@ -802,9 +800,9 @@ public class StaticData {
                 cardCount.put(c.name(), Pair.of(c.collectorNumber() != null && funnyCardCollectorNumberPattern.matcher(c.collectorNumber()).matches(), amount));
             }
 
-            // loop through the cards in this edition, considering art variations...
+            // iOS compatibility: Loop synchronously instead of using CompletableFuture.supplyAsync
             for (Map.Entry<String, Pair<Boolean, Integer>> entry : cardCount.entrySet()) {
-                futures.add(CompletableFuture.supplyAsync(()-> {
+                try {
                     final String c = entry.getKey();
                     final int artID = entry.getValue().getRight();
                     final boolean isFunny = entry.getValue().getLeft();
@@ -814,12 +812,12 @@ public class StaticData {
                     }
                     if (cp == null) {
                         if (isFunny) //skip funny cards
-                            return null;
+                            continue;
                         if (!loadNonLegalCards && CardEdition.Type.FUNNY.equals(e.getType()))
-                            return null;
+                            continue;
                         EDITION_Q.add(e.getCode() + "_" + e.getName());
                         CNI_Q.add(e.getCode() + "_" + c + "\n");
-                        return null;
+                        continue;
                     }
                     // check the front image
                     String imagePath = ImageUtil.getImageRelativePath(cp, "", true, false);
@@ -829,7 +827,7 @@ public class StaticData {
                             file = ImageKeys.setLookUpFile(imagePath, imagePath +"border");
                         if (file == null) {
                             if (imagePath.isEmpty())
-                                return null;
+                                continue;
                             EDITION_Q.add(e.getCode() + "_" + e.getName());
                             NIF_Q.add(e.getCode() + "_" + imagePath + "\n");
                         }
@@ -843,21 +841,16 @@ public class StaticData {
                                 file = ImageKeys.setLookUpFile(imagePath, imagePath +"border");
                             if (file == null) {
                                 if (imagePath.isEmpty())
-                                    return null;
+                                    continue;
                                 EDITION_Q.add(e.getCode() + "_" + e.getName());
                                 NIF_Q.add(e.getCode() + "_" + imagePath + "\n");
                             }
                         }
                     }
-                    return null;
-                }).exceptionally(ex -> {
+                } catch (Exception ex) {
                     ex.printStackTrace();
-                    return null;
-                }));
+                }
             }
-            CompletableFuture<?>[] futuresArray = futures.toArray(new CompletableFuture<?>[0]);
-            CompletableFuture.allOf(futuresArray).join();
-            futures.clear();
 
             // TODO: Audit token images here...
             for(Map.Entry<String, Collection<CardEdition.EditionEntry>> tokenEntry : e.getTokens().asMap().entrySet()) {

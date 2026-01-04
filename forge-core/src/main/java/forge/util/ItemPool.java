@@ -24,8 +24,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import forge.util.function.*;;
-import java.util.stream.Collector;
+import forge.util.function.*;
 
 /**
  * <p>
@@ -70,6 +69,9 @@ public class ItemPool<T extends InventoryItem> implements Iterable<Entry<T, Inte
         return result;
     }
 
+    // iOS compatibility: Collector removed - uses java.util.stream.Collector and java.util.function.*
+    // which are not available on iOS. This method is only used in forge-gui-desktop module.
+    /*
     public static <T extends InventoryItem> Collector<T, ?, ItemPool<T>> collector(Class<T> cls) {
         return new Collector<T, ItemPool<T>, ItemPool<T>>() {
             @Override
@@ -100,6 +102,7 @@ public class ItemPool<T extends InventoryItem> implements Iterable<Entry<T, Inte
             }
         };
     }
+    */
 
     protected ItemPool(final Map<T, Integer> items0, final Class<T> cls) {
         if (items0 != null) {
@@ -270,11 +273,13 @@ public class ItemPool<T extends InventoryItem> implements Iterable<Entry<T, Inte
     }
 
     public void removeIf(Predicate<T> filter) {
-        items.keySet().removeIf(t -> filter.test(t));
+        // iOS compatibility: Use IterableUtil.removeIf() instead of Collection.removeIf()
+        IterableUtil.removeIf(items.keySet(), filter);
     }
 
     public void retainIf(Predicate<T> filter) {
-        items.keySet().removeIf(t -> !filter.test(t));
+        // iOS compatibility: Use IterableUtil.retainIf() instead of Collection.removeIf()
+        IterableUtil.retainIf(items.keySet(), filter);
     }
 
     public T find(Predicate<T> filter) {

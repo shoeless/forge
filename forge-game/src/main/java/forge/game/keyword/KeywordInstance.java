@@ -18,8 +18,6 @@ import forge.game.spellability.SpellAbility;
 import forge.game.staticability.StaticAbility;
 import forge.game.trigger.Trigger;
 import forge.util.Lang;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 
 public abstract class KeywordInstance<T extends KeywordInstance<?>> implements KeywordInterface {
     private Card hostCard = null;
@@ -94,35 +92,15 @@ public abstract class KeywordInstance<T extends KeywordInstance<?>> implements K
         }
 
         try {
-            String msg = "KeywordInstance:createTraits: make Traits for Keyword";
-
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Card", host.getName());
-            bread.setData("Keyword", this.original);
-            Sentry.addBreadcrumb(bread);
-
-            // add Extra for debugging
-            Sentry.setExtra("Card", host.getName());
-            Sentry.setExtra("Keyword", this.original);
-
             CardFactoryUtil.addTriggerAbility(this, host, intrinsic);
             CardFactoryUtil.addReplacementEffect(this, host.getCurrentState(), intrinsic);
             CardFactoryUtil.addSpellAbility(this, host.getCurrentState(), intrinsic);
             CardFactoryUtil.addStaticAbility(this, host.getCurrentState(), intrinsic);
         } catch (Exception e) {
-            String msg = "KeywordInstance:createTraits: failed Traits for Keyword";
-
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Card", host.getName());
-            bread.setData("Keyword", this.original);
-            Sentry.addBreadcrumb(bread);
+            System.err.println("KeywordInstance:createTraits: failed Traits for Keyword");
 
             //rethrow
             throw new RuntimeException("Error in Keyword " + this.original + " for card " + host.getName(), e);
-        } finally {
-            // remove added extra
-            Sentry.removeExtra("Card");
-            Sentry.removeExtra("Keyword");
         }
     }
 
@@ -147,14 +125,10 @@ public abstract class KeywordInstance<T extends KeywordInstance<?>> implements K
         try {
             String msg = "KeywordInstance:createTraits: make Traits for Keyword";
             
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Player", player.getName());
-            bread.setData("Keyword", this.original);
-            Sentry.addBreadcrumb(bread);
+            // Log for debugging
+                System.err.println(msg);
 
             // add Extra for debugging
-            Sentry.setExtra("Player", player.getName());
-            Sentry.setExtra("Keyword", this.original);
 
             PlayerFactoryUtil.addTriggerAbility(this, player);
             PlayerFactoryUtil.addReplacementEffect(this, player);
@@ -163,17 +137,13 @@ public abstract class KeywordInstance<T extends KeywordInstance<?>> implements K
         } catch (Exception e) {
             String msg = "KeywordInstance:createTraits: failed Traits for Keyword";
 
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Player", player.getName());
-            bread.setData("Keyword", this.original);
-            Sentry.addBreadcrumb(bread);
+            // Log for debugging
+                System.err.println(msg);
 
             //rethrow
             throw new RuntimeException("Error in Keyword " + this.original + " for player " + player.getName(), e);
         } finally {
             // remove added extra
-            Sentry.removeExtra("Player");
-            Sentry.removeExtra("Keyword");
         }
     }
     /*

@@ -62,8 +62,6 @@ import forge.game.trigger.WrappedAbility;
 import forge.game.zone.ZoneType;
 import forge.item.PaperCard;
 import forge.util.*;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 
 import java.util.*;
 import java.util.concurrent.FutureTask;
@@ -755,7 +753,7 @@ public class AiController {
         } catch (IllegalArgumentException ex) {
             System.err.println(ex.getMessage());
             String assertex = ComparatorUtil.verifyTransitivity(ComputerUtilAbility.saEvaluator, all);
-            Sentry.captureMessage(ex.getMessage() + "\nAssertionError [verifyTransitivity]: " + assertex);
+            System.err.println("AssertionError [verifyTransitivity]: " + assertex);
         }
 
         for (final SpellAbility sa : ComputerUtilAbility.getOriginalAndAltCostAbilities(all, player)) {
@@ -918,22 +916,13 @@ public class AiController {
         // TODO before suspending some spells try to predict if relevant targets can be expected
         if (sa.getApi() != null) {
 
-            String msg = "AiController:canPlaySa: AI checks for if can PlaySa";
-            Breadcrumb bread = new Breadcrumb(msg);
-            bread.setData("Api", sa.getApi().toString());
-            bread.setData("Card", card.getName());
-            bread.setData("SA", sa.toString());
-            Sentry.addBreadcrumb(bread);
-
-            // add Extra for debugging
-            Sentry.setExtra("Card", card.getName());
-            Sentry.setExtra("SA", sa.toString());
+            // Log for debugging
+            System.err.println("AiController:canPlaySa: AI checks for if can PlaySa");
+            System.err.println("  Api: " + sa.getApi().toString());
+            System.err.println("  Card: " + card.getName());
+            System.err.println("  SA: " + sa.toString());
 
             boolean canPlay = SpellApiToAi.Converter.get(sa).canPlayWithSubs(player, sa).willingToPlay();
-
-            // remove added extra
-            Sentry.removeExtra("Card");
-            Sentry.removeExtra("SA");
 
             if (!canPlay) {
                 return AiPlayDecision.CantPlayAi;
@@ -1605,7 +1594,7 @@ public class AiController {
         } catch (IllegalArgumentException ex) {
             System.err.println(ex.getMessage());
             String assertex = ComparatorUtil.verifyTransitivity(ComputerUtilAbility.saEvaluator, all);
-            Sentry.captureMessage(ex.getMessage() + "\nAssertionError [verifyTransitivity]: " + assertex);
+            System.err.println("AssertionError [verifyTransitivity]: " + assertex);
         }
 
         // in case of infinite loop reset below would not be reached

@@ -69,7 +69,15 @@ public class StaticAbilityCantTarget {
     public static boolean applyCantTargetAbility(final StaticAbility stAb, final GameEntity entity, final SpellAbility spellAbility) {
         if (entity instanceof Card card) {
             if (stAb.hasParam("AffectedZone")) {
-                if (ZoneType.listValueOf(stAb.getParam("AffectedZone")).stream().noneMatch(zt -> card.isInZone(zt))) {
+                // iOS compatibility: Replace stream().noneMatch() with traditional for loop
+                boolean foundZone = false;
+                for (ZoneType zt : ZoneType.listValueOf(stAb.getParam("AffectedZone"))) {
+                    if (card.isInZone(zt)) {
+                        foundZone = true;
+                        break;
+                    }
+                }
+                if (!foundZone) {
                     return false;
                 }
             } else if (!card.isInPlay()) { // default zone is battlefield

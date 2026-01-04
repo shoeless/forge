@@ -311,10 +311,10 @@ public class AdventureEventData implements Serializable {
             }
             if (configData.allowedEditions != null) {
                 Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList(configData.allowedEditions));
-                legalBlocks.removeIf(q -> !allowed.contains(q.getName()));
+                IterableUtil.removeIf(legalBlocks, q -> !allowed.contains(q.getName()));
             } else {
                 for (String restricted : configData.restrictedEditions) {
-                    legalBlocks.removeIf(q -> q.getName().equals(restricted));
+                    IterableUtil.removeIf(legalBlocks, q -> q.getName().equals(restricted));
                 }
             }
         }

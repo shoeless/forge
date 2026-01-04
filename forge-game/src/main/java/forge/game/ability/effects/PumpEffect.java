@@ -2,6 +2,7 @@ package forge.game.ability.effects;
 
 import java.util.Arrays;
 import java.util.List;
+import forge.util.IterableUtil;
 
 import forge.util.*;
 
@@ -352,7 +353,7 @@ public class PumpEffect extends SpellAbilityEffect {
                 PlayerCollection players = AbilityUtils.getDefinedPlayers(host, defined, sa);
                 if (players.isEmpty()) return;
                 List<String> newKeywords = Lists.newArrayList();
-                keywords.removeIf(input -> {
+                IterableUtil.removeIf(keywords, input -> {
                     if (!input.contains("ChosenPlayerUID") && !input.contains("ChosenPlayerName")) {
                         return false;
                     }

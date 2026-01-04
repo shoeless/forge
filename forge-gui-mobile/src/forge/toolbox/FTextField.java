@@ -21,6 +21,8 @@ public class FTextField extends FDisplayObject implements ITextField {
     private static final FSkinFont DEFAULT_FONT = FSkinFont.get(14);
     private static final float BORDER_THICKNESS = Utils.scale(1);
     public static final float PADDING = Utils.scale(5);
+    private static int instanceCounter = 0;
+    private final int instanceId;
     protected static FSkinColor getForeColor() {
         if (Forge.isMobileAdventureMode)
             return FSkinColor.get(Colors.ADV_CLR_TEXT);
@@ -82,6 +84,7 @@ public class FTextField extends FDisplayObject implements ITextField {
         this("");
     }
     public FTextField(String text0) {
+        instanceId = ++instanceCounter;
         text = text0;
         ghostText = "";
         setFont(DEFAULT_FONT);
@@ -235,7 +238,9 @@ public class FTextField extends FDisplayObject implements ITextField {
     public boolean startEdit() {
         if (readOnly) { return false; }
         Forge.setOnScreenKeyboard(true, isNumeric);
-        if (isEditing) { return true; } //do nothing if already editing
+        if (isEditing) {
+            return true; //do nothing if already editing
+        }
 
         selStart = 0; //select all before starting input
         selLength = text.length();
@@ -254,7 +259,32 @@ public class FTextField extends FDisplayObject implements ITextField {
 
             @Override
             public boolean keyTyped(char ch) {
+                // iOS fix: Handle backspace/delete characters that come through keyTyped instead of keyDown
+                if (ch == '\b' || ch == '\u007F') { // backspace (0x08) or delete (0x7F)
+                    if (text.length() > 0) {
+                        if (selLength == 0) { // delete previous character if selection empty
+                            if (selStart > 0) {
+                                selStart--;
+                            }
+                            selLength = 1;
+                        }
+                        insertText("");
+                        // Fire changed handler for live search/filtering
+                        if (changedHandler != null) {
+                            changedHandler.handleEvent(new FEvent(FTextField.this, FEventType.CHANGE, textBeforeKeyInput));
+                        }
+                    }
+                    return true;
+                }
+                // Ignore other control characters
+                if (ch < ' ') {
+                    return false;
+                }
                 insertText(String.valueOf(ch));
+                // Fire changed handler for live search/filtering
+                if (changedHandler != null) {
+                    changedHandler.handleEvent(new FEvent(FTextField.this, FEventType.CHANGE, textBeforeKeyInput));
+                }
                 return true;
             }
 
@@ -278,6 +308,10 @@ public class FTextField extends FDisplayObject implements ITextField {
                             selLength = 1;
                         }
                         insertText("");
+                        // Fire changed handler for live search/filtering
+                        if (changedHandler != null) {
+                            changedHandler.handleEvent(new FEvent(FTextField.this, FEventType.CHANGE, textBeforeKeyInput));
+                        }
                     }
                     return true;
                 case Keys.LEFT:

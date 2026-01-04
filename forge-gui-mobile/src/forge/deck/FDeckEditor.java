@@ -50,7 +50,6 @@ import forge.util.function.Consumer;
 import forge.util.function.Function;
 import forge.util.function.Predicate;
 import forge.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class FDeckEditor extends TabPageScreen<FDeckEditor> {
     public static FSkinImage MAIN_DECK_ICON = Forge.hdbuttons ? FSkinImage.HDLIBRARY :FSkinImage.DECKLIST;
@@ -301,13 +300,16 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
                 pages.add(commanderPage);
             }
             pages.add(sideboardPage);
-            pages.removeIf(Objects::isNull);
+            // iOS compatibility: Replace removeIf() with IterableUtil.removeIf()
+            IterableUtil.removeIf(pages, page -> page == null);
 
             //Any extra pages.
-            primarySections.stream()
-                    .filter(e -> e != DeckSection.Main && e != DeckSection.Sideboard && e != DeckSection.Commander)
-                    .map(e -> createPageForExtraSection(e, this))
-                    .forEach(pages::add);
+            // iOS compatibility: Replace stream().filter().map().forEach() with traditional loop
+            for (DeckSection section : primarySections) {
+                if (section != DeckSection.Main && section != DeckSection.Sideboard && section != DeckSection.Commander) {
+                    pages.add(createPageForExtraSection(section, this));
+                }
+            }
 
             return pages.toArray(new DeckEditorPage[0]);
         }
@@ -468,7 +470,10 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
         }
 
         //Initialize pages.
-        tabPages.stream().map(DeckEditorPage.class::cast).forEach(DeckEditorPage::initialize);
+        // iOS compatibility: Replace stream().map().forEach() with traditional loop
+        for (Object page : tabPages) {
+            ((DeckEditorPage) page).initialize();
+        }
         tabsInitialized = true;
 
         //Pick an initial page to show. Test for catalog page so we don't switch off a draft screen.
@@ -565,7 +570,11 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
                     addItem(new FMenuItem(localizer.getMessage("lblAddBasicLands"), FSkinImage.LANDLOGO, e -> showAddBasicLandsDialog()));
                 if (showAddExtraSectionOption()) {
                     addItem(new FMenuItem(localizer.getMessage("lblAddDeckSection"), FSkinImage.CHAOS, e -> {
-                        List<String> options = hiddenExtraSections.stream().map(DeckSection::getLocalizedName).collect(Collectors.toList());
+                        // iOS compatibility: Replace Stream API with simple loop
+                        List<String> options = new ArrayList<>();
+                        for (DeckSection section : hiddenExtraSections) {
+                            options.add(section.getLocalizedName());
+                        }
                         GuiChoose.oneOrNone(localizer.getMessage("lblAddDeckSectionSelect"), options, result -> {
                             if (result == null || !options.contains(result))
                                 return;
@@ -1115,7 +1124,13 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
      * @param amount amount of tabs to move the selection by; 1 for next, -1 for previous, etc.
      */
     protected void controllerCycleTabs(int amount) {
-        List<TabPage<FDeckEditor>> visiblePages = tabPages.stream().filter(TabPage::isTabVisible).collect(Collectors.toList());
+        // iOS compatibility: Replace Stream API with simple loop
+        List<TabPage<FDeckEditor>> visiblePages = new ArrayList<>();
+        for (TabPage<FDeckEditor> page : tabPages) {
+            if (page.isTabVisible()) {
+                visiblePages.add(page);
+            }
+        }
         if(visiblePages.isEmpty())
             return;
         int current = visiblePages.indexOf(getSelectedPage());
@@ -1172,7 +1187,12 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
             out.add(btnMoreOptions);
             if(btnSave.isVisible())
                 out.add(btnSave);
-            float remainingWidth = availableWidth - (float) out.stream().mapToDouble(FDisplayObject::getWidth).sum();
+            // iOS compatibility: Replace Stream API with simple loop
+            float widthSum = 0;
+            for (FDisplayObject obj : out) {
+                widthSum += obj.getWidth();
+            }
+            float remainingWidth = availableWidth - widthSum;
             if(btnDraftLog != null) {
                 float width = Math.max(remainingWidth / 4, Math.min(height * 4, remainingWidth / 2));
                 btnDraftLog.setSize(width, height);
@@ -1573,7 +1593,8 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
                 return false;
             }
             List<PaperCard> commanders = parentScreen.getDeck().get(DeckSection.Commander).toFlatList();
-            commanders.removeIf((c) -> c.getRules().canBeSignatureSpell());
+            // iOS compatibility: Use IterableUtil.removeIf instead of List.removeIf
+            IterableUtil.removeIf(commanders, (c) -> c.getRules().canBeSignatureSpell());
             if(commanders.size() != 1)
                 return false;
             if(!parentScreen.shouldEnforceConformity())

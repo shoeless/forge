@@ -35,7 +35,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.*;
 import java.util.Comparator;
-import java.util.stream.Collectors;
 
 /** 
  * This is a helper class for unlocking new sets during a format-limited
@@ -140,14 +139,26 @@ public class QuestUtilUnlockSets {
         CardEdition.Collection editions = FModel.getMagicDb().getEditions();
 
         // Sort current sets by date
-        List<CardEdition> allowedSets = qData.getFormat().getAllowedSetCodes().stream()
-                .map(editions::get)
-                .sorted().collect(Collectors.toList());
-        
+        // iOS compatibility: Replace stream().map().sorted().collect() with traditional for loop
+        List<CardEdition> allowedSets = new ArrayList<>();
+        for (String code : qData.getFormat().getAllowedSetCodes()) {
+            CardEdition edition = editions.get(code);
+            if (edition != null) {
+                allowedSets.add(edition);
+            }
+        }
+        Collections.sort(allowedSets);
+
         // Sort unlockable sets by date
-        List<CardEdition> excludedSets = qData.getFormat().getLockedSets().stream()
-                .map(editions::get)
-                .sorted().collect(Collectors.toList());
+        // iOS compatibility: Replace stream().map().sorted().collect() with traditional for loop
+        List<CardEdition> excludedSets = new ArrayList<>();
+        for (String code : qData.getFormat().getLockedSets()) {
+            CardEdition edition = editions.get(code);
+            if (edition != null) {
+                excludedSets.add(edition);
+            }
+        }
+        Collections.sort(excludedSets);
         
         // get a number of sets between an excluded and any included set
         List<ImmutablePair<CardEdition, Long>> excludedWithDistances = new ArrayList<>();

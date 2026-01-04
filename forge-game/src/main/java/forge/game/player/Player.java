@@ -43,6 +43,7 @@ import forge.game.replacement.ReplacementHandler;
 import forge.game.replacement.ReplacementResult;
 import forge.game.replacement.ReplacementType;
 import forge.game.spellability.AbilitySub;
+import forge.util.IterableUtil;
 
 import forge.game.spellability.AlternativeCost;
 import forge.game.spellability.SpellAbility;
@@ -1330,7 +1331,7 @@ public class Player extends GameEntity implements Comparable<Player> {
     }
 
     public void resetExtraZones(ZoneType type) {
-        extraZones.removeIf(z -> z.getZoneType().equals(type));
+        IterableUtil.removeIf(extraZones, z -> z.getZoneType().equals(type));
         if (extraZones.isEmpty()) {
             extraZones = null;
         }

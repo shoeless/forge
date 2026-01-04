@@ -21,12 +21,14 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.18.0</version>
+            <!-- Downgraded from 3.18.0 to 3.4 for iOS/RoboVM compatibility (no Java 8 APIs) -->
+            <version>3.4</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
-            <version>1.12.0</version>
+            <!-- Downgraded from 1.12.0 to 1.1 for iOS/RoboVM compatibility (no Java 8 APIs) -->
+            <version>1.1</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.commons</groupId>

@@ -334,7 +334,12 @@ public class RollDiceEffect extends SpellAbilityEffect {
         runParams.put(AbilityKey.RolledToVisitAttractions, toVisitAttractions);
         player.getGame().getTriggerHandler().runTrigger(TriggerType.RolledDieOnce, runParams, false);
 
-        return getFinalResults(resultsList).stream().reduce(0, Integer::sum);
+        // iOS compatibility: Replace stream().reduce() with traditional loop
+        int sum = 0;
+        for (Integer result : getFinalResults(resultsList)) {
+            sum += result;
+        }
+        return sum;
     }
 
     /**

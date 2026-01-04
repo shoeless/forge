@@ -122,7 +122,13 @@ public class FMenuBar extends Header {
     }
 
     public boolean isShowingMenu(boolean anyDropdown) {
-        return tabs.stream().anyMatch(tab -> tab.isShowingDropdownMenu(anyDropdown));
+        // iOS compatibility: Replace stream().anyMatch() with traditional for loop
+        for (FMenuTab tab : tabs) {
+            if (tab.isShowingDropdownMenu(anyDropdown)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void clearSelected() {

@@ -1,6 +1,9 @@
 package forge.util;
 
 import java.util.*;
+// iOS compatibility: Stream API not available on RoboVM/MobiVM
+// These imports are kept for desktop/Android but the methods using them
+// should not be called on iOS
 import java.util.stream.Collector;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -12,6 +15,7 @@ public class StreamUtil {
     /**
      * @return a Stream with the provided iterable as its source.
      * @deprecated Stream collections with {@link Collection#stream()}.
+     * iOS compatibility: Not available on iOS - use Aggregates.random() or IterableUtil instead
      */
     @Deprecated
     public static <T> Stream<T> stream(Collection<T> collection) {
@@ -20,6 +24,7 @@ public class StreamUtil {
 
     /**
      * @return a Stream with the provided iterable as its source.
+     * iOS compatibility: Not available on iOS - use Aggregates.random() or IterableUtil instead
      */
     public static <T> Stream<T> stream(Iterable<T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false);
@@ -27,7 +32,7 @@ public class StreamUtil {
 
     /**
      * @return a Stream with the provided array as its source.
-     * iOS compatibility: Wraps array in a list to avoid Arrays.stream()
+     * iOS compatibility: Not available on iOS - use Arrays.asList() with Aggregates.random() or IterableUtil instead
      */
     public static <T> Stream<T> stream(T[] array) {
         return Arrays.asList(array).stream();
