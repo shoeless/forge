@@ -63,8 +63,22 @@ public class Graphics {
 
     private Texture dummyTexture = null;
 
+    private Matrix4 projectionMatrix = new Matrix4();
+
     public Graphics() {
         ShaderProgram.pedantic = false;
+    }
+
+    /**
+     * Updates the projection matrix for the new screen dimensions.
+     * Must be called when the screen size changes (e.g., orientation rotation).
+     */
+    public void resize(int width, int height) {
+        // Update the orthographic projection matrix for the new dimensions
+        // libGDX uses y-up coordinate system with origin at bottom-left
+        projectionMatrix.setToOrtho2D(0, 0, width, height);
+        batch.setProjectionMatrix(projectionMatrix);
+        shapeRenderer.setProjectionMatrix(projectionMatrix);
     }
 
     public ShaderProgram getShaderOutline() {

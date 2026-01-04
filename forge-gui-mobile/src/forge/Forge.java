@@ -1067,6 +1067,9 @@ public class Forge implements ApplicationListener {
             screenWidth = width;
             screenHeight = height;
 
+            // Update graphics projection matrix for new dimensions
+            graphics.resize(width, height);
+
             System.err.println("DEBUG resize: isLandscapeMode AFTER=" + isLandscapeMode());
             System.err.println("DEBUG resize: calling setSize on currentScreen");
 
