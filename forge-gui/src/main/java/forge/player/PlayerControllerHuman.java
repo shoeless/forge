@@ -1549,8 +1549,12 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
     @Override
     public List<SpellAbility> chooseSpellAbilityToPlay() {
         final MagicStack stack = getGame().getStack();
+        System.err.println("HUMAN: chooseSpellAbilityToPlay() ENTER - Phase: " + getGame().getPhaseHandler().getPhase() +
+            ", Turn: " + getGame().getPhaseHandler().getPlayerTurn() +
+            ", Priority: " + getGame().getPhaseHandler().getPriorityPlayer());
 
         if (mayAutoPass()) {
+            System.err.println("HUMAN: mayAutoPass() is true, returning null");
             // avoid prompting for input if current phase is set to be
             // auto-passed instead posing a short delay if needed to
             // prevent the game jumping ahead too quick
@@ -1576,8 +1580,13 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         }
 
         if (stack.isEmpty()) {
-            if (getGui().isUiSetToSkipPhase(getGame().getPhaseHandler().getPlayerTurn().getView(),
-                    getGame().getPhaseHandler().getPhase())) {
+            boolean skipPhase = getGui().isUiSetToSkipPhase(getGame().getPhaseHandler().getPlayerTurn().getView(),
+                    getGame().getPhaseHandler().getPhase());
+            System.err.println("HUMAN: stack empty, isUiSetToSkipPhase=" + skipPhase +
+                " for turn player=" + getGame().getPhaseHandler().getPlayerTurn() +
+                ", phase=" + getGame().getPhaseHandler().getPhase());
+            if (skipPhase) {
+                System.err.println("HUMAN: skipping phase, returning null");
                 return null; // avoid prompt for input if stack is empty and
                 // player is set to skip the current phase
             }
@@ -1594,8 +1603,10 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
             }
         }
 
+        System.err.println("HUMAN: Creating InputPassPriority and showing...");
         final InputPassPriority defaultInput = new InputPassPriority(this);
         defaultInput.showAndWait();
+        System.err.println("HUMAN: InputPassPriority returned, chosenSa=" + defaultInput.getChosenSa());
         return defaultInput.getChosenSa();
     }
 

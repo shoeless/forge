@@ -72,7 +72,8 @@ public class ManaEffect extends SpellAbilityEffect {
                 }
 
                 String combo = abMana.getComboColors(sa);
-                if (combo.isBlank()) {
+                // iOS compatibility: String.isBlank() is Java 11+, use trim().isEmpty() instead
+                if (combo == null || combo.trim().isEmpty()) {
                     return;
                 }
                 String[] colorsProduced = combo.split(" ");

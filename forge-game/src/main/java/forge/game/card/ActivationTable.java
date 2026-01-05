@@ -12,8 +12,11 @@ import org.apache.commons.lang3.ObjectUtils;
 import java.util.List;
 
 // iOS compatibility: Replaced Optional<StaticAbility> with nullable StaticAbility
+// Using separate storage for null keys since Guava HashBasedTable doesn't allow null keys
 public class ActivationTable extends ForwardingTable<SpellAbility, StaticAbility, List<Player>> {
     Table<SpellAbility, StaticAbility, List<Player>> dataTable = HashBasedTable.create();
+    // Separate storage for entries with null StaticAbility (HashBasedTable doesn't allow null keys)
+    private final java.util.Map<SpellAbility, List<Player>> nullStaticEntries = new java.util.HashMap<>();
 
     @Override
     protected Table<SpellAbility, StaticAbility, List<Player>> delegate() {
@@ -40,12 +43,22 @@ public class ActivationTable extends ForwardingTable<SpellAbility, StaticAbility
         if (original != null) {
             StaticAbility st = root.getGrantorStatic();
 
-            List<Player> activators = get(original, st);
-            if (activators == null) {
-                activators = Lists.newArrayList();
+            // Handle null StaticAbility separately since HashBasedTable doesn't allow null keys
+            if (st == null) {
+                List<Player> activators = nullStaticEntries.get(original);
+                if (activators == null) {
+                    activators = Lists.newArrayList();
+                }
+                activators.add(sa.getActivatingPlayer());
+                nullStaticEntries.put(original, activators);
+            } else {
+                List<Player> activators = get(original, st);
+                if (activators == null) {
+                    activators = Lists.newArrayList();
+                }
+                activators.add(sa.getActivatingPlayer());
+                delegate().put(original, st, activators);
             }
-            activators.add(sa.getActivatingPlayer());
-            delegate().put(original, st, activators);
         }
     }
 
@@ -57,6 +70,12 @@ public class ActivationTable extends ForwardingTable<SpellAbility, StaticAbility
         SpellAbility root = sa.getRootAbility();
         SpellAbility original = getOriginal(sa);
         StaticAbility st = root.getGrantorStatic();
+
+        // Handle null StaticAbility separately
+        if (st == null) {
+            List<Player> activators = nullStaticEntries.get(original);
+            return activators != null ? activators : Lists.newArrayList();
+        }
 
         if (contains(original, st)) {
             return get(original, st);

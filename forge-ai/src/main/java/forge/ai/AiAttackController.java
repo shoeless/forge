@@ -49,8 +49,11 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import forge.util.function.Predicate;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -79,7 +82,37 @@ public class AiAttackController {
     private final boolean nextTurn; // include creature that can only attack/block next turn
     private final int timeOut;
     private final boolean canUseTimeout;
-    private List<CompletableFuture<Integer>> futures = new ArrayList<>();
+    // iOS compatibility: Use ExecutorService + Future instead of CompletableFuture (Java 8+)
+    private static final ExecutorService executor = Executors.newCachedThreadPool();
+    private List<Future<Integer>> futures = new ArrayList<>();
+
+    /**
+     * iOS compatibility: Helper to submit a task and add to futures list.
+     * Replaces CompletableFuture.supplyAsync() which isn't available on RoboVM.
+     */
+    private void submitTask(Callable<Integer> task) {
+        futures.add(executor.submit(task));
+    }
+
+    /**
+     * iOS compatibility: Wait for all futures to complete with optional timeout.
+     * Replaces CompletableFuture.allOf().join() which isn't available on RoboVM.
+     */
+    private void awaitAllFutures() {
+        for (Future<Integer> future : futures) {
+            try {
+                if (canUseTimeout) {
+                    future.get(timeOut, TimeUnit.SECONDS);
+                } else {
+                    future.get();
+                }
+            } catch (Exception e) {
+                // Log but continue - mirrors .exceptionally() behavior
+                e.printStackTrace();
+            }
+        }
+        futures.clear();
+    }
 
     /**
      * <p>
@@ -898,73 +931,70 @@ public class AiAttackController {
         if (!nextTurn) {
             for (final Card attacker : this.attackers) {
                 final GameEntity finalDefender = defender;
-                futures.add(CompletableFuture.supplyAsync(()-> {
-                    GameEntity mustAttackDef = null;
-                    if (attacker.getSVar("MustAttack").equals("True")) {
-                        mustAttackDef = finalDefender;
-                    } else if (attacker.hasSVar("EndOfTurnLeavePlay")
-                            && isEffectiveAttacker(ai, attacker, combat, finalDefender)) {
-                        mustAttackDef = finalDefender;
-                    } else if (seasonOfTheWitch) {
-                        //TODO: if there are other ways to tap this creature (like mana creature), then don't need to attack
-                        mustAttackDef = finalDefender;
-                    } else {
-                        if (combat.getAttackConstraints().getRequirements().get(attacker) == null) return 0;
-                        // check defenders in order of maximum requirements
-                        List<Pair<GameEntity, Integer>> reqs = combat.getAttackConstraints().getRequirements().get(attacker).getSortedRequirements();
-                        final GameEntity def = finalDefender;
-                        // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
-                        IterableUtil.sort(reqs, (r1, r2) -> {
-                            if (r1.getValue() == r2.getValue()) {
-                                // try to attack the designated defender
-                                if (r1.getKey().equals(def) && !r2.getKey().equals(def)) {
-                                    return -1;
+                // iOS compatibility: Use submitTask() instead of CompletableFuture.supplyAsync()
+                submitTask(new Callable<Integer>() {
+                    @Override
+                    public Integer call() {
+                        GameEntity mustAttackDef = null;
+                        if (attacker.getSVar("MustAttack").equals("True")) {
+                            mustAttackDef = finalDefender;
+                        } else if (attacker.hasSVar("EndOfTurnLeavePlay")
+                                && isEffectiveAttacker(ai, attacker, combat, finalDefender)) {
+                            mustAttackDef = finalDefender;
+                        } else if (seasonOfTheWitch) {
+                            //TODO: if there are other ways to tap this creature (like mana creature), then don't need to attack
+                            mustAttackDef = finalDefender;
+                        } else {
+                            if (combat.getAttackConstraints().getRequirements().get(attacker) == null) return 0;
+                            // check defenders in order of maximum requirements
+                            List<Pair<GameEntity, Integer>> reqs = combat.getAttackConstraints().getRequirements().get(attacker).getSortedRequirements();
+                            final GameEntity def = finalDefender;
+                            // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
+                            IterableUtil.sort(reqs, (r1, r2) -> {
+                                if (r1.getValue() == r2.getValue()) {
+                                    // try to attack the designated defender
+                                    if (r1.getKey().equals(def) && !r2.getKey().equals(def)) {
+                                        return -1;
+                                    }
+                                    if (r2.getKey().equals(def) && !r1.getKey().equals(def)) {
+                                        return 1;
+                                    }
+                                    // otherwise PW
+                                    if (r1.getKey() instanceof Card && r2.getKey() instanceof Player) {
+                                        return -1;
+                                    }
+                                    if (r2.getKey() instanceof Card && r1.getKey() instanceof Player) {
+                                        return 1;
+                                    }
+                                    // or weakest player
+                                    if (r1.getKey() instanceof Player && r2.getKey() instanceof Player) {
+                                        Player p1 = (Player) r1.getKey();
+                                        Player p2 = (Player) r2.getKey();
+                                        return p1.getLife() - p2.getLife();
+                                    }
                                 }
-                                if (r2.getKey().equals(def) && !r1.getKey().equals(def)) {
-                                    return 1;
+                                return r2.getValue() - r1.getValue();
+                            });
+                            for (Pair<GameEntity, Integer> e : reqs) {
+                                if (e.getRight() == 0) continue;
+                                GameEntity mustAttackDefMaybe = e.getLeft();
+                                if (canAttackWrapper(attacker, mustAttackDefMaybe) && CombatUtil.getAttackCost(ai.getGame(), attacker, mustAttackDefMaybe) == null) {
+                                    mustAttackDef = mustAttackDefMaybe;
+                                    break;
                                 }
-                                // otherwise PW
-                                if (r1.getKey() instanceof Card && r2.getKey() instanceof Player) {
-                                    return -1;
-                                }
-                                if (r2.getKey() instanceof Card && r1.getKey() instanceof Player) {
-                                    return 1;
-                                }
-                                // or weakest player
-                                if (r1.getKey() instanceof Player && r2.getKey() instanceof Player) {
-                                    Player p1 = (Player) r1.getKey();
-                                    Player p2 = (Player) r2.getKey();
-                                    return p1.getLife() - p2.getLife();
-                                }
-                            }
-                            return r2.getValue() - r1.getValue();
-                        });
-                        for (Pair<GameEntity, Integer> e : reqs) {
-                            if (e.getRight() == 0) continue;
-                            GameEntity mustAttackDefMaybe = e.getLeft();
-                            if (canAttackWrapper(attacker, mustAttackDefMaybe) && CombatUtil.getAttackCost(ai.getGame(), attacker, mustAttackDefMaybe) == null) {
-                                mustAttackDef = mustAttackDefMaybe;
-                                break;
                             }
                         }
+                        if (mustAttackDef != null) {
+                            combat.addAttacker(attacker, mustAttackDef);
+                            attackersLeft.remove(attacker);
+                            numForcedAttackers.incrementAndGet();
+                        }
+                        return 0;
                     }
-                    if (mustAttackDef != null) {
-                        combat.addAttacker(attacker, mustAttackDef);
-                        attackersLeft.remove(attacker);
-                        numForcedAttackers.incrementAndGet();
-                    }
-                    return 0;
-                }).exceptionally(ex -> {
-                    ex.printStackTrace();
-                    return 0;
-                }));
+                });
             }
-            CompletableFuture<?>[] futuresArray = futures.toArray(new CompletableFuture<?>[0]);
-            if (canUseTimeout)
-                CompletableFuture.allOf(futuresArray).completeOnTimeout(null, timeOut, TimeUnit.SECONDS).join();
-            else
-                CompletableFuture.allOf(futuresArray).join();
-            futures.clear();
+            // iOS compatibility: Use awaitAllFutures() instead of CompletableFuture.allOf().join()
+            awaitAllFutures();
             if (attackersLeft.isEmpty()) {
                 return aiAggression;
             }
