@@ -127,6 +127,11 @@ public class Forge implements ApplicationListener {
     public static boolean createNewAdventureMap = false;
     private static Localizer localizer;
 
+    // Crash recovery fields
+    private static boolean startupComplete = false;
+    private static boolean recoveryAttempted = false;
+    private static long startupTime = 0;
+
     public static ApplicationListener getApp(HWInfo hwInfo, Clipboard clipboard0, IDeviceAdapter deviceAdapter0, String assetDir0, boolean propertyConfig, boolean androidOrientation, int totalRAM, boolean isTablet, int AndroidAPI) {
         if (app == null) {
             app = new Forge();
@@ -164,72 +169,52 @@ public class Forge implements ApplicationListener {
             localizer = Localizer.getInstance();
         return localizer;
     }
-    public String testMethod() {
-        System.err.println("FORGE: testMethod() called!");
-        System.err.flush();
-        return "testMethod works!";
-    }
-
     @Override
     public void create() {
-        System.err.println("FORGE: Forge.create() ENTERED");
-        System.err.flush();
+        // Record startup time for crash recovery timeout
+        startupTime = System.currentTimeMillis();
+        startupComplete = false;
+        recoveryAttempted = false;
+
+        // Check for previous crash - if startup lock file exists, previous startup didn't complete
+        try {
+            if (FileUtil.doesFileExist(ForgeConstants.STARTUP_LOCK_FILE)) {
+                // Delete the preferences file to reset to defaults
+                if (FileUtil.doesFileExist(ForgeConstants.MAIN_PREFS_FILE)) {
+                    FileUtil.deleteFile(ForgeConstants.MAIN_PREFS_FILE);
+                }
+                // Delete the lock file
+                FileUtil.deleteFile(ForgeConstants.STARTUP_LOCK_FILE);
+            }
+            // Create startup lock file - will be deleted when startup completes
+            FileUtil.writeFile(ForgeConstants.STARTUP_LOCK_FILE, "startup in progress");
+        } catch (Exception e) {
+            // Ignore crash recovery errors
+        }
 
         // Initialize static fields that couldn't be initialized during class loading
-        System.err.println("FORGE: create() - initializing lastScene");
-        System.err.flush();
         if (lastScene == null) {
             lastScene = new Array<>();
         }
-        System.err.println("FORGE: create() - lastScene initialized");
-        System.err.flush();
 
-        //install our error handler (commented out - crashes on iOS due to AWT dependency in ExceptionHandler static initializer)
-        System.err.println("FORGE: create() - skipping error handler");
-        System.err.flush();
-        //ExceptionHandler.registerErrorHandling();
-        //init hwInfo to log
-        System.err.println("FORGE: create() - printing hwInfo");
-        System.err.flush();
+        // ExceptionHandler.registerErrorHandling() crashes on iOS due to AWT dependency
         System.out.println(GuiBase.getHWInfo());
         // closeSplashScreen() is called early on non-Windows OS so it will not crash, LWJGL3 bug on AWT Splash.
-        System.err.println("FORGE: create() - checking Windows");
-        System.err.flush();
         if (OperatingSystem.isWindows())
             getDeviceAdapter().closeSplashScreen();
 
-        System.err.println("FORGE: create() - setting isAndroid flag");
-        System.err.flush();
         GuiBase.setIsAndroid(Gdx.app.getType() == Application.ApplicationType.Android);
 
-        System.err.println("FORGE: create() - initializing Utils");
-        System.err.flush();
         Utils.ensureInitialized(); // Initialize screen dimensions before any UI classes load
-        System.err.println("FORGE: create() - Utils initialized");
-        System.err.flush();
 
-        System.err.println("FORGE: create() - setting allowCardBG");
-        System.err.flush();
         if (!GuiBase.isAndroid() || (androidVersion > 25 && totalDeviceRAM > 3400)) {
             allowCardBG = true;
         }
-        System.err.println("FORGE: create() - creating Assets");
-        System.err.flush();
         assets = new Assets();
-        System.err.println("FORGE: create() - creating Graphics");
-        System.err.flush();
         graphics = new Graphics();
-        System.err.println("FORGE: create() - creating SplashScreen");
-        System.err.flush();
         splashScreen = new SplashScreen();
-        System.err.println("FORGE: create() - creating FrameRate");
-        System.err.flush();
         frameRate = new FrameRate();
-        System.err.println("FORGE: create() - creating SpriteBatch");
-        System.err.flush();
         animationBatch = new SpriteBatch();
-        System.err.println("FORGE: create() - SpriteBatch created successfully");
-        System.err.flush();
         inputProcessor = new MainInputProcessor();
         //screenWidth and screenHeight should be set initially and only change upon restarting the app
         screenWidth = Gdx.app.getGraphics().getWidth();
@@ -287,45 +272,21 @@ public class Forge implements ApplicationListener {
             initialized = true;
 
             Runnable runnable = () -> {
-                System.err.println("FORGE: runnable - starting background initialization");
-                System.err.flush();
                 safeToClose = false;
-                System.err.println("FORGE: runnable - setting isLibGDXPort");
-                System.err.flush();
                 ImageKeys.setIsLibGDXPort(GuiBase.getInterface().isLibgdxPort());
-                System.err.println("FORGE: runnable - calling FModel.initialize");
-                System.err.flush();
                 FModel.initialize(getSplashScreen().getProgressBar(), null);
-                System.err.println("FORGE: runnable - FModel.initialize completed");
-                System.err.flush();
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingFonts"));
-                System.err.println("FORGE: runnable - loading fonts");
-                System.err.flush();
                 FSkinFont.preloadAll(locale);
-                System.err.println("FORGE: runnable - fonts loaded");
-                System.err.flush();
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingCardTranslations"));
-                System.err.println("FORGE: runnable - loading card translations");
-                System.err.flush();
                 CardTranslation.preloadTranslation(locale, ForgeConstants.LANG_DIR);
-                System.err.println("FORGE: runnable - card translations loaded");
-                System.err.flush();
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblPrepareDatabase"));
-                System.err.println("FORGE: runnable - calling afterDbLoaded");
-                System.err.flush();
                 Gdx.app.postRunnable(this::afterDbLoaded);
-                System.err.println("FORGE: runnable - afterDbLoaded queued");
-                System.err.flush();
             };
             //see if app or assets need updating
-            System.err.println("FORGE: create() - checking for asset updates");
-            System.err.flush();
             FThreads.invokeInBackgroundThread(() -> AssetsDownloader.checkForUpdates(exited, runnable));
-            System.err.println("FORGE: create() - asset update check started");
-            System.err.flush();
         }
     }
     public static void setAltZoneTabMode(String mode) {
@@ -503,6 +464,15 @@ public class Forge implements ApplicationListener {
                             }
                         }
                         safeToClose = true;
+                        // Mark startup complete and delete lock file
+                        startupComplete = true;
+                        try {
+                            if (FileUtil.doesFileExist(ForgeConstants.STARTUP_LOCK_FILE)) {
+                                FileUtil.deleteFile(ForgeConstants.STARTUP_LOCK_FILE);
+                            }
+                        } catch (Exception e) {
+                            // Ignore lock file deletion errors
+                        }
                         clearTransitionScreen();
                     }, takeScreenshot(), false, false, true, false));
                 });
@@ -1004,6 +974,27 @@ public class Forge implements ApplicationListener {
                             //TODO: Don't silence this.
                         }
                     }
+
+                    // Crash recovery: if we have no screen to display and startup hasn't completed,
+                    // try to recover after a timeout
+                    if (!startupComplete && !recoveryAttempted && startupTime > 0) {
+                        long elapsedMs = System.currentTimeMillis() - startupTime;
+                        if (elapsedMs > 10000) { // 10 seconds timeout
+                            recoveryAttempted = true;
+                            try {
+                                // Try to open home screen as fallback
+                                openHomeDefault();
+                                startupComplete = true;
+                                // Delete lock file since we're recovering
+                                if (FileUtil.doesFileExist(ForgeConstants.STARTUP_LOCK_FILE)) {
+                                    FileUtil.deleteFile(ForgeConstants.STARTUP_LOCK_FILE);
+                                }
+                            } catch (Exception e) {
+                                // Recovery failed - ignore
+                            }
+                        }
+                    }
+
                     if (showFPS)
                         frameRate.render();
                     return;
@@ -1046,6 +1037,12 @@ public class Forge implements ApplicationListener {
             else
                 ex.printStackTrace();
         }
+
+        // Decrement touch fix counter each frame
+        if (touchFixFrames > 0) {
+            touchFixFrames--;
+        }
+
         if (showFPS)
             frameRate.render();
     }
@@ -1058,35 +1055,48 @@ public class Forge implements ApplicationListener {
         }));
     }
 
+    // iOS touch coordinate fix: track orientation changes
+    private static boolean lastWasLandscape = false;
+    private static int touchFixFrames = 0;
+    private static final int TOUCH_FIX_DURATION = 60; // frames to apply fix after rotation
+
     @Override
     public void resize(int width, int height) {
         try {
-            System.err.println("DEBUG resize: width=" + width + " height=" + height + " (was " + screenWidth + "x" + screenHeight + ")");
-            System.err.println("DEBUG resize: isLandscapeMode BEFORE=" + isLandscapeMode());
+            boolean isNowLandscape = width > height;
+            boolean orientationChanged = (lastWasLandscape != isNowLandscape);
+
+            System.out.println("RESIZE: " + width + "x" + height +
+                " wasLandscape=" + lastWasLandscape + " isLandscape=" + isNowLandscape +
+                " changed=" + orientationChanged);
+
+            if (orientationChanged && !GuiBase.isAndroid()) {
+                touchFixFrames = TOUCH_FIX_DURATION;
+                System.out.println("RESIZE: Orientation changed, enabling touch fix for " + TOUCH_FIX_DURATION + " frames");
+            }
+            lastWasLandscape = isNowLandscape;
 
             // iOS fix: Update screen dimensions on rotation so isLandscapeMode() works correctly
             screenWidth = width;
             screenHeight = height;
 
+            // iOS fix: Force GL viewport update on orientation change to fix touch coordinates
+            // See: https://github.com/libgdx/libgdx/issues/6514
+            if (!GuiBase.isAndroid()) {
+                com.badlogic.gdx.graphics.glutils.HdpiUtils.glViewport(0, 0, width, height);
+            }
+
             // Update graphics projection matrix for new dimensions
             graphics.resize(width, height);
 
-            System.err.println("DEBUG resize: isLandscapeMode AFTER=" + isLandscapeMode());
-            System.err.println("DEBUG resize: calling setSize on currentScreen");
-
             if (currentScreen != null) {
                 currentScreen.setSize(width, height);
-                System.err.println("DEBUG resize: currentScreen.setSize complete");
             } else if (splashScreen != null) {
                 splashScreen.setSize(width, height);
-                System.err.println("DEBUG resize: splashScreen.setSize complete");
             }
             if (currentScene != null) {
                 currentScene.resize(width, height);
-                System.err.println("DEBUG resize: currentScene.resize complete");
             }
-
-            System.err.println("DEBUG resize: complete");
         } catch (Exception ex) {
             //graphics.end();
             //check if sentry is enabled, if not it will call the gui interface but here we end the graphics so we only send it via sentry..
@@ -1375,6 +1385,14 @@ public class Forge implements ApplicationListener {
 
         @Override
         public boolean touchDown(int x, int y, int pointer, int button) {
+            // iOS fix: Mirror X coordinate after orientation change
+            // libGDX iOS backend has a bug where touch X coordinates are mirrored after rotation
+            if (touchFixFrames > 0 && !GuiBase.isAndroid()) {
+                int originalX = x;
+                x = screenWidth - x;
+                System.out.println("TOUCH_FIX: x=" + originalX + " -> " + x + " (screenWidth=" + screenWidth + ", framesLeft=" + touchFixFrames + ")");
+            }
+
             if (transitionScreen != null) {
                 boolean isFDialog = FOverlay.getTopOverlay() != null && FOverlay.getTopOverlay() instanceof FDialog;
                 if (!isFDialog)

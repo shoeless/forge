@@ -2,7 +2,7 @@
   <executableName>${app.executable}</executableName>
   <mainClass>${app.mainclass}</mainClass>
   <os>ios</os>
-  <arch>arm64-simulator</arch>
+  <arch>arm64</arch>
   <resources>
     <resource>
       <directory>../forge-gui</directory>
@@ -38,6 +38,23 @@
     <pattern>java.util.logging.**</pattern>
     <pattern>com.esotericsoftware.minlog.Log</pattern>
     <pattern>com.badlogic.gdx.**</pattern>
+    <!-- XStream serialization support -->
+    <pattern>com.thoughtworks.xstream.**</pattern>
+    <pattern>java.io.ObjectInputStream</pattern>
+    <pattern>java.io.ObjectOutputStream</pattern>
+    <pattern>java.io.ObjectStreamClass</pattern>
+    <pattern>java.io.ObjectStreamField</pattern>
+    <!-- NOTE: java.util.function is NOT available in RoboVM - use forge.util.function backports instead -->
+    <!-- LZ4 compression for multiplayer networking -->
+    <pattern>net.jpountz.lz4.**</pattern>
+    <pattern>net.jpountz.xxhash.**</pattern>
+    <!-- Netty networking for multiplayer -->
+    <pattern>io.netty.**</pattern>
+    <!-- Forge network event classes for serialization -->
+    <pattern>forge.gamemodes.net.**</pattern>
+    <pattern>forge.gamemodes.match.LobbySlot</pattern>
+    <pattern>forge.gamemodes.match.LobbySlotType</pattern>
+    <pattern>forge.gamemodes.match.GameLobby$GameLobbyData</pattern>
   </forceLinkClasses>
   <frameworkPaths>
     <path>libs</path>

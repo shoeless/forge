@@ -78,6 +78,10 @@ public class ImageCache {
 
     // iOS fix: Cache for downloaded image textures (bypassing AssetManager)
     private static final java.util.HashMap<String, Texture> downloadedTextureCache = new java.util.HashMap<String, Texture>();
+
+    // iOS fix: Reverse mapping from Texture to its file path for ImageRecord lookups
+    // Needed because texture.toString() isn't unique (returns dimensions, not path)
+    private static final java.util.IdentityHashMap<Texture, String> textureToPath = new java.util.IdentityHashMap<Texture, String>();
     public int counter = 0;
     private int maxCardCapacity = 300; //default card capacity
     private EvictingQueue<String> q;
@@ -365,9 +369,6 @@ public class ImageCache {
         // iOS fix: Convert absolute path to relative path for AssetManager
         String absolutePath = file.getPath();
         String fileName = toRelativePath(absolutePath);
-        System.err.println("DEBUG: loadAsset converting path:");
-        System.err.println("  Absolute: " + absolutePath);
-        System.err.println("  Relative: " + fileName);
 
         // iOS fix: For downloaded images (in Documents/cache), bypass AssetManager
         // Read file as bytes and create Pixmap directly (libGDX iOS can't load from FileHandle in Documents)
@@ -375,32 +376,22 @@ public class ImageCache {
         Texture directTexture = null;
 
         if (isDownloadedImage) {
-            System.err.println("DEBUG: Loading downloaded image directly (bypassing AssetManager)");
-            System.err.println("DEBUG: Reading file as bytes: " + absolutePath);
             try {
                 java.io.File imageFile = new java.io.File(absolutePath);
-                System.err.println("DEBUG: File exists: " + imageFile.exists());
-                System.err.println("DEBUG: File size: " + imageFile.length() + " bytes");
-
                 if (imageFile.exists()) {
                     // Read file as byte array
                     byte[] imageBytes = new byte[(int) imageFile.length()];
                     java.io.FileInputStream fis = new java.io.FileInputStream(imageFile);
-                    int bytesRead = fis.read(imageBytes);
+                    fis.read(imageBytes);
                     fis.close();
-                    System.err.println("DEBUG: Read " + bytesRead + " bytes from file");
 
-                    // Create Pixmap from bytes
-                    // iOS memory optimization: Convert to RGB565 format (2 bytes/pixel instead of 4)
-                    Pixmap tempPixmap = new Pixmap(imageBytes, 0, imageBytes.length);
-                    Pixmap pixmap = new Pixmap(tempPixmap.getWidth(), tempPixmap.getHeight(), Pixmap.Format.RGB565);
-                    pixmap.drawPixmap(tempPixmap, 0, 0);
-                    tempPixmap.dispose();
-
-                    System.err.println("DEBUG: Full-res Pixmap created (RGB565): " + pixmap.getWidth() + "x" + pixmap.getHeight());
+                    // Create Pixmap from bytes - use RGBA8888 to preserve color channels correctly
+                    Pixmap pixmap = new Pixmap(imageBytes, 0, imageBytes.length);
 
                     // Create Texture from Pixmap (no mipmaps for faster upload)
                     directTexture = new Texture(pixmap, false);
+                    // Apply Linear filtering for smoother card images on high-DPI/Retina displays
+                    directTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
                     // iOS fix: Store Pixmap - iOS Texture needs Pixmap to stay alive
                     // Rely on GC to clean up when memory is low
@@ -408,15 +399,9 @@ public class ImageCache {
 
                     // iOS fix: Cache the texture so we don't reload the same image!
                     downloadedTextureCache.put(absolutePath, directTexture);
-                    System.err.println("DEBUG: Texture loaded successfully! " + directTexture.getWidth() + "x" + directTexture.getHeight());
-                    System.err.println("DEBUG: Texture cache size: " + downloadedTextureCache.size());
-                } else {
-                    System.err.println("DEBUG: File does not exist!");
                 }
             } catch (Exception e) {
-                System.err.println("Failed to load downloaded image from bytes: " + absolutePath);
-                System.err.println("Error: " + e.getMessage());
-                e.printStackTrace(System.err);
+                System.err.println("Failed to load downloaded image: " + absolutePath + " - " + e.getMessage());
             }
         }
 
@@ -458,7 +443,13 @@ public class ImageCache {
                     radius = 25;
                 else
                     radius = 22;
-                updateImageRecord(cardTexture.toString(), isCloserToWhite(getpixelColor(cardTexture)), radius, cardTexture.toString().contains(".fullborder.") || cardTexture.toString().contains("tokens"));
+                // Downloaded images from Scryfall (in Documents/cache) are always fullborder
+                // Also check file path for .fullborder. or tokens
+                boolean isFullBorder = isDownloadedImage || absolutePath.contains(".fullborder.") || absolutePath.contains("tokens");
+                // Store texture-to-path mapping for later lookups
+                textureToPath.put(cardTexture, absolutePath);
+                // Use absolutePath as key instead of texture.toString() since toString() isn't unique per image
+                updateImageRecord(absolutePath, isCloserToWhite(getpixelColor(cardTexture)), radius, isFullBorder);
             }
             return cardTexture;
         }
@@ -522,7 +513,8 @@ public class ImageCache {
     }
 
     public TextureRegion croppedBorderImage(Texture image) {
-        if (!image.toString().contains(".fullborder."))
+        String key = getTextureKey(image);
+        if (key == null || !key.contains(".fullborder."))
             return new TextureRegion(image);
         float rscale = 0.96f;
         int rw = Math.round(image.getWidth() * rscale);
@@ -536,7 +528,7 @@ public class ImageCache {
         if (t == null)
             return Color.valueOf("#171717");
         try {
-            return Color.valueOf(imageRecord.get().get(t.toString()).colorValue);
+            return Color.valueOf(imageRecord.get().get(getTextureKey(t)).colorValue);
         } catch (Exception e) {
             return Color.valueOf("#171717");
         }
@@ -557,10 +549,17 @@ public class ImageCache {
         imageRecord.get().put(textureString, new ImageRecord(data.getLeft(), data.getRight(), radius, fullborder));
     }
 
+    // Helper to get the path key for a texture (uses textureToPath mapping or falls back to toString)
+    private String getTextureKey(Texture t) {
+        if (t == null) return null;
+        String path = textureToPath.get(t);
+        return path != null ? path : t.toString();
+    }
+
     public int getRadius(Texture t) {
         if (t == null)
             return 20;
-        ImageRecord record = imageRecord.get().get(t.toString());
+        ImageRecord record = imageRecord.get().get(getTextureKey(t));
         if (record == null)
             return 20;
         Integer i = record.cardRadius;
@@ -572,7 +571,7 @@ public class ImageCache {
     public boolean isFullBorder(Texture image) {
         if (image == null)
             return false;
-        ImageRecord record = imageRecord.get().get(image.toString());
+        ImageRecord record = imageRecord.get().get(getTextureKey(image));
         if (record == null)
             return false;
         return record.isFullBorder;

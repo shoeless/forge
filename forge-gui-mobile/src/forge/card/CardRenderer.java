@@ -1482,8 +1482,8 @@ public class CardRenderer {
                             getTextureData().consumePixmap().dispose();
                         }
                     };
-                    texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-                    //textureRegions[i] = new TextureRegion(texture);
+                    // Use Linear filtering for smoother text on high-DPI/Retina displays
+                    texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
                     textureRegions.add(new TextureRegion(texture));
                 }
 

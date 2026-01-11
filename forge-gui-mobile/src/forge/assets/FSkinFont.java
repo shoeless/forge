@@ -487,7 +487,8 @@ public class FSkinFont {
                             getTextureData().consumePixmap().dispose();
                         }
                     };
-                    texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+                    // Use Linear filtering for smoother text on high-DPI/Retina displays
+                    texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
                     textureRegions.addAll(new TextureRegion(texture));
                 }
 

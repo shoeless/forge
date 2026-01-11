@@ -25,6 +25,7 @@ import com.badlogic.gdx.backends.iosrobovm.IOSApplicationConfiguration;
 import com.badlogic.gdx.backends.iosrobovm.IOSFiles;
 
 import forge.Forge;
+import forge.gui.GuiBase;
 import forge.interfaces.IDeviceAdapter;
 
 public class Main extends IOSApplication.Delegate {
@@ -182,17 +183,12 @@ public class Main extends IOSApplication.Delegate {
             // Detect if running on iPad (UIUserInterfaceIdiomPad = 1)
             boolean isTablet = org.robovm.apple.uikit.UIDevice.getCurrentDevice().getUserInterfaceIdiom()
                 == org.robovm.apple.uikit.UIUserInterfaceIdiom.Pad;
-            System.err.println("FORGE: Device is tablet: " + isTablet);
 
-            System.err.println("FORGE: Calling Forge.getApp()");
+            // Set iOS platform flag before initializing Forge
+            GuiBase.setIsIOS(true);
+
             final ApplicationListener app = Forge.getApp(null, new IOSClipboard(), new IOSAdapter(), assetsDir, false, false, 0, isTablet, 0);
-            System.err.println("FORGE: app class is: " + app.getClass().getName());
-            System.err.flush();
-
-            System.err.println("FORGE: Creating IOSApplication");
-            final IOSApplication iosApp = new IOSApplication(app, config);
-            System.err.println("FORGE: createApplication() completed");
-            return iosApp;
+            return new IOSApplication(app, config);
         } catch (Throwable e) {
             System.err.println("FORGE: Exception in createApplication(): " + e.getMessage());
             e.printStackTrace();

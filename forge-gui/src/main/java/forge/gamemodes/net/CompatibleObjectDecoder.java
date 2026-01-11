@@ -36,8 +36,12 @@ public class CompatibleObjectDecoder extends LengthFieldBasedFrameDecoder {
         Object var5 = null;
         try {
             var5 = ois.readObject();
+            System.out.println("NET DECODER: Successfully decoded object type=" + (var5 != null ? var5.getClass().getName() : "null"));
         } catch (StreamCorruptedException e) {
-            System.err.printf("Version Mismatch: %s%n", e.getMessage());
+            System.err.printf("NET DECODER: Version Mismatch: %s%n", e.getMessage());
+        } catch (Exception e) {
+            System.err.println("NET DECODER: Error decoding object: " + e.getClass().getName() + " - " + e.getMessage());
+            e.printStackTrace();
         } finally {
             ois.close();
         }

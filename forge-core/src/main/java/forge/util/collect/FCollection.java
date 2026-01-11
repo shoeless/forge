@@ -260,24 +260,10 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         return false;
     }
 
-    @Override
-    public boolean removeIf(java.util.function.Predicate<? super T> filter) {
-        // iOS compatibility: Convert java.util.function.Predicate to forge.util.function.Predicate
-        forge.util.function.Predicate<T> forgePredicate = new forge.util.function.Predicate<T>() {
-            @Override
-            public boolean test(T t) {
-                return filter.test(t);
-            }
-        };
-        if (IterableUtil.removeIf(list, forgePredicate)) {
-            IterableUtil.removeIf(set, forgePredicate);
-            return true;
-        }
-        return false;
-    }
-
-    // Note: For forge.util.function.Predicate, convert at call site:
-    // IterableUtil.removeIf(collection, t -> forgePredicate.test(t))
+    // iOS/RoboVM compatibility: Do NOT override removeIf(java.util.function.Predicate)
+    // Having this method signature creates a class reference to java.util.function.Predicate
+    // which causes NoClassDefFoundError on iOS where java.util.function is not available.
+    // Use IterableUtil.removeIf(collection, forgePredicate) instead at call sites.
 
     /**
      * {@inheritDoc}

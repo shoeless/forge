@@ -66,15 +66,9 @@ public class StaticData {
     }
 
     public StaticData(CardStorageReader cardReader, CardStorageReader tokenReader, CardStorageReader customCardReader, CardStorageReader customTokenReader, String editionFolder, String customEditionsFolder, String blockDataFolder, String setLookupFolder, String cardArtPreference, boolean enableUnknownCards, boolean loadNonLegalCards, boolean allowCustomCardsInDecksConformance, boolean enableSmartCardArtSelection) {
-        System.err.println("STATICDATA: Constructor starting");
-        System.err.flush();
         this.cardReader = cardReader;
         this.tokenReader = tokenReader;
-        System.err.println("STATICDATA: Creating CardEdition.Collection from: " + editionFolder);
-        System.err.flush();
         this.editions = new CardEdition.Collection(new CardEdition.Reader(new File(editionFolder)));
-        System.err.println("STATICDATA: Main editions loaded");
-        System.err.flush();
         this.blockDataFolder = blockDataFolder;
         this.allowCustomCardsInDecksConformance = allowCustomCardsInDecksConformance;
         this.enableSmartCardArtSelection = enableSmartCardArtSelection;
@@ -83,11 +77,7 @@ public class StaticData {
         Set<String> funnyCards = new HashSet<>();
         Set<String> filtered = new HashSet<>();
 
-        System.err.println("STATICDATA: Appending custom editions from: " + customEditionsFolder);
-        System.err.flush();
         editions.append(new CardEdition.Collection(new CardEdition.Reader(new File(customEditionsFolder), true)));
-        System.err.println("STATICDATA: Custom editions loaded");
-        System.err.flush();
 
         {
             final Map<String, CardRules> regularCards = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);

@@ -132,9 +132,11 @@ public class FGameClient implements IToServer {
     private class LobbyUpdateHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+            System.out.println("CLIENT LobbyUpdateHandler: Received message type=" + (msg != null ? msg.getClass().getName() : "null"));
             if (msg instanceof LobbyUpdateEvent) {
+                final LobbyUpdateEvent event = (LobbyUpdateEvent) msg;
+                System.out.println("CLIENT: Received LobbyUpdateEvent, slot=" + event.getSlot());
                 for (final ILobbyListener listener : lobbyListeners) {
-                    final LobbyUpdateEvent event = (LobbyUpdateEvent) msg;
                     listener.update(event.getState(), event.getSlot());
                 }
             }

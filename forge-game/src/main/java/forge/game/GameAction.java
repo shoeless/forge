@@ -56,9 +56,7 @@ import forge.util.*;
 import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.jgrapht.alg.cycle.SzwarcfiterLauerSimpleCycles;
-import org.jgrapht.graph.DefaultDirectedGraph;
-import org.jgrapht.graph.DefaultEdge;
+import forge.game.staticability.StaticAbilityDependencyGraph;
 
 import java.util.*;
 import forge.util.function.Predicate;
@@ -1297,7 +1295,7 @@ public class GameAction {
             return first;
         }
 
-        DefaultDirectedGraph<StaticAbility, DefaultEdge> dependencyGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
+        StaticAbilityDependencyGraph<StaticAbility> dependencyGraph = new StaticAbilityDependencyGraph<StaticAbility>();
 
         for (StaticAbility stAb : staticsForLayer) {
             dependencyGraph.addVertex(stAb);
@@ -1366,13 +1364,13 @@ public class GameAction {
             // when lucky the effect with the earliest timestamp has no dependency
             // then we can safely return it - otherwise we need to build the whole graph
             // because it might still be part of a loop
-            if (dependencyGraph.edgeSet().isEmpty() && stAb == first) {
+            if (!dependencyGraph.hasEdges() && stAb == first) {
                 return stAb;
             }
         }
 
         // CR 613.8b If several dependent effects form a dependency loop, then this rule is ignored
-        List<List<StaticAbility>> cycles = new SzwarcfiterLauerSimpleCycles<>(dependencyGraph).findSimpleCycles();
+        List<List<StaticAbility>> cycles = dependencyGraph.findSimpleCycles();
         for (List<StaticAbility> cyc : cycles) {
             for (int i = 0 ; i < cyc.size() - 1 ; i++) {
                 dependencyGraph.removeEdge(cyc.get(i), cyc.get(i + 1));

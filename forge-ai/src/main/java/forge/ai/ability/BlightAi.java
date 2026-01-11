@@ -16,7 +16,6 @@ import forge.game.player.PlayerPredicates;
 import forge.game.spellability.SpellAbility;
 
 import java.util.Map;
-import java.util.Optional;
 
 public class BlightAi extends SpellAbilityAi {
 
@@ -40,14 +39,22 @@ public class BlightAi extends SpellAbilityAi {
         int blightAmount = AbilityUtils.calculateAmount(
                 sa.getHostCard(), sa.getParamOrDefault("Num", "1"), sa);
 
+        // iOS compatibility: Replace Stream API with traditional loop
         // Prioritize opponents whose worst blightable creature would die
-        Optional<Player> target = opponents.stream()
-                .filter(this::hasBlightableCreatures).min((a, b) -> Boolean.compare(
-                        canKillWorstCreature(b, blightAmount),
-                        canKillWorstCreature(a, blightAmount)));
+        Player target = null;
+        boolean targetCanKill = false;
+        for (Player p : opponents) {
+            if (hasBlightableCreatures(p)) {
+                boolean canKill = canKillWorstCreature(p, blightAmount);
+                if (target == null || (canKill && !targetCanKill)) {
+                    target = p;
+                    targetCanKill = canKill;
+                }
+            }
+        }
 
-        if (target.isPresent()) {
-            sa.getTargets().add(target.get());
+        if (target != null) {
+            sa.getTargets().add(target);
             return new AiAbilityDecision(100, AiPlayDecision.WillPlay);
         }
 
@@ -60,8 +67,13 @@ public class BlightAi extends SpellAbilityAi {
     }
 
     private boolean hasBlightableCreatures(Player player) {
-        return player.getCreaturesInPlay().stream()
-                .anyMatch(c -> c.canReceiveCounters(CounterEnumType.M1M1));
+        // iOS compatibility: Replace Stream API with traditional loop
+        for (Card c : player.getCreaturesInPlay()) {
+            if (c.canReceiveCounters(CounterEnumType.M1M1)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean canKillWorstCreature(Player player, int blightAmount) {

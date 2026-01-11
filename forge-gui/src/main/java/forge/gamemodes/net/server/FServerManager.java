@@ -82,12 +82,15 @@ public final class FServerManager {
 
     public void startServer(final int port) {
         this.port = port;
-        String UPnPOption = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.UPnP);
-        boolean startUPnP;
-        if(UPnPOption.equalsIgnoreCase("ASK")) {
-            startUPnP = callUPnPDialog();
-        } else {
-            startUPnP = UPnPOption.equalsIgnoreCase("ALWAYS");
+        // Skip UPnP on iOS - jupnp library is not available
+        boolean startUPnP = false;
+        if (!GuiBase.isIOS()) {
+            String UPnPOption = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.UPnP);
+            if (UPnPOption.equalsIgnoreCase("ASK")) {
+                startUPnP = callUPnPDialog();
+            } else {
+                startUPnP = UPnPOption.equalsIgnoreCase("ALWAYS");
+            }
         }
         System.out.println("Starting Multiplayer Server");
         try {
@@ -350,16 +353,18 @@ public final class FServerManager {
         public void channelActive(final ChannelHandlerContext ctx) throws Exception {
             final RemoteClient client = new RemoteClient(ctx.channel());
             clients.put(ctx.channel(), client);
-            System.out.println("Client connected to server at " + ctx.channel().remoteAddress());
+            System.out.println("SERVER: Client connected from " + ctx.channel().remoteAddress());
             updateLobbyState();
             super.channelActive(ctx);
         }
 
         @Override
         public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+            System.out.println("SERVER RegisterClientHandler: Received message type=" + (msg != null ? msg.getClass().getName() : "null"));
             final RemoteClient client = clients.get(ctx.channel());
             if (msg instanceof LoginEvent) {
                 final String username = ((LoginEvent) msg).getUsername();
+                System.out.println("SERVER: LoginEvent received from " + username);
                 client.setUsername(username);
                 broadcast(new MessageEvent(String.format("%s joined the room", username)));
                 updateLobbyState();
@@ -373,16 +378,21 @@ public final class FServerManager {
     private class LobbyInputHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+            System.out.println("SERVER LobbyInputHandler: Received message type=" + (msg != null ? msg.getClass().getName() : "null"));
             final RemoteClient client = clients.get(ctx.channel());
             if (msg instanceof LoginEvent) {
                 final LoginEvent event = (LoginEvent) msg;
+                System.out.println("SERVER LobbyInputHandler: Processing LoginEvent for " + event.getUsername());
                 final int index = localLobby.connectPlayer(event.getUsername(), event.getAvatarIndex(), event.getSleeveIndex());
+                System.out.println("SERVER LobbyInputHandler: Player assigned to slot " + index);
                 if (index == -1) {
+                    System.out.println("SERVER LobbyInputHandler: No slot available, closing connection");
                     ctx.close();
                 } else {
                     client.setIndex(index);
                     broadcast(event);
                     updateLobbyState();
+                    System.out.println("SERVER LobbyInputHandler: Lobby state updated and broadcast");
                 }
             } else if (msg instanceof UpdateLobbyPlayerEvent) {
                 updateSlot(client.getIndex(), (UpdateLobbyPlayerEvent) msg);

@@ -67,28 +67,38 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> {
     @SuppressWarnings("unchecked")
     @Override
     protected void beforeCall(final ProtocolMethod protocolMethod, final Object[] args) {
+        System.out.println("CLIENT beforeCall: protocolMethod=" + protocolMethod);
         switch (protocolMethod) {
             case openView:
-                // only need one **match**
-                if (this.match == null) {
-                    this.match = createMatch();
-                }
-
-                // openView is called **once** per game, for now create a new Game instance each time
-                this.game = createGame();
-
-                // get a tracker
-                this.tracker = createTracker();
-
-                for (PlayerView myPlayer : (TrackableCollection<PlayerView>) args[0]) {
-                    if (myPlayer.getTracker() == null) {
-                        myPlayer.setTracker(this.tracker);
+                try {
+                    System.out.println("CLIENT openView: Creating match...");
+                    // only need one **match**
+                    if (this.match == null) {
+                        this.match = createMatch();
                     }
+                    System.out.println("CLIENT openView: Match created, creating game...");
+
+                    // openView is called **once** per game, for now create a new Game instance each time
+                    this.game = createGame();
+                    System.out.println("CLIENT openView: Game created, creating tracker...");
+
+                    // get a tracker
+                    this.tracker = createTracker();
+                    System.out.println("CLIENT openView: Tracker created, setting up players...");
+
+                    for (PlayerView myPlayer : (TrackableCollection<PlayerView>) args[0]) {
+                        if (myPlayer.getTracker() == null) {
+                            myPlayer.setTracker(this.tracker);
+                        }
+                    }
+
+                    final TrackableCollection<PlayerView> myPlayers = (TrackableCollection<PlayerView>) args[0];
+                    client.setGameControllers(myPlayers);
+                    System.out.println("CLIENT openView: Setup complete, myPlayers count=" + myPlayers.size());
+                } catch (Exception e) {
+                    System.err.println("CLIENT openView: ERROR - " + e.getClass().getName() + ": " + e.getMessage());
+                    e.printStackTrace();
                 }
-
-                final TrackableCollection<PlayerView> myPlayers = (TrackableCollection<PlayerView>) args[0];
-                client.setGameControllers(myPlayers);
-
                 break;
             default:
                 break;
@@ -290,7 +300,12 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> {
     @Override
     public void channelActive(final ChannelHandlerContext ctx) {
         // Don't use send() here, as this.channel is not yet set!
-        ctx.channel().writeAndFlush(new LoginEvent(FModel.getPreferences().getPref(FPref.PLAYER_NAME), Integer.parseInt(FModel.getPreferences().getPref(FPref.UI_AVATARS).split(",")[0]), Integer.parseInt(FModel.getPreferences().getPref(FPref.UI_SLEEVES).split(",")[0])));
+        String playerName = FModel.getPreferences().getPref(FPref.PLAYER_NAME);
+        int avatarIndex = Integer.parseInt(FModel.getPreferences().getPref(FPref.UI_AVATARS).split(",")[0]);
+        int sleeveIndex = Integer.parseInt(FModel.getPreferences().getPref(FPref.UI_SLEEVES).split(",")[0]);
+        System.out.println("CLIENT: Sending LoginEvent - name=" + playerName + ", avatar=" + avatarIndex + ", sleeve=" + sleeveIndex);
+        ctx.channel().writeAndFlush(new LoginEvent(playerName, avatarIndex, sleeveIndex));
+        System.out.println("CLIENT: LoginEvent sent");
     }
 
 }

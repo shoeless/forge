@@ -264,6 +264,7 @@ public final class ForgeConstants {
     public static final String DECK_TINY_LEADERS_DIR      = DECK_BASE_DIR + "tiny_leaders" + PATH_SEPARATOR;
     public static final String DECK_BRAWL_DIR             = DECK_BASE_DIR + "brawl" + PATH_SEPARATOR;
     public static final String MAIN_PREFS_FILE            = USER_PREFS_DIR + "forge.preferences";
+    public static final String STARTUP_LOCK_FILE          = USER_PREFS_DIR + "startup.lock";
     public static final String SERVER_PREFS_FILE          = USER_PREFS_DIR + "server.preferences";
     public static final String CARD_PREFS_FILE            = USER_PREFS_DIR + "card.preferences";
     public static final String DECK_PREFS_FILE            = USER_PREFS_DIR + "deck.preferences";

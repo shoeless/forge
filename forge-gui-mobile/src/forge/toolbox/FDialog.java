@@ -99,8 +99,11 @@ public abstract class FDialog extends FOverlay {
 
         updateDisplayTop();
 
-        if (firstReveal) { //start reveal animation after dialog first laid out
-            updateRevealAnimation(3 * Forge.getScreenHeight());
+        if (firstReveal) { //show dialog immediately instead of animating (fixes iOS issues)
+            revealPercent = 1;
+            updateDisplayTop();
+            finishedFirstReveal = true;
+            onRevealFinished();
         }
     }
 

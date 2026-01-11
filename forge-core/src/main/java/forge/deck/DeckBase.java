@@ -160,7 +160,9 @@ public abstract class DeckBase implements Serializable, Comparable<DeckBase>, In
             final String createTime = dateFormat.format(new Date());
             return createTime;
         }
-        return result;
+        // iOS compatibility: Use lowercase filenames to avoid case-sensitivity issues
+        // on iOS's case-insensitive filesystem. The deck name is preserved in metadata.
+        return result.toLowerCase();
     }
 
     public abstract boolean isEmpty();

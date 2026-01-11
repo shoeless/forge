@@ -212,16 +212,21 @@ public class Graphics {
     }
 
     public void draw(FDisplayObject displayObj) {
-        if (displayObj.getWidth() <= 0 || displayObj.getHeight() <= 0) {
-            return;
-        }
-
         final Rectangle parentBounds = bounds;
         bounds = new Rectangle(parentBounds.x + displayObj.getLeft(), parentBounds.y + displayObj.getTop(), displayObj.getWidth(), displayObj.getHeight());
+
+        // Always update screenPos, even for 0-size objects
+        // This ensures screenPos is fresh after orientation changes where components
+        // temporarily had 0 bounds (e.g., back button hidden in landscape sidebar mode)
         if (!Dtransforms.isEmpty()) { //transform screen position if needed by applying transform matrix to rectangle
             updateScreenPosForRotation(displayObj);
         } else {
             displayObj.screenPos.set(bounds);
+        }
+
+        if (displayObj.getWidth() <= 0 || displayObj.getHeight() <= 0) {
+            bounds = parentBounds;
+            return;
         }
 
         Rectangle intersection = Utils.getIntersection(bounds, visibleBounds);
@@ -826,71 +831,62 @@ public class Graphics {
         }
     }
 
+    private static final float DEFAULT_CORNER_RADIUS = 20f;
+
+    // Helper to set up card image shader (grayscale or rounded corners)
+    private void beginCardShader(boolean drawGrayscale, float imgW, float imgH, float radius) {
+        batch.end();
+        if (drawGrayscale) {
+            shaderGrayscale.bind();
+            shaderGrayscale.setUniformf("u_grayness", 1f);
+            shaderGrayscale.setUniformf("u_bias", 0.8f);
+            batch.setShader(shaderGrayscale);
+        } else {
+            shaderRoundedRect.bind();
+            shaderRoundedRect.setUniformf("u_resolution", imgW, imgH);
+            shaderRoundedRect.setUniformf("edge_radius", (imgH / imgW) * radius);
+            shaderRoundedRect.setUniformf("u_gray", 0f);
+            batch.setShader(shaderRoundedRect);
+        }
+        batch.begin();
+    }
+
+    // Helper to tear down card image shader
+    private void endCardShader() {
+        batch.end();
+        batch.setShader(null);
+        batch.begin();
+    }
+
     public void drawCardImage(FImage image, TextureRegion damage_overlay, float x, float y, float w, float h, boolean drawGrayscale, boolean damaged) {
         if (image == null)
             return;
-        if (!drawGrayscale) {
-            image.draw(this, x, y, w, h);
-            if (damage_overlay != null && damaged)
-                batch.draw(damage_overlay, adjustX(x), adjustY(y, h), w, h);
-        } else {
-            batch.end();
-            shaderGrayscale.bind();
-            shaderGrayscale.setUniformf("u_grayness", 1f);
-            shaderGrayscale.setUniformf("u_bias", 0.8f);
-            batch.setShader(shaderGrayscale);
-            batch.begin();
-            //draw gray
-            image.draw(this, x, y, w, h);
-            //reset
-            batch.end();
-            batch.setShader(null);
-            batch.begin();
-        }
+        beginCardShader(drawGrayscale, image.getWidth(), image.getHeight(), DEFAULT_CORNER_RADIUS);
+        image.draw(this, x, y, w, h);
+        endCardShader();
+        if (damage_overlay != null && damaged)
+            batch.draw(damage_overlay, adjustX(x), adjustY(y, h), w, h);
     }
 
     public void drawCardImage(Texture image, TextureRegion damage_overlay, float x, float y, float w, float h, boolean drawGrayscale, boolean damaged) {
-        if (!drawGrayscale) {
-            batch.draw(image, adjustX(x), adjustY(y, h), w, h);
-            if (damage_overlay != null && damaged)
-                batch.draw(damage_overlay, adjustX(x), adjustY(y, h), w, h);
-        } else {
-            batch.end();
-            shaderGrayscale.bind();
-            shaderGrayscale.setUniformf("u_grayness", 1f);
-            shaderGrayscale.setUniformf("u_bias", 0.8f);
-            batch.setShader(shaderGrayscale);
-            batch.begin();
-            //draw gray
-            batch.draw(image, adjustX(x), adjustY(y, h), w, h);
-            //reset
-            batch.end();
-            batch.setShader(null);
-            batch.begin();
-        }
+        if (image == null)
+            return;
+        float radius = ImageCache.getInstance().getRadius(image);
+        beginCardShader(drawGrayscale, image.getWidth(), image.getHeight(), radius);
+        batch.draw(image, adjustX(x), adjustY(y, h), w, h);
+        endCardShader();
+        if (damage_overlay != null && damaged)
+            batch.draw(damage_overlay, adjustX(x), adjustY(y, h), w, h);
     }
 
     public void drawCardImage(TextureRegion image, TextureRegion damage_overlay, float x, float y, float w, float h, boolean drawGrayscale, boolean damaged) {
-        if (image != null) {
-            if (!drawGrayscale) {
-                batch.draw(image, adjustX(x), adjustY(y, h), w, h);
-                if (damage_overlay != null && damaged)
-                    batch.draw(damage_overlay, adjustX(x), adjustY(y, h), w, h);
-            } else {
-                batch.end();
-                shaderGrayscale.bind();
-                shaderGrayscale.setUniformf("u_grayness", 1f);
-                shaderGrayscale.setUniformf("u_bias", 0.8f);
-                batch.setShader(shaderGrayscale);
-                batch.begin();
-                //draw gray
-                batch.draw(image, adjustX(x), adjustY(y, h), w, h);
-                //reset
-                batch.end();
-                batch.setShader(null);
-                batch.begin();
-            }
-        }
+        if (image == null)
+            return;
+        beginCardShader(drawGrayscale, image.getRegionWidth(), image.getRegionHeight(), DEFAULT_CORNER_RADIUS);
+        batch.draw(image, adjustX(x), adjustY(y, h), w, h);
+        endCardShader();
+        if (damage_overlay != null && damaged)
+            batch.draw(damage_overlay, adjustX(x), adjustY(y, h), w, h);
     }
 
     public void drawGrayTransitionImage(FImage image, float x, float y, float w, float h, float percentage) {

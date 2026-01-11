@@ -55,6 +55,9 @@ public class FTextField extends FDisplayObject implements ITextField {
     private int alignment;
     private int selStart, selLength;
     private boolean isEditing, readOnly, isNumeric;
+    // iOS fix: Track when last keyboard input was received to prevent touch events from resetting cursor
+    private long lastKeyInputTime = 0;
+    private static final long KEY_INPUT_DEBOUNCE_MS = 100; // Ignore touch events for 100ms after key input
 
     private final FPopupMenu contextMenu = new FPopupMenu() {
         @Override
@@ -209,6 +212,12 @@ public class FTextField extends FDisplayObject implements ITextField {
 
     private void placeTextCursor(float x, float y) {
         if (isEditing) {
+            // iOS fix: Ignore touch events that occur shortly after keyboard input
+            // This prevents the on-screen keyboard from interfering with cursor position
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastKeyInputTime < KEY_INPUT_DEBOUNCE_MS) {
+                return;
+            }
             selStart = getCharIndexAtPoint(x, y);
             selLength = 0;
         }
@@ -259,6 +268,9 @@ public class FTextField extends FDisplayObject implements ITextField {
 
             @Override
             public boolean keyTyped(char ch) {
+                // iOS fix: Record keyboard input time to prevent touch events from resetting cursor
+                lastKeyInputTime = System.currentTimeMillis();
+
                 // iOS fix: Handle backspace/delete characters that come through keyTyped instead of keyDown
                 if (ch == '\b' || ch == '\u007F') { // backspace (0x08) or delete (0x7F)
                     if (text.length() > 0) {
@@ -290,6 +302,9 @@ public class FTextField extends FDisplayObject implements ITextField {
 
             @Override
             public boolean keyDown(int keyCode) {
+                // iOS fix: Record keyboard input time to prevent touch events from resetting cursor
+                lastKeyInputTime = System.currentTimeMillis();
+
                 switch (keyCode) {
                 case Keys.TAB:
                 case Keys.ENTER: //end key input on Tab or Enter

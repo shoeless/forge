@@ -9,6 +9,7 @@ public class GuiBase {
     private static boolean propertyConfig = true;
     private static boolean networkplay = false;
     private static boolean isAndroidport = false;
+    private static boolean isIOSport = false;
     private static String adventureDirectory = null;
     private static boolean interrupted = false;
     private static int androidAPI = 0;
@@ -28,6 +29,9 @@ public class GuiBase {
 
     public static void setIsAndroid(boolean value) { isAndroidport = value; }
     public static boolean isAndroid() { return isAndroidport; }
+
+    public static void setIsIOS(boolean value) { isIOSport = value; }
+    public static boolean isIOS() { return isIOSport; }
 
     public static void setAdventureDirectory(String directory) { adventureDirectory = directory; }
     public static String getAdventureDirectory() { return adventureDirectory; }

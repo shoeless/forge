@@ -37,6 +37,9 @@
                     <configFile>robovm.xml</configFile>
                     <iosInfoPList>Info.plist.xml</iosInfoPList>
                     <iosSkipSigning>true</iosSkipSigning>
+                    <!-- iOS PNG crushing converts images to CgBI format which swaps R/B channels -->
+                    <!-- This causes mana icons to have wrong colors (red shows as blue) -->
+                    <skipPngCrush>true</skipPngCrush>
                 </configuration>
             </plugin>
         </plugins>
@@ -148,6 +151,13 @@
             <artifactId>gdx-freetype-platform</artifactId>
             <version>1.13.5</version>
             <classifier>natives-ios</classifier>
+        </dependency>
+        <!-- Stub java.util.function classes for RoboVM compatibility -->
+        <!-- RoboVM's Comparator references java.util.function but doesn't include it -->
+        <dependency>
+            <groupId>forge.stubs</groupId>
+            <artifactId>java-function-stubs</artifactId>
+            <version>1.0</version>
         </dependency>
     </dependencies>
 </project>

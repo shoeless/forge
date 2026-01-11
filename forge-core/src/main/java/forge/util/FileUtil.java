@@ -109,9 +109,14 @@ public final class FileUtil {
         File source = new File(sourceFilename);
         if (!source.exists()) { return; } //if source doesn't exist, nothing to copy
 
-        // iOS compatibility: Use FileInputStream/FileOutputStream instead of Files.newInputStream/newOutputStream
+        File dest = new File(destFilename);
+        File parentDir = dest.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs();
+        }
+
         try (InputStream is = new FileInputStream(source);
-             OutputStream os = new FileOutputStream(new File(destFilename))){
+             OutputStream os = new FileOutputStream(dest)) {
             byte[] buffer = new byte[1024];
             int length;
             while ((length = is.read(buffer)) > 0) {

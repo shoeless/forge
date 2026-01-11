@@ -115,7 +115,8 @@ public class FDeckImportDialog extends FDialog {
             createNewDeckControl = createNewDeckCheck.isSelected();
             controller.setImportBehavior(createNewDeckControl ? DeckImportController.ImportBehavior.CREATE_NEW : DeckImportController.ImportBehavior.MERGE);
         });
-        setShowOptions(false);
+        // Show options expanded by default for better UX
+        setShowOptions(true);
     }
 
     private void setArtPreferenceInController() {
@@ -193,6 +194,12 @@ public class FDeckImportDialog extends FDialog {
             float y = txtInput.getTop() - FOptionPane.PADDING;
             g.drawLine(BORDER_THICKNESS, getBorderColor(), 0, y, getWidth(), y);
         }
+    }
+
+    @Override
+    protected void onRevealFinished() {
+        // Scroll text area to top so clipboard content is visible immediately
+        txtInput.scrollToTop();
     }
 
     @Override
