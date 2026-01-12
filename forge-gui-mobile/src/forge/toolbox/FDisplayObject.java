@@ -18,6 +18,7 @@ public abstract class FDisplayObject {
     private boolean hovered = false;
     private final Rectangle bounds = new Rectangle();
     public final Rectangle screenPos = new Rectangle();
+    private int lastScreenPosVersion = -1; // Version when screenPos was last updated
 
     public void setPosition(float x, float y) {
         bounds.setPosition(x, y);
@@ -75,6 +76,27 @@ public abstract class FDisplayObject {
         return y + screenPos.y;
     }
 
+    /**
+     * Marks screenPos as updated with the current resize version.
+     * Called by Graphics.draw() after updating screenPos.
+     */
+    public void markScreenPosUpdated() {
+        lastScreenPosVersion = Forge.getScreenResizeVersion();
+    }
+
+    /**
+     * Returns true if screenPos is valid (not stale from a previous resize).
+     * Used to skip objects with stale screen positions in touch handling.
+     * Returns true if:
+     * - Element has never been updated (-1) - allow initial touches before first render
+     * - Element was updated with current resize version
+     */
+    public boolean isScreenPosValid() {
+        // Allow elements that haven't been rendered yet (they'll get valid screenPos on first render)
+        // Only block elements that have an outdated version from a previous resize
+        return lastScreenPosVersion == -1 || lastScreenPosVersion == Forge.getScreenResizeVersion();
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -128,6 +150,11 @@ public abstract class FDisplayObject {
 
     public abstract void draw(Graphics g);
     public void buildTouchListeners(float screenX, float screenY, List<FDisplayObject> listeners) {
+        // Skip elements with stale screenPos (not updated since last resize)
+        // This is a safety net for the race condition during orientation changes
+        if (!isScreenPosValid()) {
+            return;
+        }
         boolean exact = !GuiBase.isAndroid() && (this instanceof FCardPanel);
         if (enabled && visible && screenPos.contains(screenX, screenY)) {
             listeners.add(this);

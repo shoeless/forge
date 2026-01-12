@@ -116,8 +116,48 @@ public abstract class FContainer extends FDisplayObject {
 
     protected abstract void doLayout(float width, float height);
 
+    /**
+     * Recursively updates screenPos for this container and all visible children.
+     * Called after resize() to ensure all screenPos values are valid before
+     * touch events can arrive. This prevents the race condition where touches
+     * use stale screenPos values during orientation changes.
+     *
+     * @param parentX The screen X position of this container's parent
+     * @param parentY The screen Y position of this container's parent
+     */
+    public void updateScreenPositions(float parentX, float parentY) {
+        // Update this container's screenPos
+        float myScreenX = parentX + getLeft();
+        float myScreenY = parentY + getTop();
+        screenPos.set(myScreenX, myScreenY, getWidth(), getHeight());
+        markScreenPosUpdated();
+
+        // Recursively update all visible children
+        for (FDisplayObject child : children) {
+            if (child.isVisible()) {
+                if (child instanceof FContainer) {
+                    ((FContainer) child).updateScreenPositions(myScreenX, myScreenY);
+                } else {
+                    // For non-container children, just update their screenPos
+                    child.screenPos.set(
+                        myScreenX + child.getLeft(),
+                        myScreenY + child.getTop(),
+                        child.getWidth(),
+                        child.getHeight()
+                    );
+                    child.markScreenPosUpdated();
+                }
+            }
+        }
+    }
+
     @Override
     public void buildTouchListeners(float screenX, float screenY, List<FDisplayObject> listeners) {
+        // Skip elements with stale screenPos (not updated since last resize)
+        // This is a safety net for the race condition during orientation changes
+        if (!isScreenPosValid()) {
+            return;
+        }
         if (isEnabled() && isVisible() && screenPos.contains(screenX, screenY)) {
             for (int i = children.size() - 1; i >= 0; i--) {
                 children.get(i).buildTouchListeners(screenX, screenY, listeners);

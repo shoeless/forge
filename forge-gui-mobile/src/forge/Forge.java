@@ -85,6 +85,7 @@ public class Forge implements ApplicationListener {
     public static boolean magnifyShowDetails = false;
     public static String cursorName = "";
     private static int continuousRenderingCount = 1; //initialize to 1 since continuous rendering is the default
+    private static int screenResizeVersion = 0; //increments on each resize to track stale screenPos values
     private static final Deque<FScreen> Dscreens = new ArrayDeque<>();
     private static boolean textureFiltering = false;
     private static boolean destroyThis = false;
@@ -788,6 +789,10 @@ public class Forge implements ApplicationListener {
         return screenHeight;
     }
 
+    public static int getScreenResizeVersion() {
+        return screenResizeVersion;
+    }
+
     public static FScreen getCurrentScreen() {
         return currentScreen;
     }
@@ -882,7 +887,13 @@ public class Forge implements ApplicationListener {
             currentScreen = screen0;
             if (currentScreen != null) {
                 currentScreen.setSize(screenWidth, screenHeight);
+                // iOS fix: Force layout refresh when screen becomes active
+                // This handles screens that had different layouts when shown as sidebar during rotation
+                currentScreen.revalidate(true);
                 currentScreen.onActivate();
+                // iOS fix: Update screenPos for all elements when screen becomes active
+                // This handles screens that were in the navigation stack during rotation
+                currentScreen.updateScreenPositions(0, 0);
             }
             else if(isMobileAdventureMode) {
                 switchToLast();
@@ -1063,6 +1074,9 @@ public class Forge implements ApplicationListener {
             screenWidth = width;
             screenHeight = height;
 
+            // Increment version to invalidate all screenPos values
+            screenResizeVersion++;
+
             // iOS fix: Force GL viewport update on orientation change to fix touch coordinates
             // See: https://github.com/libgdx/libgdx/issues/6514
             if (!GuiBase.isAndroid()) {
@@ -1074,8 +1088,19 @@ public class Forge implements ApplicationListener {
 
             if (currentScreen != null) {
                 currentScreen.setSize(width, height);
+                // iOS fix: Immediately update screenPos for all UI elements after resize
+                // This prevents race condition where touches arrive before next render()
+                currentScreen.updateScreenPositions(0, 0);
             } else if (splashScreen != null) {
                 splashScreen.setSize(width, height);
+                splashScreen.updateScreenPositions(0, 0);
+            }
+            // Also update visible overlays
+            for (FOverlay overlay : FOverlay.getOverlays()) {
+                if (overlay.isVisibleOnScreen(currentScreen)) {
+                    overlay.setSize(width, height);
+                    overlay.updateScreenPositions(0, 0);
+                }
             }
             if (currentScene != null) {
                 currentScene.resize(width, height);

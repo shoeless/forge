@@ -36,6 +36,59 @@ import static forge.assets.FSkin.getDefaultSkinFile;
 
 public class Assets implements Disposable {
     /**
+     * iOS fix: Swap red and blue color channels in a Pixmap.
+     * iOS/Metal can interpret PNG color channels differently, causing red to appear blue.
+     * This method swaps R and B channels to correct the display.
+     */
+    public static void swapRedBlueChannels(Pixmap pixmap) {
+        if (pixmap == null) return;
+
+        int width = pixmap.getWidth();
+        int height = pixmap.getHeight();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = pixmap.getPixel(x, y);
+                // RGBA8888 format: pixel = (R << 24) | (G << 16) | (B << 8) | A
+                int r = (pixel >> 24) & 0xFF;
+                int g = (pixel >> 16) & 0xFF;
+                int b = (pixel >> 8) & 0xFF;
+                int a = pixel & 0xFF;
+                // Swap R and B
+                int swapped = (b << 24) | (g << 16) | (r << 8) | a;
+                pixmap.drawPixel(x, y, swapped);
+            }
+        }
+    }
+
+    /**
+     * iOS fix: Create a texture from a file with R/B channel swap for iOS.
+     * Use this for sprite sheets that display with incorrect colors on iOS.
+     */
+    public Texture getTextureWithColorFix(FileHandle file) {
+        if (file == null || !file.exists()) {
+            return null;
+        }
+
+        // Check if we need to apply the iOS color fix
+        boolean needsColorFix = Gdx.app != null && Gdx.app.getType() == ApplicationType.iOS;
+
+        if (needsColorFix) {
+            Pixmap pixmap = new Pixmap(file);
+            swapRedBlueChannels(pixmap);
+            Texture texture = new Texture(pixmap);
+            // Keep pixmap in cache to prevent disposal issues on iOS
+            colorFixedPixmaps.put(texture, pixmap);
+            return texture;
+        } else {
+            return new Texture(file);
+        }
+    }
+
+    // Cache for color-fixed pixmaps to prevent disposal on iOS
+    private final Map<Texture, Pixmap> colorFixedPixmaps = new HashMap<>();
+
+    /**
      * Custom FileHandleResolver for iOS/Android that handles both:
      * - Absolute paths (for writable cache/Documents files)
      * - Relative paths (for read-only bundle resources)
@@ -328,6 +381,24 @@ public class Assets implements Disposable {
             System.err.println("Failed to load: " + file + "!. Creating dummy texture.");
             return getDummy();
         }
+
+        // iOS fix: Apply color channel swap for mana icons sprite sheet
+        // iOS/Metal interprets PNG color channels differently, causing red to appear blue
+        if (Gdx.app != null && Gdx.app.getType() == ApplicationType.iOS &&
+            file.name().equals(ForgeConstants.SPRITE_MANAICONS_FILE)) {
+            // Check cache first (iOS compatibility: use traditional loop instead of stream)
+            for (Map.Entry<Texture, String> entry : colorFixedTexturePaths.entrySet()) {
+                if (file.path().equals(entry.getValue())) {
+                    return entry.getKey();
+                }
+            }
+            Texture fixed = getTextureWithColorFix(file);
+            if (fixed != null) {
+                colorFixedTexturePaths.put(fixed, file.path());
+                return fixed;
+            }
+        }
+
         //internal path can be inside apk or jar..
         if (!FileType.Absolute.equals(file.type()) || file.path().contains("fallback_skin")) {
             Texture f = fallback_skins().get(file.path());
@@ -348,6 +419,9 @@ public class Assets implements Disposable {
         }
         return t;
     }
+
+    // Cache for mapping color-fixed textures to their file paths
+    private final Map<Texture, String> colorFixedTexturePaths = new HashMap<>();
 
     public ParticleEffect getEffect(FileHandle file) {
         if (file == null || !file.exists() || !FileType.Absolute.equals(file.type())) {
@@ -393,6 +467,21 @@ public class Assets implements Disposable {
                 return;
             if (!FileType.Absolute.equals(file.type()))
                 return;
+
+            // iOS fix: For mana icons, use color-fixed loading instead of AssetManager
+            // This ensures the R/B channel swap is applied
+            if (Gdx.app != null && Gdx.app.getType() == ApplicationType.iOS &&
+                file.name().equals(ForgeConstants.SPRITE_MANAICONS_FILE)) {
+                // Pre-load with color fix - getTexture() will use this cached version
+                if (!colorFixedTexturePaths.containsValue(file.path())) {
+                    Texture fixed = getTextureWithColorFix(file);
+                    if (fixed != null) {
+                        colorFixedTexturePaths.put(fixed, file.path());
+                    }
+                }
+                return; // Don't load via AssetManager
+            }
+
             manager().load(file.path(), Texture.class, parameter);
             manager().finishLoadingAsset(file.path());
         } catch (Exception e) {

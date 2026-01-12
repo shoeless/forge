@@ -223,6 +223,8 @@ public class Graphics {
         } else {
             displayObj.screenPos.set(bounds);
         }
+        // Mark screenPos as updated with current resize version
+        displayObj.markScreenPosUpdated();
 
         if (displayObj.getWidth() <= 0 || displayObj.getHeight() <= 0) {
             bounds = parentBounds;
