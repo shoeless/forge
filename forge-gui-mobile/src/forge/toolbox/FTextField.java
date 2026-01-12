@@ -56,8 +56,9 @@ public class FTextField extends FDisplayObject implements ITextField {
     private int selStart, selLength;
     private boolean isEditing, readOnly, isNumeric;
     // iOS fix: Track when last keyboard input was received to prevent touch events from resetting cursor
+    // iOS software keyboard can trigger spurious touch events that reset cursor position
     private long lastKeyInputTime = 0;
-    private static final long KEY_INPUT_DEBOUNCE_MS = 100; // Ignore touch events for 100ms after key input
+    private static final long KEY_INPUT_DEBOUNCE_MS = 500; // Ignore touch events for 500ms after key input
 
     private final FPopupMenu contextMenu = new FPopupMenu() {
         @Override
@@ -100,6 +101,11 @@ public class FTextField extends FDisplayObject implements ITextField {
     public void setText(String text0) {
         if (text0 == null) {
             text0 = ""; //don't allow setting null
+        }
+        // Don't reset cursor position if text hasn't changed
+        // This prevents cursor jumping when network callbacks update the field with same value
+        if (text.equals(text0)) {
+            return;
         }
         text = text0;
         selStart = 0;
@@ -246,10 +252,14 @@ public class FTextField extends FDisplayObject implements ITextField {
 
     public boolean startEdit() {
         if (readOnly) { return false; }
-        Forge.setOnScreenKeyboard(true, isNumeric);
         if (isEditing) {
-            return true; //do nothing if already editing
+            // Already editing - don't reset cursor or re-show keyboard
+            // Just ensure keyboard is visible (iOS may have dismissed it)
+            return true;
         }
+
+        // Show keyboard only when starting new edit
+        Forge.setOnScreenKeyboard(true, isNumeric);
 
         selStart = 0; //select all before starting input
         selLength = text.length();

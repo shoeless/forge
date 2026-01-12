@@ -1038,11 +1038,6 @@ public class Forge implements ApplicationListener {
                 ex.printStackTrace();
         }
 
-        // Decrement touch fix counter each frame
-        if (touchFixFrames > 0) {
-            touchFixFrames--;
-        }
-
         if (showFPS)
             frameRate.render();
     }
@@ -1055,25 +1050,13 @@ public class Forge implements ApplicationListener {
         }));
     }
 
-    // iOS touch coordinate fix: track orientation changes
+    // Track orientation for screen layout purposes
     private static boolean lastWasLandscape = false;
-    private static int touchFixFrames = 0;
-    private static final int TOUCH_FIX_DURATION = 60; // frames to apply fix after rotation
 
     @Override
     public void resize(int width, int height) {
         try {
             boolean isNowLandscape = width > height;
-            boolean orientationChanged = (lastWasLandscape != isNowLandscape);
-
-            System.out.println("RESIZE: " + width + "x" + height +
-                " wasLandscape=" + lastWasLandscape + " isLandscape=" + isNowLandscape +
-                " changed=" + orientationChanged);
-
-            if (orientationChanged && !GuiBase.isAndroid()) {
-                touchFixFrames = TOUCH_FIX_DURATION;
-                System.out.println("RESIZE: Orientation changed, enabling touch fix for " + TOUCH_FIX_DURATION + " frames");
-            }
             lastWasLandscape = isNowLandscape;
 
             // iOS fix: Update screen dimensions on rotation so isLandscapeMode() works correctly
@@ -1356,7 +1339,10 @@ public class Forge implements ApplicationListener {
         @Override
         public boolean keyTyped(char ch) {
             if (keyInputAdapter != null) {
-                if (ch >= ' ' && ch <= '~') { //only process this event if character is printable
+                // Process printable ASCII characters (space through tilde)
+                // Also process backspace (0x08) and delete (0x7F) for iOS keyboard compatibility
+                // iOS sends these through keyTyped rather than keyDown
+                if ((ch >= ' ' && ch <= '~') || ch == '\b' || ch == '\u007F') {
                     return keyInputAdapter.keyTyped(ch);
                 }
             }
@@ -1385,14 +1371,6 @@ public class Forge implements ApplicationListener {
 
         @Override
         public boolean touchDown(int x, int y, int pointer, int button) {
-            // iOS fix: Mirror X coordinate after orientation change
-            // libGDX iOS backend has a bug where touch X coordinates are mirrored after rotation
-            if (touchFixFrames > 0 && !GuiBase.isAndroid()) {
-                int originalX = x;
-                x = screenWidth - x;
-                System.out.println("TOUCH_FIX: x=" + originalX + " -> " + x + " (screenWidth=" + screenWidth + ", framesLeft=" + touchFixFrames + ")");
-            }
-
             if (transitionScreen != null) {
                 boolean isFDialog = FOverlay.getTopOverlay() != null && FOverlay.getTopOverlay() instanceof FDialog;
                 if (!isFDialog)
