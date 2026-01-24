@@ -9,6 +9,10 @@
       <includes>
         <include>res/**</include>
       </includes>
+      <excludes>
+        <!-- Exclude individual card .txt files - they are bundled in cardsfolder.zip for faster installs -->
+        <exclude>res/cardsfolder/*/*.txt</exclude>
+      </excludes>
     </resource>
     <resource>
       <directory>res</directory>
