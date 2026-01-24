@@ -77,7 +77,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 import forge.util.function.Function;
 import forge.util.function.Predicate;
 

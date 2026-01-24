@@ -1,12 +1,11 @@
 package forge.game.keyword;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import forge.card.mana.ManaCost;
 import forge.card.mana.ManaCostShard;
 import forge.game.card.Card;
-import forge.util.StreamUtil;
 
 public class Compleated extends SimpleKeyword {
 
@@ -20,7 +19,13 @@ public class Compleated extends SimpleKeyword {
         if (!mc.hasPhyrexian()) {
             return reminderText;
         }
-        List<ManaCostShard> shards = StreamUtil.stream(mc).filter(ManaCostShard::isPhyrexian).collect(Collectors.toList());
+        // iOS compatibility: Replace Stream API with traditional loop
+        List<ManaCostShard> shards = new ArrayList<>();
+        for (ManaCostShard shard : mc) {
+            if (shard.isPhyrexian()) {
+                shards.add(shard);
+            }
+        }
         if (shards.isEmpty()) {
             return reminderText;
         }
