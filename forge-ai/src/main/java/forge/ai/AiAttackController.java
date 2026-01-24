@@ -695,7 +695,8 @@ public class AiAttackController {
             if (!CombatUtil.canBeBlocked(attacker, accountedBlockers, null)
                     || StaticAbilityAssignCombatDamageAsUnblocked.assignCombatDamageAsUnblocked(attacker)) {
                 unblockedAttackers.add(attacker);
-            } else if (cost > 0 && !attacker.hasKeyword(Keyword.TRAMPLE) && attackCosts.keySet().stream().anyMatch(c -> c.hasKeyword(Keyword.TRAMPLE))) {
+            // iOS compatibility: Replace Stream API with traditional loop
+            } else if (cost > 0 && !attacker.hasKeyword(Keyword.TRAMPLE) && hasAnyTrampler(attackCosts.keySet())) {
                 // still another trampler that can be checked first
                 categorizedAttackers.add(categorizedAttackers.remove(0));
                 continue;
@@ -763,7 +764,12 @@ public class AiAttackController {
         }
 
         if (defendingOpponent.getLife() > 0 && !defendingOpponent.cantLoseForZeroOrLessLife()) {
-            int totalCombatDamage = tramplers.stream().map(c -> trampleDmg.getOrDefault(c, 0)).reduce(0, Integer::sum);
+            // iOS compatibility: Replace Stream API with traditional loop
+            int totalCombatDamage = 0;
+            for (Card c : tramplers) {
+                Integer dmg = trampleDmg.get(c);
+                totalCombatDamage += (dmg != null ? dmg : 0);
+            }
             if (totalCombatDamage >= defendingOpponent.getLife()) {
                 return true;
             }
@@ -1818,6 +1824,16 @@ public class AiAttackController {
 
     public final static int countExaltedBonus(Player p) {
         return CardLists.getAmountOfKeyword(p.getCardsIn(ZoneType.Battlefield), Keyword.EXALTED);
+    }
+
+    // iOS compatibility: Helper method to replace stream().anyMatch()
+    private static boolean hasAnyTrampler(Iterable<Card> cards) {
+        for (Card c : cards) {
+            if (c.hasKeyword(Keyword.TRAMPLE)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

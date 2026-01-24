@@ -1156,14 +1156,16 @@ public class GameAction {
                     stAb.applyContinuousAbility(layer, previouslyAffected);
                 }
                 if (affectedHere != null) {
-                    affectedPerLayer.computeIfAbsent(layer, l -> Sets.newHashSet()).addAll(affectedHere);
+                    // iOS compatibility: Use MapUtil.computeIfAbsent() instead of Java 8 Map.computeIfAbsent()
+                    MapUtil.computeIfAbsent(affectedPerLayer, layer, l -> Sets.newHashSet()).addAll(affectedHere);
                     for (final Card c : affectedHere) {
                         for (final StaticAbility st2 : c.getStaticAbilities()) {
                             if (!staticAbilities.contains(st2) && st2.checkMode(StaticAbilityMode.Continuous) && st2.zonesCheck()) {
                                 toAdd.add(st2);
                                 CardCollectionView newAffected = st2.applyContinuousAbilityBefore(layer, preList);
                                 if (newAffected != null) {
-                                    affectedPerLayer.computeIfAbsent(layer, l -> Sets.newHashSet()).addAll(newAffected);
+                                    // iOS compatibility: Use MapUtil.computeIfAbsent() instead of Java 8 Map.computeIfAbsent()
+                                    MapUtil.computeIfAbsent(affectedPerLayer, layer, l -> Sets.newHashSet()).addAll(newAffected);
                                 }
                             }
                         }

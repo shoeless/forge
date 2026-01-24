@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import forge.game.card.Card;
+import forge.util.MapUtil;
 import forge.game.card.CardCollection;
 import forge.game.card.CardCollectionView;
 import forge.game.player.Player;
@@ -335,7 +336,8 @@ public class StaticEffect {
     }
 
     protected static void addCard(Map<StaticAbilityLayer, Set<Card>> affectedByLayer, StaticAbilityLayer layer, Card affectedCard) {
-        affectedByLayer.computeIfAbsent(layer, l -> Sets.newHashSet()).add(affectedCard);
+        // iOS compatibility: Use MapUtil.computeIfAbsent() instead of Java 8 Map.computeIfAbsent()
+        MapUtil.computeIfAbsent(affectedByLayer, layer, l -> Sets.newHashSet()).add(affectedCard);
     }
 
     public void removeMapped(IEntityMap map) {

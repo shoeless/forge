@@ -180,7 +180,14 @@ public abstract class PlayerController {
     }
     public final void reveal(DelayedReveal delayedReveal) {
         for (ZoneType zt : delayedReveal.getZone()) {
-            reveal(delayedReveal.getCards().stream().filter(c -> c.getZone() == zt).collect(Collectors.toList()), zt, delayedReveal.getOwner(), delayedReveal.getMessagePrefix());
+            // iOS compatibility: Replace Stream API with traditional loop
+            List<CardView> filtered = Lists.newArrayList();
+            for (CardView c : delayedReveal.getCards()) {
+                if (c.getZone() == zt) {
+                    filtered.add(c);
+                }
+            }
+            reveal(filtered, zt, delayedReveal.getOwner(), delayedReveal.getMessagePrefix());
         }
     }
     public abstract void reveal(List<CardView> cards, ZoneType zone, PlayerView owner, String messagePrefix, boolean addMsgSuffix);

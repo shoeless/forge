@@ -544,8 +544,9 @@ public class ComputerUtilCard {
     }
 
     public static Comparator<Card> getCachedCreatureComparator() {
-        Map<Card, Integer> cache = new IdentityHashMap<>();
-        return Comparator.comparing(c -> cache.computeIfAbsent(c, creatureEvaluator));
+        // iOS compatibility: Use ComparatorUtil.comparing() and MapUtil.computeIfAbsent() instead of Java 8 methods
+        final Map<Card, Integer> cache = new IdentityHashMap<>();
+        return ComparatorUtil.comparing(c -> MapUtil.computeIfAbsent(cache, c, creatureEvaluator));
     }
     public static final Comparator<SpellAbility> EvaluateCreatureSpellComparator = (a, b) -> {
         // TODO ideally we could reuse the value from the previous pass with false

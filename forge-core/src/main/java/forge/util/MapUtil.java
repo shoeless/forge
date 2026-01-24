@@ -24,4 +24,26 @@ public class MapUtil {
         V value = map.get(key);
         return value != null ? value : defaultValue;
     }
+
+    /**
+     * If the specified key is not already associated with a value, attempts to compute its value
+     * using the given mapping function and enters it into this map.
+     *
+     * iOS-compatible replacement for Map.computeIfAbsent() (Java 8).
+     *
+     * @param map the map to compute the value for
+     * @param key the key with which the specified value is to be associated
+     * @param mappingFunction the function to compute a value
+     * @return the current (existing or computed) value associated with the specified key
+     */
+    public static <K, V> V computeIfAbsent(Map<K, V> map, K key, forge.util.function.Function<? super K, ? extends V> mappingFunction) {
+        V value = map.get(key);
+        if (value == null) {
+            value = mappingFunction.apply(key);
+            if (value != null) {
+                map.put(key, value);
+            }
+        }
+        return value;
+    }
 }

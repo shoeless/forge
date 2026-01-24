@@ -1914,7 +1914,14 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
     @Override
     public ICardFace chooseSingleCardFace(SpellAbility sa, List<ICardFace> faces, String message) {
-        Map<CardFaceView, ICardFace> mapped = faces.stream().collect(Collectors.toMap(CardFaceView::new, Function.identity(), (a, b) -> a, TreeMap::new));
+        // iOS compatibility: Replace Stream API with traditional loop
+        Map<CardFaceView, ICardFace> mapped = new TreeMap<>();
+        for (ICardFace face : faces) {
+            CardFaceView key = new CardFaceView(face);
+            if (!mapped.containsKey(key)) {
+                mapped.put(key, face);
+            }
+        }
         CardFaceView chosen = getGui().one(message, Lists.newArrayList(mapped.keySet()));
         return mapped.get(chosen);
     }
@@ -2995,7 +3002,11 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
             if (repeatLast) {
                 f = lastAdded;
             } else {
-                List<CardFaceView> choices = carddb.getAllFaces().stream().map(CardFaceView::new).collect(Collectors.toList());
+                // iOS compatibility: Replace Stream API with traditional loop
+                List<CardFaceView> choices = Lists.newArrayList();
+                for (ICardFace face : carddb.getAllFaces()) {
+                    choices.add(new CardFaceView(face));
+                }
                 Collections.sort(choices);
                 f = getGui().oneOrNone(localizer.getMessage("lblNameTheCard"), choices);
             }

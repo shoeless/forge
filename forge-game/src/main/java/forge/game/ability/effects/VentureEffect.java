@@ -58,8 +58,17 @@ public class VentureEffect extends SpellAbilityEffect {
             // Create a new dungeon card chosen by player in command zone.
             filter = e -> e.getValue().isEnterableDungeon();
         }
-        Map<ICardFace, String> mapping = StaticData.instance().getAllTokens().getRules().entrySet()
-                .stream().filter(filter).collect(Collectors.toMap(e -> e.getValue().getMainPart(), Map.Entry::getKey, (a,b) -> a, TreeMap::new));
+        // iOS compatibility: Replace Stream API with traditional loop
+        Map<ICardFace, String> mapping = new TreeMap<>();
+        for (Map.Entry<String, CardRules> e : StaticData.instance().getAllTokens().getRules().entrySet()) {
+            if (filter.apply(e)) {
+                ICardFace key = e.getValue().getMainPart();
+                // Only add if key not already present (equivalent to (a,b) -> a merge function)
+                if (!mapping.containsKey(key)) {
+                    mapping.put(key, e.getKey());
+                }
+            }
+        }
         String message = Localizer.getInstance().getMessage("lblChooseDungeon");
         ICardFace chosen = player.getController().chooseSingleCardFace(sa, Lists.newArrayList(mapping.keySet()), message);
         if (chosen == null) {

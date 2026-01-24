@@ -1,6 +1,7 @@
 package forge.game.player;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.Set;
 
 import forge.game.card.Card;
@@ -24,7 +25,8 @@ public class DelayedReveal implements Serializable {
         this(cards0, zone0, owner0, "");
     }
     public DelayedReveal(final Iterable<Card> cards0, final ZoneType zone0, final PlayerView owner0, final String messagePrefix0) {
-        this(cards0, Set.of(zone0), owner0, "");
+        // iOS compatibility: Use Collections.singleton() instead of Java 9+ Set.of()
+        this(cards0, Collections.singleton(zone0), owner0, messagePrefix0);
     }
     public DelayedReveal(final Iterable<Card> cards0, final Set<ZoneType> zone0, final PlayerView owner0, final String messagePrefix0) {
         cards = CardView.getCollection(cards0);
