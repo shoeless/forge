@@ -20,6 +20,7 @@ package forge.card;
 import com.google.common.collect.*;
 
 import forge.util.ITranslatable;
+import forge.util.IterableUtil;
 import forge.util.Localizer;
 import forge.util.Settable;
 import forge.util.TextUtil;

@@ -3714,22 +3714,43 @@ public class AbilityUtils {
             return doXMath(creatTypes.size(), CardFactoryUtil.extractOperators(def), source, ctb);
         }
 
-        Function<IntStream, Integer> func;
+        // iOS compatibility: Replace IntStream operations with traditional loops
         String finalDef;
         if (def.startsWith("Least")) {
-            func = s -> s.min().getAsInt();
             finalDef = def.substring(5);
+            int min = Integer.MAX_VALUE;
+            for (Card c : paidList) {
+                int val = xCount(c, finalDef, ctb);
+                if (val < min) {
+                    min = val;
+                }
+            }
+            return min == Integer.MAX_VALUE ? 0 : min;
         } else if (def.startsWith("Greatest")) {
-            func = s -> s.max().getAsInt();
             finalDef = def.substring(8);
+            int max = Integer.MIN_VALUE;
+            for (Card c : paidList) {
+                int val = xCount(c, finalDef, ctb);
+                if (val > max) {
+                    max = val;
+                }
+            }
+            return max == Integer.MIN_VALUE ? 0 : max;
         } else if (def.startsWith("Different")) {
-            func = s -> Math.toIntExact(s.distinct().count());
             finalDef = def.substring(9);
+            Set<Integer> distinct = new HashSet<>();
+            for (Card c : paidList) {
+                distinct.add(xCount(c, finalDef, ctb));
+            }
+            return distinct.size();
         } else {
-            func = IntStream::sum;
             finalDef = def;
+            int sum = 0;
+            for (Card c : paidList) {
+                sum += xCount(c, finalDef, ctb);
+            }
+            return sum;
         }
-        return func.apply(StreamUtil.stream(paidList).mapToInt(c -> xCount(c, finalDef, ctb)));
     }
 
     private static CardCollectionView getCardListForXCount(final Card c, final Player cc, final String[] sq, CardTraitBase ctb) {

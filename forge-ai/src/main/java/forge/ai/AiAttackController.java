@@ -878,17 +878,6 @@ public class AiAttackController {
             return aiAggression;
         }
 
-        GlobalAttackRestrictions restrict = combat.getAttackConstraints().getGlobalRestrictions();
-        int attackMax = restrict.getMax();
-        if (attackMax == -1) {
-            // check with the local limitations vs. the chosen defender
-            attackMax = restrict.getDefenderMax().getOrDefault(defender, -1);
-        }
-        if (attackMax == 0) {
-            // can't attack anymore
-            return aiAggression;
-        }
-
         // Aggro options
         boolean playAggro = false;
         int chanceToAttackToTrade = 0;

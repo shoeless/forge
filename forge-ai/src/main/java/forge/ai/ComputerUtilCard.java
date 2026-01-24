@@ -73,8 +73,8 @@ public class ComputerUtilCard {
      */
     public static void sortByEvaluateCreature(final CardCollection list) {
         // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
-        // Note: reversed() to match upstream behavior (descending order)
-        IterableUtil.sort(list, Collections.reverseOrder(ComputerUtilCard.EvaluateCreatureComparator));
+        // Collections.reverseOrder() is equivalent to Comparator.reversed()
+        IterableUtil.sort(list, Collections.reverseOrder(getCachedCreatureComparator()));
     }
 
     /**

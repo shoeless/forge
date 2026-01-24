@@ -6,8 +6,9 @@ import java.util.List;
 import forge.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
-
 import com.google.common.collect.Lists;
+
+import forge.util.IterableUtil;
 import forge.Forge;
 import forge.Graphics;
 import forge.assets.FImage;
@@ -65,7 +66,8 @@ public class GameEntityPicker extends TabPageScreen<GameEntityPicker> {
         List<PickerTab> tabs = Lists.newArrayList();
         tabs.add(new PickerTab(choiceList, Forge.getLocalizer().getMessage("lblChoices"), Forge.hdbuttons ? FSkinImage.HDCHOICE : FSkinImage.DECKLIST, 1));
         for (ZoneType zone : delayedReveal.getZone()) {
-            final Collection<CardView> revealList = delayedReveal.getCards().stream().filter(c -> c.getZone() == zone).collect(Collectors.toList());
+            // iOS compatibility: Replace stream().filter().collect() with IterableUtil
+            final Collection<CardView> revealList = Lists.newArrayList(IterableUtil.filter(delayedReveal.getCards(), c -> c.getZone() == zone));
             final String revealListCaption = StringUtils.capitalize(MessageUtil.formatMessage("{player's} " + zone.getTranslatedName(), delayedReveal.getOwner(), delayedReveal.getOwner()));
             final FImage revealListImage = VPlayerPanel.iconFromZone(zone);
             tabs.add(new PickerTab(revealList, revealListCaption, revealListImage, 1));

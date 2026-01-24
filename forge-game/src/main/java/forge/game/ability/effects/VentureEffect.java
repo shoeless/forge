@@ -61,7 +61,7 @@ public class VentureEffect extends SpellAbilityEffect {
         // iOS compatibility: Replace Stream API with traditional loop
         Map<ICardFace, String> mapping = new TreeMap<>();
         for (Map.Entry<String, CardRules> e : StaticData.instance().getAllTokens().getRules().entrySet()) {
-            if (filter.apply(e)) {
+            if (filter.test(e)) {
                 ICardFace key = e.getValue().getMainPart();
                 // Only add if key not already present (equivalent to (a,b) -> a merge function)
                 if (!mapping.containsKey(key)) {

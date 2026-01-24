@@ -1309,7 +1309,7 @@ public class SpecialCardAi {
         public static CardCollection reviseCreatureSacList(final Player ai, final SpellAbility sa, final CardCollection choices) {
             // iOS compatibility: Use IterableUtil.sort() instead of List.sort()
             // Note: NOT reversed to match upstream behavior (ascending order)
-            IterableUtil.sort(choices, ComputerUtilCard.EvaluateCreatureComparator);
+            IterableUtil.sort(choices, ComputerUtilCard.getCachedCreatureComparator());
             int power = 0;
             List<Card> toKeep = Lists.newArrayList();
             for (Card c : choices) {
