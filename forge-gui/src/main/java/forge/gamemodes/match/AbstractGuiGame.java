@@ -121,7 +121,32 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
         if (player == null) {
             return spectator;
         }
-        return gameControllers.get(player);
+
+        // Direct lookup
+        IGameController controller = gameControllers.get(player);
+        if (controller != null) {
+            return controller;
+        }
+
+        // Fallback: lookup by player ID (for network play where PlayerView objects may differ)
+        int targetId = player.getId();
+        for (Map.Entry<PlayerView, IGameController> entry : gameControllers.entrySet()) {
+            if (entry.getKey().getId() == targetId) {
+                return entry.getValue();
+            }
+        }
+
+        // Second fallback: lookup by player name
+        String targetName = player.getName();
+        if (targetName != null) {
+            for (Map.Entry<PlayerView, IGameController> entry : gameControllers.entrySet()) {
+                if (targetName.equals(entry.getKey().getName())) {
+                    return entry.getValue();
+                }
+            }
+        }
+
+        return null;
     }
 
     public final Collection<IGameController> getOriginalGameControllers() {
@@ -217,15 +242,16 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
                 }
                 return true;
             }
-            try {
-                if (getGameController().mayLookAtAllCards()) { // when it bugged here, the game thinks the spectator (null)
-                    return true;                               // is the humancontroller here (maybe because there is an existing game thread???)
-                }
-            } catch (NullPointerException e) {
-                return true; // return true so it will work as normal
+            // Check if game controller allows looking at all cards (dev mode, etc.)
+            IGameController controller = getGameController();
+            if (controller != null && controller.mayLookAtAllCards()) {
+                return true;
             }
+            // Note: If controller is null (can happen in network play due to PlayerView ID mismatch),
+            // we fall through to the normal visibility check below instead of returning true.
         } else {
-            if (getGameController().mayLookAtAllCards()) {
+            IGameController controller = getGameController();
+            if (controller != null && controller.mayLookAtAllCards()) {
                 return true;
             }
         }

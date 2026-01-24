@@ -518,10 +518,13 @@ public class PlayerPanel extends FContainer {
             if (source instanceof FTextField) { // the text box
                 FTextField nField = (FTextField)source;
                 String newName = nField.getText().trim();
-                if (index == 0 && !StringUtils.isBlank(newName)
-                        && StringUtils.isAlphanumericSpace(newName) && prefs.getPref(FPref.PLAYER_NAME) != newName) {
-                    prefs.setPref(FPref.PLAYER_NAME, newName);
-                    prefs.save();
+                if (!StringUtils.isBlank(newName) && StringUtils.isAlphanumericSpace(newName)) {
+                    // Only save to preferences for player 0 (local player on host)
+                    if (index == 0 && !newName.equals(prefs.getPref(FPref.PLAYER_NAME))) {
+                        prefs.setPref(FPref.PLAYER_NAME, newName);
+                        prefs.save();
+                    }
+                    // Apply to lobby slot and fire listener for any editable player
                     screen.getLobby().applyToSlot(index, UpdateLobbyPlayerEvent.nameUpdate(newName));
                     if (allowNetworking) {
                         screen.firePlayerChangeListener(index);

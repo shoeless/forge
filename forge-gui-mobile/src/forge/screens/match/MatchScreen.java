@@ -390,10 +390,15 @@ public class MatchScreen extends FScreen {
         if (game.getNeedsPhaseRedrawn()) {
             resetAllPhaseButtons();
             if (game.getPlayerTurn() != null && game.getPhase() != null) {
-                final PhaseLabel phaseLabel = getPlayerPanel(game.getPlayerTurn()).getPhaseIndicator().getLabel(game.getPhase());
-                if (phaseLabel != null) {
-                    phaseLabel.setActive(true);
-                    game.clearNeedsPhaseRedrawn();
+                final VPlayerPanel turnPanel = getPlayerPanel(game.getPlayerTurn());
+                if (turnPanel != null) {
+                    final PhaseLabel phaseLabel = turnPanel.getPhaseIndicator().getLabel(game.getPhase());
+                    if (phaseLabel != null) {
+                        phaseLabel.setActive(true);
+                        game.clearNeedsPhaseRedrawn();
+                    }
+                } else {
+                    System.err.println("NETWORK_DEBUG: phase redraw - panel is null for playerTurn=" + game.getPlayerTurn());
                 }
             }
         }
@@ -770,7 +775,40 @@ public class MatchScreen extends FScreen {
     }
 
     public static VPlayerPanel getPlayerPanel(final PlayerView playerView) {
-        return getPlayerPanels().get(playerView);
+        if (playerView == null) {
+            return null;
+        }
+
+        // Direct lookup by PlayerView (works when IDs match)
+        VPlayerPanel panel = getPlayerPanels().get(playerView);
+        if (panel != null) {
+            return panel;
+        }
+
+        // Fallback: lookup by player ID (for network play where PlayerView objects may differ)
+        // This handles the case where server and client have different PlayerView instances
+        // with the same underlying player ID
+        int targetId = playerView.getId();
+        for (Map.Entry<PlayerView, VPlayerPanel> entry : getPlayerPanels().entrySet()) {
+            if (entry.getKey().getId() == targetId) {
+                return entry.getValue();
+            }
+        }
+
+        // Second fallback: lookup by player name (last resort for network ID mismatch)
+        String targetName = playerView.getName();
+        if (targetName != null) {
+            for (Map.Entry<PlayerView, VPlayerPanel> entry : getPlayerPanels().entrySet()) {
+                if (targetName.equals(entry.getKey().getName())) {
+                    return entry.getValue();
+                }
+            }
+        }
+
+        System.err.println("NETWORK_DEBUG: getPlayerPanel failed for playerView=" + playerView +
+            ", id=" + targetId + ", name=" + targetName +
+            ". Available panels: " + getPlayerPanels().keySet());
+        return null;
     }
 
     public void highlightCard(final CardView c) {
@@ -812,6 +850,11 @@ public class MatchScreen extends FScreen {
         for (final PlayerZoneUpdate update : zonesToUpdate) {
             final PlayerView owner = update.getPlayer();
             final VPlayerPanel panel = getPlayerPanel(owner);
+            if (panel == null) {
+                System.err.println("NETWORK_DEBUG: updateZones - panel is null for owner=" + owner +
+                    ". Skipping zone update.");
+                continue;
+            }
             for (final ZoneType zone : update.getZones()) {
                 panel.updateZone(zone);
             }

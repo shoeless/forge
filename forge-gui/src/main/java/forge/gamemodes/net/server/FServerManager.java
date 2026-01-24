@@ -396,6 +396,7 @@ public final class FServerManager {
                 }
             } else if (msg instanceof UpdateLobbyPlayerEvent) {
                 updateSlot(client.getIndex(), (UpdateLobbyPlayerEvent) msg);
+                updateLobbyState(); // Broadcast changes to all clients
             } else if (msg instanceof MessageEvent) {
                 final MessageEvent event = (MessageEvent) msg;
                 lobbyListener.message(event.getSource(), event.getMessage());

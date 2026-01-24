@@ -20,9 +20,11 @@ public class RSSReader {
             RssReader reader = new RssReader();
             URL url = new URL(commitsAtom);
             InputStream inputStream = url.openStream();
-            // iOS compatibility: Use traditional loop instead of Stream + Collectors
+            // iOS compatibility: Use traditional loop instead of Stream.forEach() (Java 8 method)
             List<Item> items = new ArrayList<>();
-            reader.read(inputStream).forEach(items::add);
+            for (Item item : (Iterable<Item>) () -> reader.read(inputStream).iterator()) {
+                items.add(item);
+            }
             StringBuilder logs = new StringBuilder();
             int c = 0;
             for (Item i : items) {
@@ -75,9 +77,11 @@ public class RSSReader {
             RssReader reader = new RssReader();
             URL url = new URL(releaseAtom);
             InputStream inputStream = url.openStream();
-            // iOS compatibility: Use traditional loop instead of Stream + Collectors
+            // iOS compatibility: Use traditional loop instead of Stream.forEach() (Java 8 method)
             List<Item> items = new ArrayList<>();
-            reader.read(inputStream).forEach(items::add);
+            for (Item item : (Iterable<Item>) () -> reader.read(inputStream).iterator()) {
+                items.add(item);
+            }
             for (Item i : items) {
                 if (i.getLink().isPresent()) {
                     try {
