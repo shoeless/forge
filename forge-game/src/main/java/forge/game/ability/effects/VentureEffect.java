@@ -10,7 +10,6 @@ import org.apache.commons.lang3.ObjectUtils;
 import com.google.common.collect.Lists;
 
 import forge.util.function.Predicate;
-import forge.util.IterableUtil;
 
 import forge.StaticData;
 import forge.card.CardRules;

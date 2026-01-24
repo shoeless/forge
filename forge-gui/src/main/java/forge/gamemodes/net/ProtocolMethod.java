@@ -23,7 +23,6 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import forge.util.function.Function;
 
 /**
  * The methods that can be sent through this protocol.

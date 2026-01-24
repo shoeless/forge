@@ -20,7 +20,7 @@ package forge.screens.match.controllers;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 import javax.swing.SwingUtilities;
 

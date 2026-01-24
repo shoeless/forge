@@ -6,7 +6,7 @@ import forge.itemmanager.ItemManager;
 import forge.itemmanager.SFilterUtil;
 import forge.screens.home.quest.DialogChooseFormats;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public class DeckFormatFilter extends FormatFilter<DeckProxy> {

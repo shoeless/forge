@@ -25,7 +25,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 import javax.swing.AbstractListModel;
 import javax.swing.DefaultListCellRenderer;

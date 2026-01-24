@@ -48,7 +48,7 @@ import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 /**
  * ItemManager.

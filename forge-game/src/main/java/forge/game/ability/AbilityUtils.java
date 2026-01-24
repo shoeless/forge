@@ -1,6 +1,5 @@
 package forge.game.ability;
 
-import com.google.common.base.Function;
 import com.google.common.collect.*;
 import com.google.common.math.IntMath;
 import forge.card.CardStateName;

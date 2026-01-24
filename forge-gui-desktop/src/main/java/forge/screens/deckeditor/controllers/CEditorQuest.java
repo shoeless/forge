@@ -22,8 +22,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import forge.util.function.Function;
+import forge.util.function.Predicate;
 import java.util.function.Supplier;
 
 import javax.swing.KeyStroke;

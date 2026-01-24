@@ -5,7 +5,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.event.MouseEvent;
 import java.util.*;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 import javax.swing.*;
 

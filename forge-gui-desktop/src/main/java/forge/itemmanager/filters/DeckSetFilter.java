@@ -3,7 +3,7 @@ package forge.itemmanager.filters;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.deck.DeckProxy;
 import forge.game.GameFormat;

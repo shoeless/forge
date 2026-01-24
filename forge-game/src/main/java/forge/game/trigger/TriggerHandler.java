@@ -39,9 +39,6 @@ import forge.game.staticability.StaticAbilityPanharmonicon;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
 import forge.util.FileSection;
-import forge.util.Visitor;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 
 public class TriggerHandler {
     private final Set<TriggerType> suppressedModes = Collections.synchronizedSet(EnumSet.noneOf(TriggerType.class));

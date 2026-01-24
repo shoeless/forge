@@ -8,7 +8,7 @@ import forge.itemmanager.SFilterUtil;
 import forge.itemmanager.SItemManagerUtil.StatTypes;
 import forge.util.ItemPool;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public class DeckColorFilter extends StatTypeFilter<DeckProxy> {

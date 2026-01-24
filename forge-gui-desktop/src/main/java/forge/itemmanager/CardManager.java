@@ -21,8 +21,6 @@ import forge.util.Localizer;
 import javax.swing.*;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /** 
  * ItemManager for cards
@@ -77,8 +75,13 @@ public class CardManager extends ItemManager<PaperCard> {
                 continue;  // skip card
 
             // Try to retain only those editions accepted by the current Card Art Preference Policy
-            Predicate<CardEdition> editionPredicate = ed -> StaticData.instance().getCardArtPreference().accept(ed);
-            List<CardEdition> acceptedEditions = entriesByEdition.keySet().stream().filter(editionPredicate).collect(Collectors.toList());
+            // iOS compatibility: Replace stream().filter().collect() with traditional loop
+            List<CardEdition> acceptedEditions = new ArrayList<>();
+            for (CardEdition ed : entriesByEdition.keySet()) {
+                if (StaticData.instance().getCardArtPreference().accept(ed)) {
+                    acceptedEditions.add(ed);
+                }
+            }
 
             // If policy too strict, fall back to getting all editions.
             if (acceptedEditions.size() == 0)

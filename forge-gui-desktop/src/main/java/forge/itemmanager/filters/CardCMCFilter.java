@@ -2,7 +2,7 @@ package forge.itemmanager.filters;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import javax.swing.JPanel;
 

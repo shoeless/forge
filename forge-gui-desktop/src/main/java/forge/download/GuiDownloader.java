@@ -39,7 +39,7 @@ import forge.toolbox.FTextField;
 import forge.toolbox.JXButtonPanel;
 import net.miginfocom.swing.MigLayout;
 
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 @SuppressWarnings("serial")
 public class GuiDownloader extends DefaultBoundedRangeModel {

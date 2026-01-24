@@ -15,7 +15,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
+import forge.util.function.Consumer;
 
 import javax.sound.sampled.AudioSystem;
 import javax.swing.ImageIcon;

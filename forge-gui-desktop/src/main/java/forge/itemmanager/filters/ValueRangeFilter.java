@@ -1,7 +1,7 @@
 package forge.itemmanager.filters;
 
 import java.awt.Component;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import javax.swing.JPanel;
 import javax.swing.JSpinner;

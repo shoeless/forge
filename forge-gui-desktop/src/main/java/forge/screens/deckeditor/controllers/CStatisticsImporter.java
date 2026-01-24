@@ -18,7 +18,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class CStatisticsImporter {
 

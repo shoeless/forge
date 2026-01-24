@@ -1,7 +1,7 @@
 package forge.screens.deckeditor.controllers;
 
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import javax.swing.JLabel;
 

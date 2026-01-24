@@ -1,10 +1,9 @@
 package forge.gui.interfaces;
 
-import forge.game.card.Card;
 import forge.game.card.CardView;
 
 /**
- * Interface that receives requests on whether a {@link Card} can be shown.
+ * Interface that receives requests on whether a {@link CardView} can be shown.
  */
 public interface IMayViewCards {
 

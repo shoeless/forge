@@ -45,8 +45,6 @@ import forge.util.ITranslatable;
 import forge.util.IterableUtil;
 import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
-import io.sentry.Breadcrumb;
-import io.sentry.Sentry;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;

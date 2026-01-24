@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.card.CardDb;
 import forge.item.PaperCardPredicates;
@@ -357,14 +357,15 @@ public class ImportSourceAnalyzer {
     //
 
     private static void addSetCards(final Map<String, String> cardFileNames, final CardDb library, final Predicate<PaperCard> filter) {
-        library.streamAllCards().filter(filter).forEach(c -> {
+        // iOS compatibility: Replace stream API with traditional loop
+        for (PaperCard c : library.getAllCards(filter)) {
             String filename = c.getCardImageKey() + ".jpg";
             cardFileNames.put(filename, filename);
             if (c.hasBackFace()) {
                 filename = c.getCardAltImageKey() + ".jpg";
                 cardFileNames.put(filename, filename);
             }
-        });
+        }
     }
 
     Map<String, Map<String, String>> cardFileNamesBySet;
@@ -384,14 +385,15 @@ public class ImportSourceAnalyzer {
             nameUpdates = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             final Predicate<PaperCard> predPlanes = arg0 -> arg0.getRules().getType().isPlane() || arg0.getRules().getType().isPhenomenon();
 
-            FModel.getMagicDb().getVariantCards().streamAllCards().filter(predPlanes).forEach(c -> {
+            // iOS compatibility: Replace stream API with traditional loop
+            for (PaperCard c : FModel.getMagicDb().getVariantCards().getAllCards(predPlanes)) {
                 String baseName = c.getCardImageKey();
                 nameUpdates.put(baseName + ".full.jpg", baseName + ".jpg");
                 if (c.hasBackFace()) {
                     baseName = c.getCardAltImageKey();
                     nameUpdates.put(baseName + ".full.jpg", baseName + ".jpg");
                 }
-            });
+            }
         }
 
         final CardEdition.Collection editions = FModel.getMagicDb().getEditions();

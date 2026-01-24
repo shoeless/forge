@@ -19,7 +19,7 @@ package forge.itemmanager.views;
 
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Function;
+import forge.util.function.Function;
 
 import javax.swing.table.TableColumn;
 

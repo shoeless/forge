@@ -1,7 +1,7 @@
 package forge.itemmanager.filters;
 
 import java.util.List;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 import forge.game.GameFormat;
 import forge.item.PaperCard;

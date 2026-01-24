@@ -12,7 +12,7 @@ import forge.toolbox.FLabel;
 import forge.toolbox.FTextField;
 import forge.toolbox.LayoutHelper;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public class CardSearchFilter extends TextSearchFilter<PaperCard> {

@@ -37,7 +37,7 @@ import forge.util.Localizer;
 import forge.util.storage.IStorage;
 
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -140,8 +140,9 @@ public final class CEditorVariant extends CDeckEditor<Deck> {
      */
     @Override
     public void resetTables() {
-        ItemPool<PaperCard> allNT = FModel.getMagicDb().getVariantCards().streamAllCards()
-                .filter(cardPoolCondition).collect(ItemPool.collector(PaperCard.class));
+        // iOS compatibility: Replace stream API with getAllCards(Predicate)
+        ItemPool<PaperCard> allNT = ItemPool.createFrom(
+                FModel.getMagicDb().getVariantCards().getAllCards(cardPoolCondition), PaperCard.class);
 
         this.getCatalogManager().setPool(allNT, true);
         this.getDeckManager().setPool(this.controller.getModel().getOrCreate(this.sectionMode));

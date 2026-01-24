@@ -8,7 +8,7 @@ import forge.itemmanager.SFilterUtil;
 import forge.itemmanager.SItemManagerUtil.StatTypes;
 import forge.model.FModel;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 public class CardRatingFilter extends StatTypeFilter<PaperCard> {
     public CardRatingFilter(ItemManager<? super PaperCard> itemManager0) {

@@ -8,7 +8,7 @@ import forge.itemmanager.SFilterUtil;
 import forge.itemmanager.SItemManagerUtil.StatTypes;
 import forge.itemmanager.SpellShopManager;
 
-import java.util.function.Predicate;
+import forge.util.function.Predicate;
 
 
 public class CardColorFilter extends StatTypeFilter<PaperCard> {
