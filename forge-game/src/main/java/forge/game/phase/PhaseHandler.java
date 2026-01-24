@@ -326,6 +326,8 @@ public class PhaseHandler implements java.io.Serializable {
                         givePriorityToPlayer = false;
                     } else {
                         combat.dealAssignedDamage();
+                        // Check state-based effects after combat damage to handle lethal damage
+                        game.getAction().checkStateEffects(true);
                     }
                     break;
 
@@ -338,6 +340,8 @@ public class PhaseHandler implements java.io.Serializable {
                         givePriorityToPlayer = false;
                     } else {
                         combat.dealAssignedDamage();
+                        // Check state-based effects after combat damage to handle lethal damage
+                        game.getAction().checkStateEffects(true);
                     }
                     break;
 
