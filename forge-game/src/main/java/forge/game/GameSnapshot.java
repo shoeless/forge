@@ -415,9 +415,27 @@ public class GameSnapshot {
         return null;
     }
 
-    private record UnorderedEntities(
-        Player toPlayer, Card fromCard, Card newCard, ZoneType fromType, int zonePosition
-    ) implements Comparable<UnorderedEntities> {
+    private static final class UnorderedEntities implements Comparable<UnorderedEntities> {
+        private final Player toPlayer;
+        private final Card fromCard;
+        private final Card newCard;
+        private final ZoneType fromType;
+        private final int zonePosition;
+
+        UnorderedEntities(Player toPlayer, Card fromCard, Card newCard, ZoneType fromType, int zonePosition) {
+            this.toPlayer = toPlayer;
+            this.fromCard = fromCard;
+            this.newCard = newCard;
+            this.fromType = fromType;
+            this.zonePosition = zonePosition;
+        }
+
+        Player toPlayer() { return toPlayer; }
+        Card fromCard() { return fromCard; }
+        Card newCard() { return newCard; }
+        ZoneType fromType() { return fromType; }
+        int zonePosition() { return zonePosition; }
+
         @Override
         public int compareTo(UnorderedEntities o) {
             return Integer.compare(this.zonePosition, o.zonePosition);

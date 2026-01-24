@@ -124,13 +124,17 @@ public abstract class PaperCardPredicates {
     public static Predicate<PaperCard> isObtainableNotRestricted(final String[] restrictedEditionCodes) {
         Set<String> restrictedEditions = new HashSet<>(Arrays.asList(restrictedEditionCodes));
 
-        return card -> StaticData.instance().getCommonCards()
-            .getAllCards(card.getName()).stream()
-            .map(PaperCard::getEdition)
-            .anyMatch(editionCode ->
-                !restrictedEditions.contains(editionCode) &&
-                    StaticData.instance().getCardEdition(editionCode).isCardObtainable(card.getName())
-        );
+        // iOS compatibility: Replace Stream API with traditional loop
+        return card -> {
+            for (PaperCard pc : StaticData.instance().getCommonCards().getAllCards(card.getName())) {
+                String editionCode = pc.getEdition();
+                if (!restrictedEditions.contains(editionCode) &&
+                        StaticData.instance().getCardEdition(editionCode).isCardObtainable(card.getName())) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     private static final class PredicatePrintedWithRarity implements Predicate<PaperCard> {

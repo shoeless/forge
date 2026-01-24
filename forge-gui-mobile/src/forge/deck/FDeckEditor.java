@@ -590,6 +590,28 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
                         });
                     }));
                 }
+                // Archidekt import option - always available
+                addItem(new FMenuItem(localizer.getMessage("lblImportFromArchidekt"), Forge.hdbuttons ? FSkinImage.HDIMPORT : FSkinImage.OPEN, e -> {
+                    ArchidektImportScreen.show(importedDeck -> {
+                        if (importedDeck != null) {
+                            if (importedDeck.hasName()) {
+                                deck.setName(importedDeck.getName());
+                                setHeaderText(importedDeck.getName());
+                            }
+                            // Replace current deck contents
+                            for (DeckSectionPage page : pagesBySection.values()) {
+                                if (importedDeck.has(page.deckSection)) {
+                                    page.setCards(importedDeck.get(page.deckSection));
+                                    if (hiddenExtraSections.contains(page.deckSection)) {
+                                        showExtraSectionTab(page.deckSection);
+                                    }
+                                } else {
+                                    page.setCards(new CardPool());
+                                }
+                            }
+                        }
+                    });
+                }));
                 if (editorConfig.hasInfiniteCardPool() || editorConfig.usePlayerInventory()) {
                     addItem(new FMenuItem(localizer.getMessage("lblImportFromClipboard"), Forge.hdbuttons ? FSkinImage.HDIMPORT : FSkinImage.OPEN, e -> {
                         FDeckImportDialog dialog = new FDeckImportDialog(deck, FDeckEditor.this.editorConfig);

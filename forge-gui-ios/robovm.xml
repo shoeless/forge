@@ -63,6 +63,12 @@
     <pattern>forge.gamemodes.match.LobbySlot</pattern>
     <pattern>forge.gamemodes.match.LobbySlotType</pattern>
     <pattern>forge.gamemodes.match.GameLobby$GameLobbyData</pattern>
+    <!-- Archidekt deck import - may be redundant since classes are referenced from FDeckEditor,
+         but kept for safety as initial build without these entries failed to include the classes -->
+    <pattern>forge.deck.ArchidektService</pattern>
+    <pattern>forge.deck.ArchidektService$*</pattern>
+    <pattern>forge.deck.ArchidektImportScreen</pattern>
+    <pattern>forge.deck.ArchidektImportScreen$*</pattern>
   </forceLinkClasses>
   <frameworkPaths>
     <path>libs</path>

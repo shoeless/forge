@@ -400,13 +400,12 @@ public final class CardEdition implements Comparable<CardEdition> {
         this.cardMap = cardMap;
         this.cardsInSet = new ArrayList<>(cardMap.values());
         Collections.sort(cardsInSet);
-        this.cardsInSetLookupMap = cardsInSet.stream().collect(
-            Multimaps.toMultimap(
-                e -> e.name,
-                e -> e,
-                MultimapBuilder.treeKeys(String.CASE_INSENSITIVE_ORDER).arrayListValues()::build
-            )
-        );
+        // Build lookup map using traditional loop (RoboVM doesn't support Stream API)
+        ListMultimap<String, EditionEntry> lookupMap = MultimapBuilder.treeKeys(String.CASE_INSENSITIVE_ORDER).arrayListValues().build();
+        for (EditionEntry e : cardsInSet) {
+            lookupMap.put(e.name, e);
+        }
+        this.cardsInSetLookupMap = lookupMap;
         this.tokenMap = tokens;
         this.customPrintSheetsToParse = customPrintSheetsToParse;
     }
