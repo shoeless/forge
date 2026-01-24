@@ -19,6 +19,10 @@
         <include>Icon*.png</include>
       </includes>
     </resource>
+    <resource>
+      <directory>fallback_skin</directory>
+      <targetPath>fallback_skin</targetPath>
+    </resource>
   </resources>
   <target>ios</target>
   <iosInfoPList>Info.plist.xml</iosInfoPList>
