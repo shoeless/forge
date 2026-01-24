@@ -128,7 +128,9 @@ public class CostRemoveAnyCounter extends CostPart {
                 removed += v.getValue();
                 e.getKey().subtractCounter(v.getKey(), v.getValue(), ai);
             }
-            if (e.getKey() instanceof Card c) {
+            // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+            if (e.getKey() instanceof Card) {
+                Card c = (Card) e.getKey();
                 e.getKey().getGame().updateLastStateForCard(c);
             }
         }

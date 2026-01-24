@@ -2575,10 +2575,14 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                         || keyword.startsWith("Sneak") || keyword.startsWith("Squad")
                         || keyword.startsWith("Emerge") || keyword.startsWith("More Than Meets the Eye")
                         || keyword.startsWith("Level up") || keyword.startsWith("Plot")
-                        ) && inst instanceof KeywordWithCost withCost) {
+                        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                        ) && inst instanceof KeywordWithCost) {
+                    KeywordWithCost withCost = (KeywordWithCost) inst;
                     sbLong.append(withCost.getTitle()).append(" (").append(inst.getReminderText()).append(")");
                     sbLong.append("\r\n");
-                } else if ((keyword.startsWith("Impending") || keyword.equals("Suspend")) && inst instanceof KeywordWithCostAndAmount costAndAmount) {
+                // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                } else if ((keyword.startsWith("Impending") || keyword.equals("Suspend")) && inst instanceof KeywordWithCostAndAmount) {
+                    KeywordWithCostAndAmount costAndAmount = (KeywordWithCostAndAmount) inst;
                     sbLong.append(costAndAmount.getTitle()).append(" (").append(inst.getReminderText()).append(")");
                     sbLong.append("\r\n");
                 } else if (keyword.startsWith("Escape") || keyword.startsWith("Foretell:")
@@ -2688,12 +2692,16 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                         || keyword.equals("Daybound") || keyword.equals("Nightbound")
                         || keyword.equals("Choose a Background") || keyword.equals("Compleated")
                         || keyword.equals("Space sculptor") || keyword.equals("Doctor's companion")
-                        || keyword.equals("Start your engines")) && inst instanceof SimpleKeyword simple) {
+                        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                        || keyword.equals("Start your engines")) && inst instanceof SimpleKeyword) {
+                    SimpleKeyword simple = (SimpleKeyword) inst;
                     sbLong.append(simple.getTitle()).append(" (").append(inst.getReminderText()).append(")");
                 } else if (keyword.startsWith("Partner with:")) {
                     final String[] k = keyword.split(":");
                     sbLong.append("Partner with ").append(k[1]).append(" (").append(inst.getReminderText()).append(")");
-                } else if (keyword.startsWith("Partner") && inst instanceof Partner partner) {
+                // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                } else if (keyword.startsWith("Partner") && inst instanceof Partner) {
+                    Partner partner = (Partner) inst;
                     sbLong.append(partner.getTitle()).append(" (").append(inst.getReminderText()).append(")");
                 } else if (keyword.startsWith("Prototype")) {
                     final String[] k = keyword.split(":");
@@ -2707,7 +2715,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                         || keyword.startsWith("Afterlife") || keyword.startsWith("Hideaway") || keyword.startsWith("Toxic")
                         || keyword.startsWith("Afflict") || keyword.startsWith ("Poisonous") || keyword.startsWith("Rampage")
                         || keyword.startsWith("Renown") || keyword.startsWith("Annihilator") || keyword.startsWith("Ripple"))
-                        && inst instanceof KeywordWithAmount withAmount) {
+                        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                        && inst instanceof KeywordWithAmount) {
+                    KeywordWithAmount withAmount = (KeywordWithAmount) inst;
                     sbLong.append(withAmount.getTitle()).append(" (").append(inst.getReminderText()).append(")");
                 } else if (keyword.startsWith("Crew")) {
                     final String[] k = keyword.split(":");
@@ -3320,10 +3330,12 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                     sbAfter.append(" (").append(inst.getReminderText()).append(")").append("\r\n");
                 } else if (keyword.startsWith("Starting intensity")) {
                     sbAfter.append(TextUtil.fastReplace(keyword, ":", " ")).append("\r\n");
+                // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
                 } else if ((keyword.startsWith("Escalate") || keyword.startsWith("Buyback")
                         || keyword.startsWith("Freerunning") || keyword.startsWith("Prowl")
                         || keyword.startsWith("Sneak") || keyword.startsWith("Cleave"))
-                    && inst instanceof KeywordWithCost withCost) {
+                    && inst instanceof KeywordWithCost) {
+                    KeywordWithCost withCost = (KeywordWithCost) inst;
                     sbBefore.append(withCost.getTitle()).append(" (").append(inst.getReminderText()).append(")");
                     sbBefore.append("\r\n");
                 } else if (keyword.startsWith("Multikicker")) {
@@ -3348,12 +3360,14 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                     // Pseudo keywords, only print Reminder
                     sbBefore.append(inst.getReminderText());
                     sbBefore.append("\r\n");
+                // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
                 } else if ((keyword.startsWith("Entwine") || keyword.startsWith("Madness")
                         || keyword.startsWith("Miracle") || keyword.startsWith("Recover")
                         || keyword.startsWith("Escape") || keyword.startsWith("Foretell:")
                         || keyword.startsWith("Disturb") || keyword.startsWith("Overload")
                         || keyword.startsWith("Plot") || keyword.startsWith("Mayhem"))
-                        && inst instanceof KeywordWithCost withCost) {
+                        && inst instanceof KeywordWithCost) {
+                    KeywordWithCost withCost = (KeywordWithCost) inst;
                     sbAfter.append(withCost.getTitle()).append(" (").append(inst.getReminderText()).append(")");
                     sbAfter.append("\r\n");
                 } else if (keyword.equals("Gift")) {

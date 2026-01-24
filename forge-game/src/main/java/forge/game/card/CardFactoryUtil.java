@@ -2251,7 +2251,9 @@ public class CardFactoryUtil {
             re.setOverridingAbility(saTransform);
 
             inst.addReplacement(re);
-        } else if (keyword.startsWith("Devour") && inst instanceof Devour devour) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("Devour") && inst instanceof Devour) {
+            Devour devour = (Devour) inst;
             String valid = devour.getValidType();
 
             String sacrificeStr = "DB$ Sacrifice | Defined$ You | Amount$ DevourSacX | RememberSacrificed$ True | Optional$ True"
@@ -2373,7 +2375,9 @@ public class CardFactoryUtil {
             final ReplacementEffect re = makeEtbCounter(sb.toString(), card, intrinsic);
 
             inst.addReplacement(re);
-        } else if (keyword.startsWith("Impending") && inst instanceof KeywordWithCostAndAmount impending) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("Impending") && inst instanceof KeywordWithCostAndAmount) {
+            KeywordWithCostAndAmount impending = (KeywordWithCostAndAmount) inst;
             final String effect = "DB$ PutCounter | Defined$ ReplacedCard | CounterType$ TIME | CounterNum$ " + impending.getAmountString()
                     + " | ETB$ True | SpellDescription$ " + impending.getTitle();
 
@@ -2420,7 +2424,9 @@ public class CardFactoryUtil {
             re.setOverridingAbility(AbilityFactory.getAbility(sVarMadness, card));
 
             inst.addReplacement(re);
-        } else if (keyword.startsWith("Modular") && inst instanceof Modular modular) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("Modular") && inst instanceof Modular) {
+            Modular modular = (Modular) inst;
             final String m = modular.getAmountString();
 
             StringBuilder sb = new StringBuilder("etbCounter:P1P1:");
@@ -2572,7 +2578,9 @@ public class CardFactoryUtil {
             ReplacementEffect cardre = createETBReplacement(card, ReplacementLayer.Other, effect, true, true, intrinsic, "Card.Self", "");
 
             inst.addReplacement(cardre);
-        } else if (keyword.startsWith("Vanishing:") && inst instanceof Vanishing vanishing) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("Vanishing:") && inst instanceof Vanishing) {
+            Vanishing vanishing = (Vanishing) inst;
             // Vanishing could be added to a card, but this Effect should only be done when it has amount
 
             StringBuilder sb = new StringBuilder("etbCounter:TIME:");
@@ -2699,7 +2707,9 @@ public class CardFactoryUtil {
             final SpellAbility sa = AbilityFactory.getAbility(effect, card);
             sa.setIntrinsic(intrinsic);
             inst.addSpellAbility(sa);
-        } else if (keyword.startsWith("Awaken") && inst instanceof KeywordWithCostAndAmount awaken) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("Awaken") && inst instanceof KeywordWithCostAndAmount) {
+            KeywordWithCostAndAmount awaken = (KeywordWithCostAndAmount) inst;
             final SpellAbility awakenSpell = card.getFirstSpellAbility().copyWithDefinedCost(awaken.getCost());
 
             final String putCounter = "DB$ PutCounter | CounterType$ P1P1 | CounterNum$ "+ awaken.getAmount() + " | "
@@ -2860,7 +2870,9 @@ public class CardFactoryUtil {
             newSA.getRestrictions().setZone(ZoneType.Graveyard);
             newSA.setIntrinsic(intrinsic);
             inst.addSpellAbility(newSA);
-        } else if (keyword.startsWith("Emerge") && inst instanceof Emerge emerge) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("Emerge") && inst instanceof Emerge) {
+            Emerge emerge = (Emerge) inst;
             String desc = "(" + emerge.getTitleWithoutCost()  + ")";
 
             final SpellAbility sa = card.getFirstSpellAbilityWithFallback();
@@ -3191,7 +3203,9 @@ public class CardFactoryUtil {
                 sa.setIntrinsic(intrinsic);
                 inst.addSpellAbility(sa);
             }
-        } else if (keyword.startsWith("Impending") && inst instanceof KeywordWithCostAndAmount impending) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("Impending") && inst instanceof KeywordWithCostAndAmount) {
+            KeywordWithCostAndAmount impending = (KeywordWithCostAndAmount) inst;
             final Cost cost = impending.getCost();
             final SpellAbility newSA = card.getFirstSpellAbility().copyWithDefinedCost(cost);
 
@@ -3512,7 +3526,9 @@ public class CardFactoryUtil {
             SpellAbility unattachSA = AbilityFactory.getAbility(unattachStr.toString(), card);
             unattachSA.setIntrinsic(intrinsic);
             inst.addSpellAbility(unattachSA);
-        } else if (keyword.startsWith("Reinforce") && inst instanceof KeywordWithCostAndAmount reinforce) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("Reinforce") && inst instanceof KeywordWithCostAndAmount) {
+            KeywordWithCostAndAmount reinforce = (KeywordWithCostAndAmount) inst;
             final String n = reinforce.getAmountString();
             final String manacost = reinforce.getCostString();
 
@@ -3848,7 +3864,9 @@ public class CardFactoryUtil {
             SpellAbility sa = AbilityFactory.getAbility(sb.toString(), card);
             sa.setIntrinsic(intrinsic);
             inst.addSpellAbility(sa);
-        } else if (keyword.startsWith("TypeCycling") && inst instanceof KeywordWithCostAndType typeCycling) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        } else if (keyword.startsWith("TypeCycling") && inst instanceof KeywordWithCostAndType) {
+            KeywordWithCostAndType typeCycling = (KeywordWithCostAndType) inst;
             StringBuilder sb = new StringBuilder();
             sb.append("AB$ ChangeZone | Cost$ ").append(typeCycling.getCostString());
 

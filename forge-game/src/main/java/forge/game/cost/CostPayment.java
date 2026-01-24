@@ -165,7 +165,9 @@ public class CostPayment extends ManaConversionMatrix {
 
         // clear lists used for undo
         for (final CostPart part : this.paidCostParts) {
-            if (part instanceof CostPartWithList listCost) {
+            // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+            if (part instanceof CostPartWithList) {
+                CostPartWithList listCost = (CostPartWithList) part;
                 listCost.resetLists();
             }
         }

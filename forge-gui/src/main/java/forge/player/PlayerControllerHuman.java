@@ -473,9 +473,11 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                 continue;
             }
 
-            if (!(ge instanceof Card c)) {
+            // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+            if (!(ge instanceof Card)) {
                 return false;
             }
+            Card c = (Card) ge;
             final Zone cz = c.getZone();
             // Don't try to draw the UI point of a card if it doesn't exist in any zone.
             if (cz == null) {

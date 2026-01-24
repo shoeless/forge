@@ -246,7 +246,9 @@ public class CostAdjustment {
         if (sa.isSpell() && sa.isOffering()) {
             adjustCostByOffering(cost, sa);
         }
-        if (sa.isSpell() && sa.isEmerge() && sa.getKeyword() instanceof Emerge emerge) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        if (sa.isSpell() && sa.isEmerge() && sa.getKeyword() instanceof Emerge) {
+            Emerge emerge = (Emerge) sa.getKeyword();
             adjustCostByEmerge(cost, sa, emerge);
         }
 

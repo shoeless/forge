@@ -573,7 +573,9 @@ public class AbilityUtils {
         }
 
         // All the following only work for SpellAbilities
-        else if (ability instanceof SpellAbility sa) {
+        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+        else if (ability instanceof SpellAbility) {
+            SpellAbility sa = (SpellAbility) ability;
             // Player attribute counting
             if (calcX[0].startsWith("TargetedPlayer")) {
                 final List<Player> players = new ArrayList<>();
@@ -3137,7 +3139,9 @@ public class AbilityUtils {
 
         final CardCollection splices = CardLists.filter(hand, input -> {
             for (final KeywordInterface inst : input.getKeywords(Keyword.SPLICE)) {
-                if (inst instanceof KeywordWithCostAndType splice) {
+                // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                if (inst instanceof KeywordWithCostAndType) {
+                    KeywordWithCostAndType splice = (KeywordWithCostAndType) inst;
                     if (source.isValid(splice.getValidType().split(","), player, input, sa)) {
                         return true;
                     }
@@ -3168,7 +3172,9 @@ public class AbilityUtils {
         Cost spliceCost = null;
         // This Function thinks that Splice exist only once on the card
         for (final KeywordInterface inst : c.getKeywords(Keyword.SPLICE)) {
-            if (inst instanceof KeywordWithCostAndType splice) {
+            // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+            if (inst instanceof KeywordWithCostAndType) {
+                KeywordWithCostAndType splice = (KeywordWithCostAndType) inst;
                 spliceCost = splice.getCost();
                 break;
             }

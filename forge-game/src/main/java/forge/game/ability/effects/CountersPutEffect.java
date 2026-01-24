@@ -309,7 +309,9 @@ public class CountersPutEffect extends SpellAbilityEffect {
                         options = options.replace(ct.getName(), "");
                     }
                     for (CounterType ct : typesToAdd) {
-                        if (obj instanceof Player p) {
+                        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                        if (obj instanceof Player) {
+                            Player p = (Player) obj;
                             p.addCounter(ct, counterAmount, placer, table);
                         }
                         if (obj instanceof Card) {
@@ -372,7 +374,9 @@ public class CountersPutEffect extends SpellAbilityEffect {
                                 counterAmount = remaining;
                             }
                         }
-                        if (obj instanceof Player p) {
+                        // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                        if (obj instanceof Player) {
+                            Player p = (Player) obj;
                             p.addCounter(ct, counterAmount, placer, table);
                         }
                         if (obj instanceof Card) {
@@ -398,7 +402,9 @@ public class CountersPutEffect extends SpellAbilityEffect {
 
                     if (eachExistingCounter) {
                         for (CounterType ct : choices) {
-                            if (obj instanceof Player p) {
+                            // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+                            if (obj instanceof Player) {
+                                Player p = (Player) obj;
                                 p.addCounter(ct, counterAmount, placer, table);
                             }
                             if (obj instanceof Card) {

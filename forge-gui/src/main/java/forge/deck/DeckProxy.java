@@ -89,7 +89,9 @@ public class DeckProxy implements InventoryItem {
 
     public CardEdition getEdition() {
         if (edition == null) {
-            if (deck instanceof PreconDeck pd) {
+            // iOS compatibility: Use traditional instanceof + cast instead of Java 16+ pattern matching
+            if (deck instanceof PreconDeck) {
+                PreconDeck pd = (PreconDeck) deck;
                 edition = StaticData.instance().getEditions().get(pd.getEdition());
             }
             else if (!isGeneratedDeck()) {
