@@ -101,6 +101,7 @@ public class StaticEffects {
         if (affectedPerLayer.containsKey(StaticAbilityLayer.ABILITIES)) {
             affectedKeywordsBefore.addAll(affectedPerLayer.get(StaticAbilityLayer.ABILITIES));
         }
-        affectedKeywordsBefore.forEach(Card::updateKeywordsCache);
+        // iOS compatibility: Use IterableUtil.forEach() instead of Collection.forEach()
+        IterableUtil.forEach(affectedKeywordsBefore, Card::updateKeywordsCache);
     }
 }

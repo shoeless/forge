@@ -1240,12 +1240,14 @@ public class GameAction {
         CardCollection affectedKeywords = new CardCollection();
         CardCollection affectedPT = new CardCollection();
         if (affectedPerLayer.containsKey(StaticAbilityLayer.TEXT)) {
-            affectedPerLayer.get(StaticAbilityLayer.TEXT).forEach(Card::updateNameforView);
+            // iOS compatibility: Use IterableUtil.forEach() instead of Collection.forEach()
+            IterableUtil.forEach(affectedPerLayer.get(StaticAbilityLayer.TEXT), Card::updateNameforView);
             affectedKeywords.addAll(affectedPerLayer.get(StaticAbilityLayer.TEXT));
             affectedPT.addAll(affectedPerLayer.get(StaticAbilityLayer.TEXT));
         }
         if (affectedPerLayer.containsKey(StaticAbilityLayer.TYPE)) {
-            affectedPerLayer.get(StaticAbilityLayer.TYPE).forEach(Card::updateTypesForView);
+            // iOS compatibility: Use IterableUtil.forEach() instead of Collection.forEach()
+            IterableUtil.forEach(affectedPerLayer.get(StaticAbilityLayer.TYPE), Card::updateTypesForView);
             // setting Basic Land Type case
             affectedKeywords.addAll(affectedPerLayer.get(StaticAbilityLayer.TYPE));
             affectedPT.addAll(affectedPerLayer.get(StaticAbilityLayer.TYPE));
@@ -1268,11 +1270,13 @@ public class GameAction {
             affectedPT.addAll(affectedPerLayer.get(StaticAbilityLayer.SWITCHPT));
         }
         //*/
-        affectedPT.forEach(Card::updatePTforView);
-        affectedKeywords.forEach(Card::updateKeywords);
+        // iOS compatibility: Use IterableUtil.forEach() instead of Collection.forEach()
+        IterableUtil.forEach(affectedPT, Card::updatePTforView);
+        IterableUtil.forEach(affectedKeywords, Card::updateKeywords);
 
         if (affectedPerLayer.containsKey(StaticAbilityLayer.RULES)) {
-            affectedPerLayer.get(StaticAbilityLayer.RULES).forEach(Card::updateNonAbilityTextForView);
+            // iOS compatibility: Use IterableUtil.forEach() instead of Collection.forEach()
+            IterableUtil.forEach(affectedPerLayer.get(StaticAbilityLayer.RULES), Card::updateNonAbilityTextForView);
         }
         // TODO filter out old copies from zone change
 
