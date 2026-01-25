@@ -683,7 +683,7 @@ public class AiAttackController {
         CardCollection accountedBlockers = new CardCollection(this.blockers);
         while (!categorizedAttackers.isEmpty()) {
             Card attacker = categorizedAttackers.get(0);
-            int cost = attackCosts.getOrDefault(attacker, 0);
+            int cost = MapUtil.getOrDefault(attackCosts, attacker, 0);
             if (cost > myFreeMana) {
                 // skip attackers exceeding the attack tax that's payable
                 // (this prevents the AI from only making a partial attack that could backfire)
