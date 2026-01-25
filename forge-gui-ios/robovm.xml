@@ -69,10 +69,22 @@
     <pattern>forge.deck.ArchidektService$*</pattern>
     <pattern>forge.deck.ArchidektImportScreen</pattern>
     <pattern>forge.deck.ArchidektImportScreen$*</pattern>
+    <!-- os_log wrapper for iOS 26+ logging -->
+    <pattern>forge.ios.ForgeOSLog</pattern>
+    <pattern>forge.ios.OSLogPrintStream</pattern>
   </forceLinkClasses>
   <frameworkPaths>
     <path>libs</path>
   </frameworkPaths>
+  <libs>
+    <lib>libs/libForgeOSLog.a</lib>
+  </libs>
+  <exportedSymbols>
+    <symbol>forge_os_log_public</symbol>
+    <symbol>forge_os_log_info</symbol>
+    <symbol>forge_os_log_debug</symbol>
+    <symbol>forge_os_log_error</symbol>
+  </exportedSymbols>
   <frameworks>
     <framework>gdx</framework>
     <framework>ObjectAL</framework>

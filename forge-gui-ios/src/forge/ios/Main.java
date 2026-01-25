@@ -32,11 +32,28 @@ public class Main extends IOSApplication.Delegate {
     private static int initCounter = 0;
     private static final Object initLock = new Object();
 
+    // iOS 26+ requires os_log with public specifier - NSLog is fully redacted
+    // Use our native ForgeOSLog wrapper which calls os_log with %{public}s
+    private static boolean osLogAvailable = true;
+    private static void log(String message) {
+        if (osLogAvailable) {
+            try {
+                ForgeOSLog.log(message);
+            } catch (Throwable t) {
+                osLogAvailable = false;
+                System.err.println("FORGE (stderr): ForgeOSLog failed: " + t.getMessage());
+                System.err.println("FORGE (stderr): " + message);
+            }
+        } else {
+            System.err.println("FORGE (stderr): " + message);
+        }
+    }
+
     // Static initializer runs when class is loaded, before main()
     static {
         synchronized (initLock) {
             initCounter++;
-            System.err.println("FORGE: Static initializer starting (count=" + initCounter + ")");
+            log("Static initializer starting (count=" + initCounter + ")");
         }
         try {
             // Create a custom timezone without file system access
@@ -49,15 +66,15 @@ public class Main extends IOSApplication.Delegate {
                 // Set both the property AND the default timezone programmatically
                 System.setProperty("user.timezone", tzName != null ? tzName : "UTC");
                 TimeZone.setDefault(new SimpleTimeZone(offsetMillis, tzName != null ? tzName : "UTC"));
-                System.err.println("FORGE: Timezone set to " + tzName);
+                log("Timezone set to " + tzName);
             } else {
                 // Fallback if systemTimeZone is null
                 System.setProperty("user.timezone", "America/Los_Angeles");
                 TimeZone.setDefault(new SimpleTimeZone(-8 * 3600 * 1000, "America/Los_Angeles"));
-                System.err.println("FORGE: Timezone set to fallback PST");
+                log("Timezone set to fallback PST");
             }
         } catch (Throwable e) {
-            System.err.println("FORGE: Exception in static initializer: " + e.getMessage());
+            log("Exception in static initializer: " + e.getMessage());
             e.printStackTrace();
             // Catch everything including Errors to prevent static initializer failure
             try {
@@ -66,19 +83,19 @@ public class Main extends IOSApplication.Delegate {
             } catch (Throwable ignored) {
                 // If even the fallback fails, continue anyway
             }
-            System.err.println("FORGE: Static initializer completed (count=" + initCounter + ")");
+            log("Static initializer completed (count=" + initCounter + ")");
         }
     }
 
     private static int createAppCounter = 0;
 
     private void copyEssentialResources(final String assetsDir) {
-        System.err.println("FORGE: copyEssentialResources() starting");
+        log("copyEssentialResources() starting");
         try {
             String bundlePath = NSBundle.getMainBundle().getBundlePath();
             File bundleResDir = new File(bundlePath, "res");
 
-            System.err.println("FORGE: Bundle res dir: " + bundleResDir.getAbsolutePath());
+            log("Bundle res dir: " + bundleResDir.getAbsolutePath());
 
             if (bundleResDir.exists() && bundleResDir.isDirectory()) {
                 // Copy essential small resource directories to avoid watchdog timeout
@@ -88,13 +105,13 @@ public class Main extends IOSApplication.Delegate {
                 File docsLangDir = new File(assetsDir + "/res", "languages");
 
                 if (bundleLangDir.exists() && !docsLangDir.exists()) {
-                    System.err.println("FORGE: Copying languages directory...");
+                    log("Copying languages directory...");
                     copyDirectory(bundleLangDir, docsLangDir);
-                    System.err.println("FORGE: Languages copied successfully");
+                    log("Languages copied successfully");
                 } else if (docsLangDir.exists()) {
-                    System.err.println("FORGE: Languages directory already exists");
+                    log("Languages directory already exists");
                 } else {
-                    System.err.println("FORGE: Languages directory not found in bundle");
+                    log("Languages directory not found in bundle");
                 }
 
                 // Copy defaults directory (placeholder images like no_card.jpg)
@@ -102,19 +119,19 @@ public class Main extends IOSApplication.Delegate {
                 File docsDefaultsDir = new File(assetsDir + "/res", "defaults");
 
                 if (bundleDefaultsDir.exists() && !docsDefaultsDir.exists()) {
-                    System.err.println("FORGE: Copying defaults directory...");
+                    log("Copying defaults directory...");
                     copyDirectory(bundleDefaultsDir, docsDefaultsDir);
-                    System.err.println("FORGE: Defaults copied successfully");
+                    log("Defaults copied successfully");
                 } else if (docsDefaultsDir.exists()) {
-                    System.err.println("FORGE: Defaults directory already exists");
+                    log("Defaults directory already exists");
                 } else {
-                    System.err.println("FORGE: Defaults directory not found in bundle");
+                    log("Defaults directory not found in bundle");
                 }
             } else {
-                System.err.println("FORGE: No bundled resources found at: " + bundleResDir.getAbsolutePath());
+                log("No bundled resources found at: " + bundleResDir.getAbsolutePath());
             }
         } catch (Exception e) {
-            System.err.println("FORGE: Error copying essential resources: " + e.getMessage());
+            log("Error copying essential resources: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -145,7 +162,7 @@ public class Main extends IOSApplication.Delegate {
                     // Only copy if destination doesn't exist (don't overwrite user changes)
                     if (!destFile.exists()) {
                         copyFile(file, destFile);
-                        System.err.println("FORGE: Copied " + file.getName());
+                        log("Copied " + file.getName());
                     }
                 }
             }
@@ -156,7 +173,7 @@ public class Main extends IOSApplication.Delegate {
     protected IOSApplication createApplication() {
         synchronized (initLock) {
             createAppCounter++;
-            System.err.println("FORGE: createApplication() starting (count=" + createAppCounter + ")");
+            log("createApplication() starting (count=" + createAppCounter + ")");
         }
         try {
             // Use the app bundle as assetsDir so resources are read directly from there
@@ -164,12 +181,12 @@ public class Main extends IOSApplication.Delegate {
             String bundlePath = NSBundle.getMainBundle().getBundlePath();
             // Ensure path ends with / so relative paths are appended correctly
             final String assetsDir = bundlePath.endsWith("/") ? bundlePath : bundlePath + "/";
-            System.err.println("FORGE: Assets dir (bundle): " + assetsDir);
+            log("Assets dir (bundle): " + assetsDir);
 
             // Set writable directories for iOS using libGDX IOSFiles (Documents directory)
             // This avoids iOS sandbox violations when trying to write to the read-only app bundle
             String documentsPath = new IOSFiles().getExternalStoragePath();
-            System.err.println("FORGE: Documents dir (writable): " + documentsPath);
+            log("Documents dir (writable): " + documentsPath);
             System.setProperty("forge.ios.userDir", documentsPath);
             System.setProperty("forge.ios.cacheDir", documentsPath + "cache/");
 
@@ -188,16 +205,38 @@ public class Main extends IOSApplication.Delegate {
             GuiBase.setIsIOS(true);
 
             final ApplicationListener app = Forge.getApp(null, new IOSClipboard(), new IOSAdapter(), assetsDir, false, false, 0, isTablet, 0);
-            return new IOSApplication(app, config);
+            IOSApplication iosApp = new IOSApplication(app, config);
+
+            // Re-apply System.out/err redirection - IOSApplication replaces them with FoundationLogPrintStream
+            // which doesn't appear in Console.app on iOS 26+
+            try {
+                OSLogPrintStream outStream = new OSLogPrintStream("", false);
+                OSLogPrintStream errStream = new OSLogPrintStream("[ERR] ", true);
+                System.setOut(outStream);
+                System.setErr(errStream);
+            } catch (Throwable t) {
+                log("Failed to re-apply System.out/err redirection: " + t.getMessage());
+            }
+            return iosApp;
         } catch (Throwable e) {
-            System.err.println("FORGE: Exception in createApplication(): " + e.getMessage());
+            log("Exception in createApplication(): " + e.getMessage());
             e.printStackTrace();
             throw e;
         }
     }
 
     public static void main(String[] args) {
-        System.err.println("FORGE: main() starting");
+        // Redirect System.out and System.err to os_log FIRST
+        // This ensures all logging (900+ calls) is visible in Console.app
+        // Note: IOSApplication will replace these, so we re-apply in createApplication()
+        try {
+            OSLogPrintStream outStream = new OSLogPrintStream("", false);
+            OSLogPrintStream errStream = new OSLogPrintStream("[ERR] ", true);
+            System.setOut(outStream);
+            System.setErr(errStream);
+        } catch (Throwable t) {
+            log("Failed to redirect System.out/err: " + t.getMessage());
+        }
         try {
             // Use iOS NSTimeZone API to avoid sandbox violations when accessing /etc/localtime
             NSTimeZone systemTimeZone = NSTimeZone.getSystemTimeZone();
@@ -209,16 +248,16 @@ public class Main extends IOSApplication.Delegate {
                 // Set both the property AND the default timezone to prevent /etc/localtime access
                 System.setProperty("user.timezone", tzName != null ? tzName : "UTC");
                 TimeZone.setDefault(new SimpleTimeZone(offsetMillis, tzName != null ? tzName : "UTC"));
-                System.err.println("FORGE: Timezone set to " + tzName + " in main()");
+                log("Timezone set to " + tzName + " in main()");
             }
 
             final NSAutoreleasePool pool = new NSAutoreleasePool();
-            System.err.println("FORGE: Calling UIApplication.main()");
+            log("Calling UIApplication.main()");
             UIApplication.main(args, null, Main.class);
-            System.err.println("FORGE: UIApplication.main() returned");
+            log("UIApplication.main() returned");
             pool.close();
         } catch (Throwable e) {
-            System.err.println("FORGE: Exception in main(): " + e.getMessage());
+            log("Exception in main(): " + e.getMessage());
             e.printStackTrace();
             throw e;
         }
