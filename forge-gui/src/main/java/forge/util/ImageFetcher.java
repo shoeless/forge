@@ -88,21 +88,16 @@ public abstract class ImageFetcher {
     public void fetchImage(final String imageKey, final Callback callback) {
         FThreads.assertExecutedByEdt(true);
 
-        System.out.println("DEBUG: fetchImage() called for: " + imageKey);
-
         if (FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_DISABLE_CARD_IMAGES)) {
-            System.out.println("DEBUG: UI_DISABLE_CARD_IMAGES is true, returning early");
             return;
         }
 
         if (!FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
-            System.out.println("DEBUG: UI_ENABLE_ONLINE_IMAGE_FETCHER is false, returning early");
             return;
         }
 
         // Fake card (like the ante prompt) trying to be "fetched"
         if (imageKey.length() < 2) {
-            System.out.println("DEBUG: imageKey too short, returning early");
             return;
         }
         if (imageKey.startsWith(ImageKeys.BOOSTER_PREFIX)) {
@@ -368,6 +363,8 @@ public abstract class ImageFetcher {
         observers.add(callback);
         fetching.add(destPath);
         currentFetches.put(destPath, observers);
+
+        System.out.println("Downloading image: " + destPath);
 
         final Runnable notifyObservers = () -> {
             FThreads.assertExecutedByEdt(true);

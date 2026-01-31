@@ -8,9 +8,12 @@ import forge.game.player.Player;
 import forge.game.player.PlayerActionConfirmMode;
 import forge.game.spellability.Spell;
 import forge.game.spellability.SpellAbility;
+import forge.game.spellability.SpellAbilityStackInstance;
+import forge.game.trigger.WrappedAbility;
 import forge.util.MyRandom;
 import forge.util.collect.FCollectionView;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -55,8 +58,19 @@ public class CopySpellAbilityAi extends SpellAbilityAi {
                 }
             }
 
-            if (top.isWrapper() || top.isActivatedAbility()) {
-                // Shouldn't even try with triggered or wrapped abilities at this time, will crash
+            // Check if this spell specifically targets triggered abilities (e.g., Strionic Resonator)
+            boolean targetsTriggered = sa.hasParam("TargetType") && sa.getParam("TargetType").contains("Triggered");
+
+            if (top.isWrapper()) {
+                // Wrapped abilities are triggered abilities on the stack
+                if (targetsTriggered) {
+                    // Handle triggered ability copying (e.g., Strionic Resonator)
+                    return checkTriggeredAbilityCopy(aiPlayer, sa, top);
+                }
+                // Otherwise, skip wrapped abilities
+                return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+            } else if (top.isActivatedAbility()) {
+                // Skip activated abilities for now (complex to evaluate)
                 return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
             } else if (top.getApi() == ApiType.CopySpellAbility) {
                 // Don't try to copy a copy ability, too complex for the AI to handle
@@ -102,6 +116,92 @@ public class CopySpellAbilityAi extends SpellAbilityAi {
         // the AI should not miss mandatory activations
         boolean result = sa.isMandatory() || "Always".equals(logic);
         return result ? new AiAbilityDecision(100, AiPlayDecision.WillPlay) : new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+    }
+
+    /**
+     * Check if we should copy a triggered ability (e.g., with Strionic Resonator).
+     * Evaluates the trigger's value and decides whether copying is worthwhile.
+     */
+    private AiAbilityDecision checkTriggeredAbilityCopy(Player aiPlayer, SpellAbility sa, SpellAbility trigger) {
+        // Unwrap the triggered ability to get the actual spell ability
+        SpellAbility innerAbility = trigger;
+        if (trigger.isWrapper()) {
+            innerAbility = ((WrappedAbility) trigger).getWrappedAbility();
+        }
+
+        // Make sure it's a trigger we control
+        if (!trigger.getActivatingPlayer().equals(aiPlayer)) {
+            return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+        }
+
+        // Evaluate the triggered ability's value
+        int abilityValue = ComputerUtilAbilityValue.evaluateSpellAbility(innerAbility);
+
+        // Only copy valuable triggers (threshold 150)
+        if (abilityValue < 150) {
+            return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+        }
+
+        // Avoid copying certain problematic effects
+        ApiType api = innerAbility.getApi();
+        if (api == ApiType.DestroyAll || api == ApiType.SacrificeAll) {
+            // Board wipes are rarely worth copying
+            return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+        }
+
+        // Check if we can target this trigger
+        if (trigger.canBeTargetedBy(sa)) {
+            sa.resetTargets();
+            sa.getTargets().add(trigger);
+            return new AiAbilityDecision(abilityValue / 2, AiPlayDecision.WillPlay);
+        }
+
+        return new AiAbilityDecision(0, AiPlayDecision.TargetingFailed);
+    }
+
+    /**
+     * Find the best triggered ability to copy from the stack.
+     * Called when the copy spell is used proactively (not targeting a specific ability).
+     */
+    private SpellAbility findBestTriggeredAbilityToCopy(Player aiPlayer, SpellAbility sa) {
+        Game game = aiPlayer.getGame();
+        SpellAbility bestTrigger = null;
+        int bestValue = 0;
+
+        Iterator<SpellAbilityStackInstance> it = game.getStack().iterator();
+        while (it.hasNext()) {
+            SpellAbility stackSa = it.next().getSpellAbility();
+
+            // Only consider our own triggered abilities
+            if (!stackSa.isWrapper() || !stackSa.getActivatingPlayer().equals(aiPlayer)) {
+                continue;
+            }
+
+            // Check if we can target it
+            if (!stackSa.canBeTargetedBy(sa)) {
+                continue;
+            }
+
+            // Unwrap and evaluate
+            SpellAbility inner = ((WrappedAbility) stackSa).getWrappedAbility();
+            int value = ComputerUtilAbilityValue.evaluateSpellAbility(inner);
+
+            // Skip low-value or problematic triggers
+            if (value < 150) {
+                continue;
+            }
+            ApiType api = inner.getApi();
+            if (api == ApiType.DestroyAll || api == ApiType.SacrificeAll) {
+                continue;
+            }
+
+            if (value > bestValue) {
+                bestValue = value;
+                bestTrigger = stackSa;
+            }
+        }
+
+        return bestTrigger;
     }
 
     @Override

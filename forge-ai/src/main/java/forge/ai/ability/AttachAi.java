@@ -806,6 +806,7 @@ public class AttachAi extends SpellAbilityAi {
 
         boolean cantAttack = false;
         boolean cantBlock = false;
+        boolean removesAllAbilities = false;
 
         for (final StaticAbility stAbility : attachSource.getStaticAbilities()) {
             if (stAbility.checkMode(StaticAbilityMode.CantAttack)) {
@@ -838,6 +839,11 @@ public class AttachAi extends SpellAbilityAi {
                 totToughness += AbilityUtils.calculateAmount(attachSource, stAbility.getParam("AddToughness"), sa);
                 totPower += AbilityUtils.calculateAmount(attachSource, stAbility.getParam("AddPower"), sa);
 
+                // Check if this curse removes all abilities (e.g., Darksteel Mutation)
+                if ("True".equals(stAbility.getParam("RemoveAllAbilities"))) {
+                    removesAllAbilities = true;
+                }
+
                 String kws = stAbility.getParam("AddKeyword");
                 if (kws != null) {
                     keywords.addAll(Arrays.asList(kws.split(" & ")));
@@ -869,6 +875,30 @@ public class AttachAi extends SpellAbilityAi {
             card = ComputerUtilCard.getBestAI(prefList);
             if (card != null) {
                 return card;
+            }
+        }
+
+        // For curses that remove all abilities (e.g., Darksteel Mutation), prioritize targets
+        // with valuable abilities, but any creature is a valid target since even a vanilla
+        // 5/5 becomes a 0/1 with no abilities
+        if (removesAllAbilities && !prefList.isEmpty()) {
+            // Score each creature: ability value + creature evaluation (P/T, keywords, etc.)
+            Card bestTarget = null;
+            int bestScore = 0;
+            for (Card c : prefList) {
+                // Ability value gives bonus for targeting ability-rich creatures
+                int abilityValue = ComputerUtilAbilityValue.evaluateCardAbilities(c);
+                // Creature evaluation covers P/T and other combat-relevant factors
+                int creatureValue = ComputerUtilCard.evaluateCreature(c);
+                // Combined score prioritizes ability-rich creatures but any creature is valid
+                int totalScore = abilityValue + creatureValue;
+                if (totalScore > bestScore) {
+                    bestScore = totalScore;
+                    bestTarget = c;
+                }
+            }
+            if (bestTarget != null) {
+                return bestTarget;
             }
         }
 
