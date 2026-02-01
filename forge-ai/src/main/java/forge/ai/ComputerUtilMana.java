@@ -868,6 +868,17 @@ public class ComputerUtilMana {
                     }
                 }
 
+                // Check mana cost when testing (for abilities like signets that cost generic mana to activate)
+                // This ensures we don't double-count mana sources
+                // Note: Only generic costs are handled correctly here. Colored/hybrid costs (like filter lands)
+                // require a more sophisticated approach because the activation cost must be reserved from
+                // specific sources before allocating mana to the spell cost.
+                CostPartMana activationManaCost = saPayment.getPayCosts().getCostMana();
+                if (activationManaCost != null && !activationManaCost.getMana().isZero()) {
+                    // Add the activation cost as generic mana to what we need to pay
+                    cost.increaseShard(ManaCostShard.GENERIC, activationManaCost.getMana().getCMC());
+                }
+
                 String manaProduced = predictManafromSpellAbility(saPayment, ai, toPay);
                 payMultipleMana(cost, manaProduced, ai);
 
@@ -1823,14 +1834,21 @@ public class ComputerUtilMana {
     public static List<SpellAbility> getAIPlayableMana(Card c) {
         final List<SpellAbility> res = new ArrayList<>();
         for (final SpellAbility a : c.getManaAbilities()) {
-            // if a mana ability has a mana cost the AI will miscalculate
             // if there is a parent ability the AI can't use it
-            final Cost cost = a.getPayCosts();
-            if (cost.hasManaCost() || (a.getApi() != ApiType.Mana && a.getApi() != ApiType.ManaReflected)) {
+            if (a.getApi() != ApiType.Mana && a.getApi() != ApiType.ManaReflected) {
                 continue;
             }
 
             if (a.getRestrictions() != null && a.getRestrictions().isInstantSpeed()) {
+                continue;
+            }
+
+            final Cost cost = a.getPayCosts();
+            // Allow mana abilities with generic-only mana costs (like signets: "1, T: Add RW")
+            // The mana cost is accounted for in payManaCost test mode to prevent miscalculation
+            // Abilities with colored mana costs (like filter lands) are still excluded because
+            // the test mode can't properly reserve colored mana for activation costs
+            if (cost.hasManaCost() && cost.getTotalMana().getColorProfile() != 0) {
                 continue;
             }
 

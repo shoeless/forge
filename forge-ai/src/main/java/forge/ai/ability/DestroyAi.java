@@ -8,6 +8,7 @@ import forge.game.ability.ApiType;
 import forge.game.card.*;
 import forge.game.cost.Cost;
 import forge.game.cost.CostPart;
+import forge.game.cost.CostPayEnergy;
 import forge.game.cost.CostSacrifice;
 import forge.game.keyword.Keyword;
 import forge.game.phase.PhaseHandler;
@@ -22,6 +23,71 @@ public class DestroyAi extends SpellAbilityAi {
     @Override
     public AiAbilityDecision chkDrawback(Player ai, SpellAbility sa) {
         return checkApiLogic(ai, sa);
+    }
+
+    /**
+     * Check if this ability uses energy-based X cost for targeting (like HELIOS One).
+     */
+    private boolean hasEnergyBasedXCost(SpellAbility sa) {
+        Cost cost = sa.getPayCosts();
+        if (cost == null) {
+            return false;
+        }
+        CostPayEnergy energyCost = cost.getCostEnergy();
+        return energyCost != null && "X".equals(energyCost.getAmount());
+    }
+
+    /**
+     * Handle targeting for energy-based X destroy abilities (like HELIOS One).
+     * Finds the best target with CMC <= available energy, sets X accordingly,
+     * and returns a decision based on whether the target is worth destroying.
+     */
+    private AiAbilityDecision handleEnergyBasedXDestroy(Player ai, SpellAbility sa, CardCollection candidates) {
+        int availableEnergy = ai.getCounters(CounterEnumType.ENERGY);
+        if (availableEnergy <= 0) {
+            return new AiAbilityDecision(0, AiPlayDecision.CantAffordX);
+        }
+
+        // Filter to targets we can afford (CMC <= available energy)
+        CardCollection affordable = CardLists.filter(candidates, c -> c.getCMC() <= availableEnergy);
+        if (affordable.isEmpty()) {
+            return new AiAbilityDecision(0, AiPlayDecision.TargetingFailed);
+        }
+
+        // Find the best target - prefer higher value targets
+        Card bestTarget = null;
+        int bestValue = 0;
+        for (Card c : affordable) {
+            int value;
+            if (c.isCreature()) {
+                value = ComputerUtilCard.evaluateCreature(c);
+            } else {
+                // For non-creatures, use CMC as a rough proxy for value
+                value = c.getCMC() * 50;
+            }
+            if (value > bestValue) {
+                bestValue = value;
+                bestTarget = c;
+            }
+        }
+
+        if (bestTarget == null) {
+            return new AiAbilityDecision(0, AiPlayDecision.TargetingFailed);
+        }
+
+        // Check if this target is worth destroying (using standard removal evaluation)
+        if (!ComputerUtilCard.useRemovalNow(sa, bestTarget, 0, ZoneType.Graveyard)) {
+            return new AiAbilityDecision(0, AiPlayDecision.TargetingFailed);
+        }
+
+        // Set X to the target's CMC
+        int targetCMC = bestTarget.getCMC();
+        sa.getRootAbility().setXManaCostPaid(targetCMC);
+
+        // Add the target
+        sa.getTargets().add(bestTarget);
+
+        return new AiAbilityDecision(100, AiPlayDecision.WillPlay);
     }
 
     @Override
@@ -119,6 +185,14 @@ public class DestroyAi extends SpellAbilityAi {
             // reset targets before AI Logic part
             sa.resetTargets();
             int maxTargets;
+
+            // Handle energy-based X costs (like HELIOS One) - find best affordable target first
+            if (hasEnergyBasedXCost(sa)) {
+                // Get initial candidate list for energy-based targeting
+                CardCollection candidates = CardLists.getTargetableCards(ai.getOpponents().getCardsIn(ZoneType.Battlefield), sa);
+                candidates = CardLists.getNotKeyword(candidates, Keyword.INDESTRUCTIBLE);
+                return handleEnergyBasedXDestroy(ai, sa, candidates);
+            }
 
             // If there's X in payment costs and it's tied to targeting, make sure we set the XManaCostPaid first
             // (e.g. Heliod's Intervention)
