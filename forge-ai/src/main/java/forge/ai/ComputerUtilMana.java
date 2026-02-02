@@ -799,6 +799,19 @@ public class ComputerUtilMana {
 
             saList.removeAll(saExcludeList);
 
+            // Filter out mana abilities with hybrid activation costs that can't be paid by other sources
+            // This prevents circular dependency (e.g., Fetid Heath needing W/B to activate but being the only W/B source)
+            java.util.Iterator<SpellAbility> hybridIter = saList.iterator();
+            while (hybridIter.hasNext()) {
+                SpellAbility sa2 = hybridIter.next();
+                CostPartMana costMana = sa2.getPayCosts().getCostMana();
+                if (costMana != null && isHybridOnlyCost(costMana.getMana())) {
+                    if (!canOtherSourcesPayHybridCost(ai, sa2, sourcesForShards)) {
+                        hybridIter.remove();
+                    }
+                }
+            }
+
             SpellAbility saPayment = saList.isEmpty() ? null : chooseManaAbility(cost, sa, ai, toPay, saList, checkPlayable || !test);
 
             if (saPayment != null && ComputerUtilCost.isSacrificeSelfCost(saPayment.getPayCosts()) && sa.isTargeting(saPayment.getHostCard())) {
@@ -868,15 +881,22 @@ public class ComputerUtilMana {
                     }
                 }
 
-                // Check mana cost when testing (for abilities like signets that cost generic mana to activate)
+                // Check mana cost when testing (for abilities like signets that cost generic mana to activate,
+                // or filter lands that cost hybrid mana like WB to activate)
                 // This ensures we don't double-count mana sources
-                // Note: Only generic costs are handled correctly here. Colored/hybrid costs (like filter lands)
-                // require a more sophisticated approach because the activation cost must be reserved from
-                // specific sources before allocating mana to the spell cost.
                 CostPartMana activationManaCost = saPayment.getPayCosts().getCostMana();
                 if (activationManaCost != null && !activationManaCost.getMana().isZero()) {
-                    // Add the activation cost as generic mana to what we need to pay
-                    cost.increaseShard(ManaCostShard.GENERIC, activationManaCost.getMana().getCMC());
+                    ManaCost activationCost = activationManaCost.getMana();
+
+                    if (isHybridOnlyCost(activationCost)) {
+                        // Preserve hybrid shards - they require specific colors (W or B, not R or G)
+                        for (ManaCostShard shard : activationCost) {
+                            cost.increaseShard(shard, 1);
+                        }
+                    } else {
+                        // Generic or mixed costs - use existing behavior (add as generic)
+                        cost.increaseShard(ManaCostShard.GENERIC, activationCost.getCMC());
+                    }
                 }
 
                 String manaProduced = predictManafromSpellAbility(saPayment, ai, toPay);
@@ -1845,11 +1865,15 @@ public class ComputerUtilMana {
 
             final Cost cost = a.getPayCosts();
             // Allow mana abilities with generic-only mana costs (like signets: "1, T: Add RW")
+            // or hybrid-only mana costs (like filter lands: "WB, T: Add WW or WB or BB")
             // The mana cost is accounted for in payManaCost test mode to prevent miscalculation
-            // Abilities with colored mana costs (like filter lands) are still excluded because
-            // the test mode can't properly reserve colored mana for activation costs
-            if (cost.hasManaCost() && cost.getTotalMana().getColorProfile() != 0) {
-                continue;
+            if (cost.hasManaCost()) {
+                ManaCost manaCost = cost.getTotalMana();
+                // Block pure colored costs (W, U, B, R, G) - they require specific colors
+                // Allow generic-only or hybrid-only costs - they have payment flexibility
+                if (manaCost.getColorProfile() != 0 && !isHybridOnlyCost(manaCost)) {
+                    continue;
+                }
             }
 
             if (!res.contains(a)) {
@@ -1899,5 +1923,72 @@ public class ComputerUtilMana {
             convoke.put(list.get(i), ManaCostShard.GENERIC);
         }
         return convoke;
+    }
+
+    /**
+     * Check if a mana cost consists only of hybrid shards (like WB, UR, etc.)
+     * without any mono-colored or generic components.
+     */
+    private static boolean isHybridOnlyCost(ManaCost cost) {
+        if (cost.getGenericCost() > 0) {
+            return false;
+        }
+        for (ManaCostShard shard : cost) {
+            if (!shard.isMultiColor()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if other mana sources (excluding the given card) can pay a hybrid activation cost.
+     * This prevents circular dependency where a filter land would need its own output to activate.
+     */
+    private static boolean canOtherSourcesPayHybridCost(Player ai, SpellAbility manaAbility,
+            ListMultimap<ManaCostShard, SpellAbility> sourcesForShards) {
+        CostPartMana costPart = manaAbility.getPayCosts().getCostMana();
+        if (costPart == null) {
+            return true;
+        }
+
+        ManaCost activationCost = costPart.getMana();
+        Card cardToExclude = manaAbility.getHostCard();
+
+        for (ManaCostShard shard : activationCost) {
+            if (!shard.isMultiColor()) {
+                continue;
+            }
+            if (!canPayShardWithoutCard(ai, shard, cardToExclude, sourcesForShards)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if a hybrid shard can be paid without using a specific card.
+     * For hybrid WB, checks if mana pool has W or B, or if any other source can produce W or B.
+     */
+    private static boolean canPayShardWithoutCard(Player ai, ManaCostShard hybridShard,
+            Card cardToExclude, ListMultimap<ManaCostShard, SpellAbility> sourcesForShards) {
+        byte colorMask = hybridShard.getColorMask();
+
+        for (byte color : MagicColor.WUBRG) {
+            if ((colorMask & color) == 0) {
+                continue;
+            }
+            // This color can pay the hybrid - check if we have it from another source
+            if (ai.getManaPool().getAmountOfColor(color) > 0) {
+                return true;
+            }
+            ManaCostShard monoShard = ManaCostShard.valueOf(color);
+            for (SpellAbility sa : sourcesForShards.get(monoShard)) {
+                if (!sa.getHostCard().equals(cardToExclude)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
