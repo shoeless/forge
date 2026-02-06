@@ -1297,6 +1297,39 @@ public class AiAttackController {
             aiAggression = 0;
         } // stay at home to block
 
+        // Boost aggression when close to lethal damage on opponent
+        if (candidateUnblockedDamage > 0 && defendingOpponent.canLoseLife()
+                && !defendingOpponent.cantLoseForZeroOrLessLife()) {
+            int oppLife = defendingOpponent.getLife()
+                    - ComputerUtil.possibleNonCombatDamage(ai, defendingOpponent);
+            if (unblockableDamage >= oppLife && oppLife > 0) {
+                // Unblockable creatures alone can kill the opponent
+                aiAggression = Math.max(aiAggression, 5);
+            } else if (candidateUnblockedDamage >= oppLife && oppLife > 0) {
+                // Total board damage could be lethal if enough gets through
+                aiAggression = Math.max(aiAggression, 4);
+            } else if (candidateUnblockedDamage * 2 >= oppLife && oppLife > 0) {
+                // Within 2 turns of lethal
+                aiAggression = Math.max(aiAggression, 3);
+            }
+        }
+
+        // Racing consideration: if AI wins the unblockable damage race, be more aggressive
+        if (unblockableDamage > 0 && nextUnblockableDamage > 0
+                && defendingOpponent.canLoseLife() && !defendingOpponent.cantLoseForZeroOrLessLife()) {
+            int oppLife = defendingOpponent.getLife();
+            int aiLife = ai.getLife();
+            int aiTurnsToKill = (int) Math.ceil((double) oppLife / unblockableDamage);
+            int oppTurnsToKill = (int) Math.ceil((double) aiLife / nextUnblockableDamage);
+            if (aiTurnsToKill <= 2) {
+                // AI is very close to winning with unblockable damage
+                aiAggression = Math.max(aiAggression, 4);
+            } else if (aiTurnsToKill < oppTurnsToKill) {
+                // AI wins the damage race
+                aiAggression = Math.max(aiAggression, 3);
+            }
+        }
+
         if ( LOG_AI_ATTACKS )
             System.out.println(aiAggression + " = ai aggression");
 
@@ -1537,6 +1570,41 @@ public class AiAttackController {
             if (LOG_AI_ATTACKS)
                 System.out.println(attacker.getName() + " = expecting to survive and get some Trample damage through");
             return true;
+        }
+
+        // Blocker overflow: account for the fact that each blocker can only block one attacker.
+        // If enough attackers are already committed to occupy all relevant blockers,
+        // additional attackers are effectively unblocked.
+        if (aiAggression >= 2 && attacker.getNetCombatDamage() > 0) {
+            List<Card> currentAttackers = combat.getAttackers();
+
+            // Flying-specific: only flying/reach creatures can block flyers
+            if (attacker.hasKeyword(Keyword.FLYING)) {
+                int flyingBlockers = 0;
+                for (Card b : defenders) {
+                    if (b.hasKeyword(Keyword.FLYING) || b.hasKeyword(Keyword.REACH)) {
+                        flyingBlockers++;
+                    }
+                }
+                int flyingAttackersInCombat = 0;
+                for (Card a : currentAttackers) {
+                    if (a.hasKeyword(Keyword.FLYING)) {
+                        flyingAttackersInCombat++;
+                    }
+                }
+                if (flyingAttackersInCombat >= flyingBlockers) {
+                    if (LOG_AI_ATTACKS)
+                        System.out.println(attacker.getName() + " = attacking because all flying/reach blockers are occupied");
+                    return true;
+                }
+            }
+
+            // General overflow: if all blockers are already occupied by other attackers
+            if (aiAggression >= 3 && currentAttackers.size() >= defenders.size() && !defenders.isEmpty()) {
+                if (LOG_AI_ATTACKS)
+                    System.out.println(attacker.getName() + " = attacking because all blockers are occupied by other attackers");
+                return true;
+            }
         }
 
         // decide if the creature should attack based on the prevailing strategy choice in aiAggression
