@@ -68,6 +68,10 @@ public class TriggerHandler {
         delayedTriggers.add(trig);
     }
 
+    public int getDelayedTriggersSize() {
+        return delayedTriggers.size();
+    }
+
     public final void clearThisTurnDelayedTrigger() {
         delayedTriggers.removeAll(thisTurnDelayedTriggers);
         thisTurnDelayedTriggers.clear();

@@ -6223,6 +6223,24 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public CardDamageHistory getDamageHistory() {
         return damageHistory;
     }
+
+    /** Diagnostic: total entries across all timestamp-keyed tables on this card. */
+    public int getTimestampTableSize() {
+        return changedCardTypesByText.size() + changedCardTypesCharacterDefining.size()
+                + changedCardTypes.size() + changedCardNames.size()
+                + changedCardKeywordsByText.size() + changedCardKeywords.size()
+                + changedCardTraitsByText.size() + changedCardTraits.size()
+                + changedCardColorsByText.size() + changedCardColorsCharacterDefining.size()
+                + changedCardColors.size() + changedCardManaCost.size()
+                + changedSVars.size()
+                + newPTText.size() + newPTCharacterDefining.size() + newPT.size()
+                + boostPT.size() + hiddenExtrinsicKeywords.size();
+    }
+
+    /** Diagnostic: size of storedKeywords map. */
+    public int getStoredKeywordsSize() {
+        return storedKeywords.size();
+    }
     public void setDamageHistory(CardDamageHistory history) {
         damageHistory = history;
     }

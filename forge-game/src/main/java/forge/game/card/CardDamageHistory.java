@@ -228,6 +228,10 @@ public class CardDamageHistory {
         return damagedThisGame;
     }
 
+    public int getDamagedThisGameSize() {
+        return damagedThisGame.size();
+    }
+
     public void registerDamage(int damage, boolean isCombat, Card sourceLKI, GameEntity target, Map<Integer, Card> lkiCache) {
         if (damage <= 0) {
             return;

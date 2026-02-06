@@ -996,6 +996,14 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
         return thisTurnActivated;
     }
 
+    public int getCommandListSize() {
+        int total = 0;
+        for (List<GameCommand> cmds : commandList.values()) {
+            total += cmds.size();
+        }
+        return total;
+    }
+
     public final void addCastCommand(final String valid, final GameCommand c) {
         if (commandList.containsKey(valid)) {
             commandList.get(valid).add(0, c);

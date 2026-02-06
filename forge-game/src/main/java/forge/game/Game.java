@@ -1181,6 +1181,60 @@ public class Game {
         for (final Card card : getCardsInGame()) {
             card.resetActivationsPerTurn();
         }
+        logMemoryDiagnostics();
+    }
+
+    /**
+     * Log sizes of key collections to diagnose memory growth in long games.
+     * Runs at end of each cleanup phase. Remove once leak is identified.
+     */
+    private void logMemoryDiagnostics() {
+        int turnNum = getPhaseHandler().getTurn();
+        // Only log every 5 turns to avoid spam
+        if (turnNum % 5 != 0 && turnNum != 1) {
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n=== MEMORY DIAGNOSTICS (Turn ").append(turnNum).append(") ===");
+        sb.append("\n  Game timestamp: ").append(getTimestamp());
+        sb.append("\n  changeZoneLKIInfo: ").append(changeZoneLKIInfo.size());
+        sb.append("\n  gameLog entries: ").append(gameLog.getLogEntries(null).size());
+        sb.append("\n  stack.commandList keys: ").append(getStack().getCommandListSize());
+        sb.append("\n  triggerHandler.delayedTriggers: ").append(getTriggerHandler().getDelayedTriggersSize());
+
+        // Card-level stats: aggregate across all battlefield cards
+        int totalCardTableEntries = 0;
+        int totalDamagedThisGame = 0;
+        int totalStoredKeywords = 0;
+        int maxCardTableEntries = 0;
+        String maxCardName = "";
+        for (final Card c : getCardsIncludePhasingIn(ZoneType.Battlefield)) {
+            int cardEntries = c.getTimestampTableSize();
+            totalCardTableEntries += cardEntries;
+            if (cardEntries > maxCardTableEntries) {
+                maxCardTableEntries = cardEntries;
+                maxCardName = c.getName();
+            }
+            totalDamagedThisGame += c.getDamageHistory().getDamagedThisGameSize();
+            totalStoredKeywords += c.getStoredKeywordsSize();
+        }
+        sb.append("\n  Card timestamp table entries (total): ").append(totalCardTableEntries);
+        sb.append("\n  Card timestamp table entries (max): ").append(maxCardTableEntries)
+          .append(" (").append(maxCardName).append(")");
+        sb.append("\n  Card damagedThisGame (total): ").append(totalDamagedThisGame);
+        sb.append("\n  Card storedKeywords (total): ").append(totalStoredKeywords);
+        sb.append("\n  Cards on battlefield: ").append(getCardsIncludePhasingIn(ZoneType.Battlefield).size());
+        sb.append("\n  Cards in game: ").append(getCardsInGame().size());
+
+        // JVM memory
+        Runtime rt = Runtime.getRuntime();
+        long usedMB = (rt.totalMemory() - rt.freeMemory()) / (1024 * 1024);
+        long totalMB = rt.totalMemory() / (1024 * 1024);
+        sb.append("\n  JVM heap: ").append(usedMB).append("MB / ").append(totalMB).append("MB");
+        sb.append("\n==============================\n");
+
+        System.err.println(sb.toString());
     }
 
     public void addCounterAddedThisTurn(Player putter, CounterType cType, Card card, Integer value) {
