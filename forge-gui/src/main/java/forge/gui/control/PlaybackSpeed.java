@@ -1,9 +1,10 @@
 package forge.gui.control;
 
 public enum PlaybackSpeed {
-    SLOW(3),
     NORMAL(1),
-    FAST(.1);
+    FAST(0.1),
+    FASTER(1.0 / 30),
+    FASTEST(1.0 / 50);
 
     private double modifier = 1;
 
@@ -20,7 +21,9 @@ public enum PlaybackSpeed {
             case NORMAL:
                 return "10x speed";
             case FAST:
-                return "1/3x speed";
+                return "30x speed";
+            case FASTER:
+                return "50x speed";
             default:
                 return "1x speed";
         }
@@ -31,7 +34,9 @@ public enum PlaybackSpeed {
             case NORMAL:
                 return PlaybackSpeed.FAST;
             case FAST:
-                return PlaybackSpeed.SLOW;
+                return PlaybackSpeed.FASTER;
+            case FASTER:
+                return PlaybackSpeed.FASTEST;
             default:
                 return PlaybackSpeed.NORMAL;
         }
