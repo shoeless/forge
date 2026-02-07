@@ -65,8 +65,8 @@ public class ComputerUtilCombat {
     // Combat evaluation cache: pre-filtered triggers and static abilities
     // to avoid redundant iteration during attack/block evaluation.
     // Call beginCombatEvaluation() before and endCombatEvaluation() after bulk evaluation.
-    private static List<Trigger> cachedCombatTriggers = null;
-    private static List<StaticAbility> cachedCombatStaticAbilities = null;
+    private static final ThreadLocal<List<Trigger>> cachedCombatTriggers = new ThreadLocal<List<Trigger>>();
+    private static final ThreadLocal<List<StaticAbility>> cachedCombatStaticAbilities = new ThreadLocal<List<StaticAbility>>();
 
     private static boolean isCombatRelevantTrigger(Trigger trigger) {
         TriggerType mode = trigger.getMode();
@@ -84,42 +84,45 @@ public class ComputerUtilCombat {
     }
 
     public static void beginCombatEvaluation(Game game) {
-        cachedCombatTriggers = new ArrayList<Trigger>();
-        cachedCombatStaticAbilities = new ArrayList<StaticAbility>();
+        List<Trigger> triggers = new ArrayList<Trigger>();
+        List<StaticAbility> statics = new ArrayList<StaticAbility>();
         for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
             for (Trigger t : card.getTriggers()) {
                 if (isCombatRelevantTrigger(t)) {
-                    cachedCombatTriggers.add(t);
+                    triggers.add(t);
                 }
             }
             for (StaticAbility stAb : card.getStaticAbilities()) {
                 if (isCombatRelevantStaticAbility(stAb)) {
-                    cachedCombatStaticAbilities.add(stAb);
+                    statics.add(stAb);
                 }
             }
         }
         for (Card card : game.getCardsIn(ZoneType.Command)) {
             for (Trigger t : card.getTriggers()) {
                 if (isCombatRelevantTrigger(t)) {
-                    cachedCombatTriggers.add(t);
+                    triggers.add(t);
                 }
             }
             for (StaticAbility stAb : card.getStaticAbilities()) {
                 if (isCombatRelevantStaticAbility(stAb)) {
-                    cachedCombatStaticAbilities.add(stAb);
+                    statics.add(stAb);
                 }
             }
         }
+        cachedCombatTriggers.set(triggers);
+        cachedCombatStaticAbilities.set(statics);
     }
 
     public static void endCombatEvaluation() {
-        cachedCombatTriggers = null;
-        cachedCombatStaticAbilities = null;
+        cachedCombatTriggers.remove();
+        cachedCombatStaticAbilities.remove();
     }
 
     static List<Trigger> getCombatTriggers(Game game) {
-        if (cachedCombatTriggers != null) {
-            return cachedCombatTriggers;
+        List<Trigger> cached = cachedCombatTriggers.get();
+        if (cached != null) {
+            return cached;
         }
         // Fallback: build fresh pre-filtered list
         List<Trigger> triggers = new ArrayList<Trigger>();
@@ -141,8 +144,9 @@ public class ComputerUtilCombat {
     }
 
     static List<StaticAbility> getCombatStaticAbilities(Game game) {
-        if (cachedCombatStaticAbilities != null) {
-            return cachedCombatStaticAbilities;
+        List<StaticAbility> cached = cachedCombatStaticAbilities.get();
+        if (cached != null) {
+            return cached;
         }
         // Fallback: build fresh pre-filtered list
         List<StaticAbility> statics = new ArrayList<StaticAbility>();

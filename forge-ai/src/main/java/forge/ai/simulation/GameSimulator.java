@@ -36,9 +36,9 @@ public class GameSimulator {
         eval = new GameStateEvaluator();
 
         origLines = new ArrayList<>();
-        debugLines = origLines;
+        debugLines.set(origLines);
 
-        debugPrint = false;
+        debugPrint.set(Boolean.FALSE);
         origScore = eval.getScoreForGameState(origGame, origAiPlayer);
 
         if (advanceToPhase == null) {
@@ -50,26 +50,26 @@ public class GameSimulator {
         // want to compare to the eval score after simulating.
         if (COPY_STACK && !origGame.getStackZone().isEmpty()) {
             origLines = new ArrayList<>();
-            debugLines = origLines;
+            debugLines.set(origLines);
             Game copyOrigGame = copier.makeCopy();
             Player copyOrigAiPlayer = copyOrigGame.getPlayers().get(1);
             resolveStack(copyOrigGame, copyOrigGame.getPlayers().get(0));
             origScore = eval.getScoreForGameState(copyOrigGame, copyOrigAiPlayer);
         }
 
-        debugPrint = false;
-        debugLines = null;
+        debugPrint.set(Boolean.FALSE);
+        debugLines.set(null);
     }
 
     private void ensureGameCopyScoreMatches(Game origGame, Player origAiPlayer) {
         eval.setDebugging(true);
         List<String> simLines = new ArrayList<>();
-        debugLines = simLines;
+        debugLines.set(simLines);
         Score simScore = eval.getScoreForGameState(simGame, aiPlayer);
         if (!simScore.equals(origScore)) {
             // Re-eval orig with debug printing.
             origLines = new ArrayList<>();
-            debugLines = origLines;
+            debugLines.set(origLines);
             eval.getScoreForGameState(origGame, origAiPlayer);
             // Print debug info.
             printDiff(origLines, simLines);
@@ -112,14 +112,17 @@ public class GameSimulator {
         }
     }
 
-    public static boolean debugPrint;
-    public static List<String> debugLines;
+    public static final ThreadLocal<Boolean> debugPrint = new ThreadLocal<Boolean>() {
+        @Override protected Boolean initialValue() { return Boolean.FALSE; }
+    };
+    public static final ThreadLocal<List<String>> debugLines = new ThreadLocal<List<String>>();
     public static void debugPrint(String str) {
-        if (debugPrint) {
+        if (debugPrint.get()) {
             System.out.println(str);
         }
-        if (debugLines != null) {
-            debugLines.add(str);
+        List<String> lines = debugLines.get();
+        if (lines != null) {
+            lines.add(str);
         }
     }
 
@@ -201,7 +204,7 @@ public class GameSimulator {
                 saOrSubSa = saOrSubSa.getSubAbility();
             } while (saOrSubSa != null);
 
-            if (debugPrint && !sa.getAllTargetChoices().isEmpty()) {
+            if (debugPrint.get() && !sa.getAllTargetChoices().isEmpty()) {
                 debugPrint("Targets: ");
                 for (TargetChoices target : sa.getAllTargetChoices()) {
                     System.out.print(target);
@@ -232,16 +235,16 @@ public class GameSimulator {
         // we should simulate how combat will resolve and evaluate that
         // state instead!
         List<String> simLines = null;
-        if (debugPrint) {
+        if (debugPrint.get()) {
             debugPrint("SimGame:");
             simLines = new ArrayList<>();
-            debugLines = simLines;
-            debugPrint = false;
+            debugLines.set(simLines);
+            debugPrint.set(Boolean.FALSE);
         }
         Score score = eval.getScoreForGameState(simGame, aiPlayer);
         if (simLines != null) {
-            debugLines = null;
-            debugPrint = true;
+            debugLines.set(null);
+            debugPrint.set(Boolean.TRUE);
             printDiff(origLines, simLines);
         }
         controller.possiblyCacheResult(score, origSa);

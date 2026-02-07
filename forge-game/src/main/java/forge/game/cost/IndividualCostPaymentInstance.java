@@ -1,10 +1,12 @@
 package forge.game.cost;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import forge.game.IIdentifiable;
 
 public class IndividualCostPaymentInstance implements IIdentifiable {
-    private static int maxId = 0;
-    private static int nextId() { return ++maxId; }
+    private static final AtomicInteger maxId = new AtomicInteger(0);
+    private static int nextId() { return maxId.incrementAndGet(); }
 
     private final int id;
     private final CostPart cost;

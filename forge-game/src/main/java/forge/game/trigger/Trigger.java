@@ -41,6 +41,7 @@ import forge.util.Lang;
 import forge.util.TextUtil;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * <p>
@@ -51,8 +52,8 @@ import java.util.*;
  * @version $Id$
  */
 public abstract class Trigger extends TriggerReplacementBase {
-    private static int maxId = 0;
-    private static int nextId() { return ++maxId; }
+    private static final AtomicInteger maxId = new AtomicInteger(0);
+    private static int nextId() { return maxId.incrementAndGet(); }
 
     /**
      * <p>
@@ -60,7 +61,7 @@ public abstract class Trigger extends TriggerReplacementBase {
      * </p>
      */
     public static void resetIDs() {
-        Trigger.maxId = 50000;
+        Trigger.maxId.set(50000);
     }
 
     /** The ID. */

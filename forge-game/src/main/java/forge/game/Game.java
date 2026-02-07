@@ -53,6 +53,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import forge.util.function.Predicate;
 
 /**
@@ -60,8 +61,8 @@ import forge.util.function.Predicate;
  */
 public class Game {
 
-    private static int maxId = 0;
-    private static int nextId() { return ++maxId; }
+    private static final AtomicInteger maxId = new AtomicInteger(0);
+    private static int nextId() { return maxId.incrementAndGet(); }
 
     /** The ID. */
     private int id;
