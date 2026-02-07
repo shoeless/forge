@@ -65,6 +65,10 @@
     <false/>
     <key>UIStatusBarHidden</key>
     <true/>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
     <key>UIUserInterfaceStyle</key>
     <string>Light</string>
     <key>NSAppTransportSecurity</key>
