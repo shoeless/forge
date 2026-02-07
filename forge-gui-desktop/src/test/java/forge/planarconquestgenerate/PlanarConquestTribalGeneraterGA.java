@@ -3,7 +3,7 @@ package forge.planarconquestgenerate;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import forge.util.IterableUtil;
 
 import forge.GuiDesktop;
 import forge.StaticData;
@@ -75,12 +75,11 @@ public class PlanarConquestTribalGeneraterGA extends PlanarConquestGeneraterGA {
             cards.add(StaticData.instance().getCommonCards().getUniqueByName(cardName));
         }
 
-        List<PaperCard> filteredListTribe = cards.stream()
-                .filter(PaperCardPredicates.fromRules(CardRulesPredicates.IS_KEPT_IN_AI_DECKS
+        List<PaperCard> filteredListTribe = IterableUtil.filterToList(cards,
+                PaperCardPredicates.fromRules(CardRulesPredicates.IS_KEPT_IN_AI_DECKS
                                 .and(CardRulesPredicates.hasCreatureType("Pirate"))
-                                .and(CardRulesPredicates.IS_CREATURE)))
-                .filter(gameFormat.getFilterPrinted())
-                .collect(Collectors.toList());
+                                .and(CardRulesPredicates.IS_CREATURE))
+                        .and(gameFormat.getFilterPrinted()));
 
         rankedList = CardRanker.rankCardsInDeck(filteredListTribe);
         List<Deck> decks = new ArrayList<>();

@@ -3,7 +3,7 @@ package forge.planarconquestgenerate;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import forge.util.IterableUtil;
 
 import forge.GuiDesktop;
 import forge.StaticData;
@@ -73,13 +73,10 @@ public class PlanarConquestCommanderGeneraterGA extends PlanarConquestGeneraterG
             cards.add(StaticData.instance().getCommonCards().getUniqueByName(cardName));
         }
 
-        List<PaperCard> filteredList = cards.stream()
-                .filter(PaperCardPredicates.fromRules(CardRulesPredicates.IS_KEPT_IN_AI_DECKS
-                                .and(CardRulesPredicates.IS_PLANESWALKER)
-                                //.and(CardRulesPredicates.IS_LEGENDARY)
-                        ))
-                .filter(gameFormat.getFilterPrinted())
-                .collect(Collectors.toList());
+        List<PaperCard> filteredList = IterableUtil.filterToList(cards,
+                PaperCardPredicates.fromRules(CardRulesPredicates.IS_KEPT_IN_AI_DECKS
+                                .and(CardRulesPredicates.IS_PLANESWALKER))
+                        .and(gameFormat.getFilterPrinted()));
 
         rankedList = CardRanker.rankCardsInDeck(filteredList);
         List<Deck> decks = new ArrayList<>();
