@@ -354,6 +354,10 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
         playbackSpeed = speed;
     }
 
+    public float getAnimationSpeedMultiplier() {
+        return playbackSpeed.getAnimationSpeedMultiplier();
+    }
+
     public void pauseMatch() {
         IGameController controller = spectator;
         if (controller != null && !isGamePaused())

@@ -1041,6 +1041,11 @@ public class AiAttackController {
             }
         }
 
+        // Cache battlefield triggers and static abilities for the duration of attack evaluation
+        // to avoid redundant iteration in combat prediction methods.
+        ComputerUtilCombat.beginCombatEvaluation(ai.getGame());
+        try {
+
         // Exalted
         if (combat.getAttackers().isEmpty()) {
             boolean exalted = countExaltedBonus(ai) > 2;
@@ -1406,6 +1411,10 @@ public class AiAttackController {
         }
 
         return aiAggression;
+
+        } finally {
+            ComputerUtilCombat.endCombatEvaluation();
+        }
     }
 
     private class SpellAbilityFactors {
@@ -1452,6 +1461,13 @@ public class AiAttackController {
             // total power of the defending creatures, used in predicting whether a gang block can kill the attacker
             defPower = CardLists.getTotalPower(validBlockers, null);
 
+            // Pre-compute attacker properties once (invariant across blockers)
+            final boolean attackerIndestructible = attacker.hasKeyword(Keyword.INDESTRUCTIBLE);
+            final boolean attackerHasWither = attacker.isWitherDamage();
+            final boolean attackerHasDeathtouch = attacker.hasKeyword(Keyword.DEATHTOUCH);
+            final int attackerNetPower = attacker.getNetPower();
+            final boolean attackerToughnessAssigns = attacker.toughnessAssignsDamage();
+
             // look at the attacker in relation to the blockers to establish a
             // number of factors about the attacking context that will be relevant
             // to the attackers decision according to the selected strategy
@@ -1459,7 +1475,19 @@ public class AiAttackController {
                 // if both isWorthLessThanAllKillers and canKillAllDangerous are false there's nothing more to check
                 if (isWorthLessThanAllKillers || canKillAllDangerous || numberOfPossibleBlockers < 2) {
                     numberOfPossibleBlockers += 1;
-                    if (isWorthLessThanAllKillers && ComputerUtilCombat.canDestroyAttacker(ai, attacker, blocker, combat, false)
+
+                    // Fast pre-check: can this blocker possibly kill the attacker?
+                    boolean blockerMightKill = true;
+                    if (attackerIndestructible && !blocker.isWitherDamage()) {
+                        blockerMightKill = false;
+                    } else if (blocker.getNetPower() <= 0
+                            && !blocker.hasKeyword(Keyword.DEATHTOUCH)
+                            && !blocker.toughnessAssignsDamage()) {
+                        blockerMightKill = false;
+                    }
+
+                    if (isWorthLessThanAllKillers && blockerMightKill
+                            && ComputerUtilCombat.canDestroyAttacker(ai, attacker, blocker, combat, false)
                             && !(attacker.hasKeyword(Keyword.UNDYING) && attacker.getCounters(CounterEnumType.P1P1) == 0)) {
                         canBeKilledByOne = true; // there is a single creature on the battlefield that can kill the creature
                         // see if the defending creature is of higher or lower
@@ -1469,9 +1497,17 @@ public class AiAttackController {
                             isWorthLessThanAllKillers = false;
                         }
                     }
+                    // Fast pre-check: can this attacker possibly kill the blocker?
+                    boolean attackerMightKill = true;
+                    if (blocker.hasKeyword(Keyword.INDESTRUCTIBLE) && !attackerHasWither) {
+                        attackerMightKill = false;
+                    } else if (attackerNetPower <= 0 && !attackerHasDeathtouch && !attackerToughnessAssigns) {
+                        attackerMightKill = false;
+                    }
+
                     // see if this attacking creature can destroy this defender, if
                     // not record that it can't kill everything
-                    if (canKillAllDangerous && !ComputerUtilCombat.canDestroyBlocker(ai, blocker, attacker, combat, false)) {
+                    if (canKillAllDangerous && (!attackerMightKill || !ComputerUtilCombat.canDestroyBlocker(ai, blocker, attacker, combat, false))) {
                         canKillAll = false;
 
                         if (blocker.getSVar("HasCombatEffect").equals("TRUE") || blocker.getSVar("HasBlockEffect").equals("TRUE")

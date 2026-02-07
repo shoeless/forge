@@ -1307,15 +1307,31 @@ public class AiController {
 
     // declares blockers for given defender in a given combat
     public void declareBlockersFor(Player defender, Combat combat) {
-        AiBlockController block = new AiBlockController(defender, defender != player);
-        // When player != defender, AI should declare blockers for its benefit.
-        block.assignBlockersForCombat(combat);
+        long startTime = System.currentTimeMillis();
+        ComputerUtilCombat.beginCombatEvaluation(game);
+        try {
+            AiBlockController block = new AiBlockController(defender, defender != player);
+            // When player != defender, AI should declare blockers for its benefit.
+            block.assignBlockersForCombat(combat);
+        } finally {
+            ComputerUtilCombat.endCombatEvaluation();
+            long elapsed = System.currentTimeMillis() - startTime;
+            if (elapsed > 50) {
+                System.err.println("PERF: declareBlockers took " + elapsed + "ms (turn=" + game.getPhaseHandler().getTurn() + ")");
+            }
+        }
     }
 
     public void declareAttackers(Player attacker, Combat combat) {
+        long startTime = System.currentTimeMillis();
         // 12/2/10(sol) the decision making here has moved to getAttackers()
         AiAttackController aiAtk = new AiAttackController(attacker);
         lastAttackAggression = aiAtk.declareAttackers(combat);
+        long elapsed = System.currentTimeMillis() - startTime;
+        if (elapsed > 50) {
+            System.err.println("PERF: declareAttackers took " + elapsed + "ms (aggression=" + lastAttackAggression
+                    + ", attackers=" + combat.getAttackers().size() + ", turn=" + game.getPhaseHandler().getTurn() + ")");
+        }
 
         // Check if we can reinforce with Banding creatures
         aiAtk.reinforceWithBanding(combat);
@@ -1520,7 +1536,10 @@ public class AiController {
     }
 
     private SpellAbility getSpellAbilityToPlay() {
+        long startTime = System.currentTimeMillis();
         System.err.println("AI: getSpellAbilityToPlay() ENTER");
+        ComputerUtilCombat.beginCombatEvaluation(game);
+        try {
         if (skipped != null) {
             //FIXME: this is for failed SA to skip temporarily, don't know why AI computation for mana fails, maybe due to auto mana compute?
             for (SpellAbility sa : skipped) {
@@ -1593,12 +1612,22 @@ public class AiController {
         SpellAbility chosenSa = chooseSpellAbilityToPlayFromList(saList, true);
         System.err.println("AI: chooseSpellAbilityToPlayFromList returned: " + (chosenSa == null ? "null" : chosenSa.getHostCard()));
 
+        long elapsed = System.currentTimeMillis() - startTime;
+        if (elapsed > 100) {
+            System.err.println("PERF: getSpellAbilityToPlay took " + elapsed + "ms (phase="
+                    + game.getPhaseHandler().getPhase() + ", turn=" + game.getPhaseHandler().getTurn()
+                    + ", abilities=" + saList.size() + ")");
+        }
+
         if (topOwnedByAI && !mustRespond && chosenSa != ComputerUtilAbility.getFirstCopySASpell(saList)) {
             System.err.println("AI: returning null (not copying own spell)");
             return null; // not planning to copy the spell and not marked as something the AI would respond to
         }
 
         return chosenSa;
+        } finally {
+            ComputerUtilCombat.endCombatEvaluation();
+        }
     }
 
     private SpellAbility chooseSpellAbilityToPlayFromList(final List<SpellAbility> all, boolean skipCounter) {

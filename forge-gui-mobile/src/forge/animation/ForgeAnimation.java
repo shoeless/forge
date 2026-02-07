@@ -6,6 +6,7 @@ import java.util.List;
 import com.badlogic.gdx.Gdx;
 
 import forge.Forge;
+import forge.screens.match.MatchController;
 
 public abstract class ForgeAnimation {
     private static final List<ForgeAnimation> activeAnimations = new ArrayList<>();
@@ -35,6 +36,10 @@ public abstract class ForgeAnimation {
         if (activeAnimations.isEmpty()) { return; }
 
         float dt = Gdx.graphics.getDeltaTime();
+        // Scale animation speed to match playback speed (10x speed = 10x faster animations)
+        if (MatchController.instance != null) {
+            dt *= MatchController.instance.getAnimationSpeedMultiplier();
+        }
         for (int i = 0; i < activeAnimations.size(); i++) {
             if (!activeAnimations.get(i).advance(dt)) {
                 // Without this guard, there is leaky behavior when a new animation is started

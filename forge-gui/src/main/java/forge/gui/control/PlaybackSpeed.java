@@ -16,6 +16,11 @@ public enum PlaybackSpeed {
         return (long) (this.modifier * milliseconds);
     }
 
+    /** Returns how much faster animations should run (1.0 at normal, 10.0 at 10x, etc.) */
+    public float getAnimationSpeedMultiplier() {
+        return (float) (1.0 / modifier);
+    }
+
     public String nextSpeedText() {
         switch(this) {
             case NORMAL:

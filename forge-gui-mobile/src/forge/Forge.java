@@ -909,8 +909,13 @@ public class Forge implements ApplicationListener {
         }
     }
 
+    // PERF diagnostics: track slow frames
+    private long lastFrameWarnTime = 0;
+    private int slowFrameCount = 0;
+
     @Override
     public void render() {
+        long frameStart = System.currentTimeMillis();
         if (showFPS)
             frameRate.update(ImageCache.getInstance().counter, getAssets().manager().getMemoryInMegabytes());
 
@@ -1051,6 +1056,18 @@ public class Forge implements ApplicationListener {
 
         if (showFPS)
             frameRate.render();
+
+        // PERF diagnostics: log slow frames
+        long frameElapsed = System.currentTimeMillis() - frameStart;
+        if (frameElapsed > 100) {
+            slowFrameCount++;
+            long now = System.currentTimeMillis();
+            // Rate-limit warnings to every 5 seconds
+            if (now - lastFrameWarnTime > 5000) {
+                System.err.println("PERF: slow frame " + frameElapsed + "ms (slowFrames=" + slowFrameCount + ")");
+                lastFrameWarnTime = now;
+            }
+        }
     }
 
     public static void delayedSwitchBack() {

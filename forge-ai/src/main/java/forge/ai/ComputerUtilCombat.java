@@ -47,8 +47,7 @@ import forge.game.zone.ZoneType;
 import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
-import forge.util.collect.FCollection;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -62,6 +61,107 @@ import java.util.Map;
  * @version $Id: ComputerUtil.java 19179 2013-01-25 18:48:29Z Max mtg  $
  */
 public class ComputerUtilCombat {
+
+    // Combat evaluation cache: pre-filtered triggers and static abilities
+    // to avoid redundant iteration during attack/block evaluation.
+    // Call beginCombatEvaluation() before and endCombatEvaluation() after bulk evaluation.
+    private static List<Trigger> cachedCombatTriggers = null;
+    private static List<StaticAbility> cachedCombatStaticAbilities = null;
+
+    private static boolean isCombatRelevantTrigger(Trigger trigger) {
+        TriggerType mode = trigger.getMode();
+        return mode == TriggerType.Attacks || mode == TriggerType.Blocks
+            || mode == TriggerType.AttackerBlocked || mode == TriggerType.AttackerBlockedByCreature
+            || mode == TriggerType.AttackerUnblocked || mode == TriggerType.DamageDone;
+    }
+
+    private static boolean isCombatRelevantStaticAbility(StaticAbility stAb) {
+        if (!stAb.checkMode(StaticAbilityMode.Continuous)) return false;
+        if (!stAb.hasParam("Affected")) return false;
+        String affected = stAb.getParam("Affected");
+        return affected.contains("attacking") || affected.contains("blocking")
+            || affected.contains("untapped");
+    }
+
+    public static void beginCombatEvaluation(Game game) {
+        cachedCombatTriggers = new ArrayList<Trigger>();
+        cachedCombatStaticAbilities = new ArrayList<StaticAbility>();
+        for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
+            for (Trigger t : card.getTriggers()) {
+                if (isCombatRelevantTrigger(t)) {
+                    cachedCombatTriggers.add(t);
+                }
+            }
+            for (StaticAbility stAb : card.getStaticAbilities()) {
+                if (isCombatRelevantStaticAbility(stAb)) {
+                    cachedCombatStaticAbilities.add(stAb);
+                }
+            }
+        }
+        for (Card card : game.getCardsIn(ZoneType.Command)) {
+            for (Trigger t : card.getTriggers()) {
+                if (isCombatRelevantTrigger(t)) {
+                    cachedCombatTriggers.add(t);
+                }
+            }
+            for (StaticAbility stAb : card.getStaticAbilities()) {
+                if (isCombatRelevantStaticAbility(stAb)) {
+                    cachedCombatStaticAbilities.add(stAb);
+                }
+            }
+        }
+    }
+
+    public static void endCombatEvaluation() {
+        cachedCombatTriggers = null;
+        cachedCombatStaticAbilities = null;
+    }
+
+    static List<Trigger> getCombatTriggers(Game game) {
+        if (cachedCombatTriggers != null) {
+            return cachedCombatTriggers;
+        }
+        // Fallback: build fresh pre-filtered list
+        List<Trigger> triggers = new ArrayList<Trigger>();
+        for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
+            for (Trigger t : card.getTriggers()) {
+                if (isCombatRelevantTrigger(t)) {
+                    triggers.add(t);
+                }
+            }
+        }
+        for (Card card : game.getCardsIn(ZoneType.Command)) {
+            for (Trigger t : card.getTriggers()) {
+                if (isCombatRelevantTrigger(t)) {
+                    triggers.add(t);
+                }
+            }
+        }
+        return triggers;
+    }
+
+    static List<StaticAbility> getCombatStaticAbilities(Game game) {
+        if (cachedCombatStaticAbilities != null) {
+            return cachedCombatStaticAbilities;
+        }
+        // Fallback: build fresh pre-filtered list
+        List<StaticAbility> statics = new ArrayList<StaticAbility>();
+        for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
+            for (StaticAbility stAb : card.getStaticAbilities()) {
+                if (isCombatRelevantStaticAbility(stAb)) {
+                    statics.add(stAb);
+                }
+            }
+        }
+        for (Card card : game.getCardsIn(ZoneType.Command)) {
+            for (StaticAbility stAb : card.getStaticAbilities()) {
+                if (isCombatRelevantStaticAbility(stAb)) {
+                    statics.add(stAb);
+                }
+            }
+        }
+        return statics;
+    }
 
     /**
      * <p>
@@ -889,33 +989,21 @@ public class ComputerUtilCombat {
 
         final Game game = attacker.getGame();
         // look out for continuous static abilities that only care for blocking creatures
-        final CardCollectionView cardList = CardCollection.combine(game.getCardsIn(ZoneType.Battlefield), game.getCardsIn(ZoneType.Command));
-        for (final Card card : cardList) {
-            for (final StaticAbility stAb : card.getStaticAbilities()) {
-                if (!stAb.checkMode(StaticAbilityMode.Continuous)) {
-                    continue;
-                }
-                if (!stAb.hasParam("Affected") || !stAb.getParam("Affected").contains("blocking")) {
-                    continue;
-                }
-                final String valid = TextUtil.fastReplace(stAb.getParam("Affected"), "blocking", "Creature");
-                if (!blocker.isValid(valid, card.getController(), card, stAb)) {
-                    continue;
-                }
-                if (stAb.hasParam("AddPower")) {
-                    power += AbilityUtils.calculateAmount(card, stAb.getParam("AddPower"), stAb);
-                }
+        for (final StaticAbility stAb : getCombatStaticAbilities(game)) {
+            if (!stAb.getParam("Affected").contains("blocking")) {
+                continue;
+            }
+            final Card card = stAb.getHostCard();
+            final String valid = TextUtil.fastReplace(stAb.getParam("Affected"), "blocking", "Creature");
+            if (!blocker.isValid(valid, card.getController(), card, stAb)) {
+                continue;
+            }
+            if (stAb.hasParam("AddPower")) {
+                power += AbilityUtils.calculateAmount(card, stAb.getParam("AddPower"), stAb);
             }
         }
 
-        final FCollection<Trigger> theTriggers = new FCollection<>();
-        for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
-            theTriggers.addAll(card.getTriggers());
-        }
-        for (Card card : game.getCardsIn(ZoneType.Command)) {
-            theTriggers.addAll(card.getTriggers());
-        }
-        theTriggers.addAll(attacker.getTriggers());
+        final List<Trigger> theTriggers = getCombatTriggers(game);
         for (final Trigger trigger : theTriggers) {
             final Card source = trigger.getHostCard();
 
@@ -1017,14 +1105,7 @@ public class ComputerUtilCombat {
         }
 
         final Game game = attacker.getGame();
-        final FCollection<Trigger> theTriggers = new FCollection<>();
-        for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
-            theTriggers.addAll(card.getTriggers());
-        }
-        for (Card card : game.getCardsIn(ZoneType.Command)) {
-            theTriggers.addAll(card.getTriggers());
-        }
-        theTriggers.addAll(attacker.getTriggers());
+        final List<Trigger> theTriggers = getCombatTriggers(game);
         for (final Trigger trigger : theTriggers) {
             final Card source = trigger.getHostCard();
 
@@ -1152,13 +1233,6 @@ public class ComputerUtilCombat {
         }
 
         final Game game = attacker.getGame();
-        final FCollection<Trigger> theTriggers = new FCollection<>();
-        for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
-            theTriggers.addAll(card.getTriggers());
-        }
-        for (Card card : game.getCardsIn(ZoneType.Command)) {
-            theTriggers.addAll(card.getTriggers());
-        }
         // if the defender has first strike and wither the attacker will deal
         // less damage than expected
         if (null != blocker) {
@@ -1168,33 +1242,28 @@ public class ComputerUtilCombat {
                     && attacker.canReceiveCounters(CounterEnumType.M1M1)) {
                 power -= blocker.getNetCombatDamage();
             }
-            theTriggers.addAll(blocker.getTriggers());
         }
 
         // TODO consider Exert + Enlist
 
         // look out for continuous static abilities that only care for attacking creatures
         if (!withoutCombatStaticAbilities) {
-            final CardCollectionView cardList = CardCollection.combine(game.getCardsIn(ZoneType.Battlefield), game.getCardsIn(ZoneType.Command));
-            for (final Card card : cardList) {
-                for (final StaticAbility stAb : card.getStaticAbilities()) {
-                    if (!stAb.checkMode(StaticAbilityMode.Continuous)) {
-                        continue;
-                    }
-                    if (!stAb.hasParam("Affected") || !stAb.getParam("Affected").contains("attacking")) {
-                        continue;
-                    }
-                    final String valid = TextUtil.fastReplace(stAb.getParam("Affected"), "attacking", "Creature");
-                    if (!attacker.isValid(valid, card.getController(), card, stAb)) {
-                        continue;
-                    }
-                    if (stAb.hasParam("AddPower")) {
-                        power += AbilityUtils.calculateAmount(card, stAb.getParam("AddPower"), stAb);
-                    }
+            for (final StaticAbility stAb : getCombatStaticAbilities(game)) {
+                if (!stAb.getParam("Affected").contains("attacking")) {
+                    continue;
+                }
+                final Card card = stAb.getHostCard();
+                final String valid = TextUtil.fastReplace(stAb.getParam("Affected"), "attacking", "Creature");
+                if (!attacker.isValid(valid, card.getController(), card, stAb)) {
+                    continue;
+                }
+                if (stAb.hasParam("AddPower")) {
+                    power += AbilityUtils.calculateAmount(card, stAb.getParam("AddPower"), stAb);
                 }
             }
         }
 
+        final List<Trigger> theTriggers = getCombatTriggers(game);
         for (final Trigger trigger : theTriggers) {
             final Card source = trigger.getHostCard();
 
@@ -1352,52 +1421,35 @@ public class ComputerUtilCombat {
         }
 
         final Game game = attacker.getGame();
-        final FCollection<Trigger> theTriggers = new FCollection<>();
-        for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
-            theTriggers.addAll(card.getTriggers());
-        }
-        for (Card card : game.getCardsIn(ZoneType.Command)) {
-            theTriggers.addAll(card.getTriggers());
-        }
-        if (blocker != null) {
-            theTriggers.addAll(blocker.getTriggers());
-        }
 
         // look out for continuous static abilities that only care for attacking creatures
         if (!withoutCombatStaticAbilities) {
-            final CardCollectionView cardList = game.getCardsIn(ZoneType.Battlefield);
-            for (final Card card : cardList) {
-                for (final StaticAbility stAb : card.getStaticAbilities()) {
-                    if (!stAb.checkMode(StaticAbilityMode.Continuous)) {
+            for (final StaticAbility stAb : getCombatStaticAbilities(game)) {
+                if (!stAb.hasParam("AddToughness")) {
+                    continue;
+                }
+                String affected = stAb.getParam("Affected");
+                final Card card = stAb.getHostCard();
+                String addT = stAb.getParam("AddToughness");
+                if (affected.contains("attacking")) {
+                    final String valid = TextUtil.fastReplace(affected, "attacking", "Creature");
+                    if (!attacker.isValid(valid, card.getController(), card, null)) {
                         continue;
                     }
-                    if (!stAb.hasParam("Affected")) {
+                    toughness += AbilityUtils.calculateAmount(card, addT, stAb, true);
+                } else if (affected.contains("untapped")) {
+                    final String valid = TextUtil.fastReplace(affected, "untapped", "Creature");
+                    if (!attacker.isValid(valid, card.getController(), card, null)
+                            || attacker.hasKeyword(Keyword.VIGILANCE)) {
                         continue;
                     }
-                    if (!stAb.hasParam("AddToughness")) {
-                        continue;
-                    }
-                    String affected = stAb.getParam("Affected");
-                    String addT = stAb.getParam("AddToughness");
-                    if (affected.contains("attacking")) {
-                        final String valid = TextUtil.fastReplace(affected, "attacking", "Creature");
-                        if (!attacker.isValid(valid, card.getController(), card, null)) {
-                            continue;
-                        }
-                        toughness += AbilityUtils.calculateAmount(card, addT, stAb, true);
-                    } else if (affected.contains("untapped")) {
-                        final String valid = TextUtil.fastReplace(affected, "untapped", "Creature");
-                        if (!attacker.isValid(valid, card.getController(), card, null)
-                                || attacker.hasKeyword(Keyword.VIGILANCE)) {
-                            continue;
-                        }
-                        // remove the bonus, because it will no longer be granted
-                        toughness -= AbilityUtils.calculateAmount(card, addT, stAb, true);
-                    }
+                    // remove the bonus, because it will no longer be granted
+                    toughness -= AbilityUtils.calculateAmount(card, addT, stAb, true);
                 }
             }
         }
 
+        final List<Trigger> theTriggers = getCombatTriggers(game);
         for (final Trigger trigger : theTriggers) {
             final Card source = trigger.getHostCard();
 
@@ -1562,10 +1614,7 @@ public class ComputerUtilCombat {
         }
 
         // check Destroy triggers (Cockatrice and friends)
-        final FCollection<Trigger> theTriggers = new FCollection<>();
-        for (Card card : attacker.getGame().getCardsIn(ZoneType.Battlefield)) {
-            theTriggers.addAll(card.getTriggers());
-        }
+        final List<Trigger> theTriggers = getCombatTriggers(attacker.getGame());
         for (Trigger trigger : theTriggers) {
             final Card source = trigger.getHostCard();
 
@@ -1681,10 +1730,13 @@ public class ComputerUtilCombat {
             return false;
         }
 
+        // Pre-compute toughness bonuses once (reused for both damage and life calculations)
+        final int toughBonusBlocker = predictToughnessBonusOfBlocker(attacker, blocker, withoutAbilities);
+        final int toughBonusAttacker = predictToughnessBonusOfAttacker(attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+
         int defenderDamage;
         if (blocker.toughnessAssignsDamage()) {
-            defenderDamage = blocker.getNetToughness()
-                    + predictToughnessBonusOfBlocker(attacker, blocker, withoutAbilities);
+            defenderDamage = blocker.getNetToughness() + toughBonusBlocker;
         } else {
         	defenderDamage = blocker.getNetPower()
                     + predictPowerBonusOfBlocker(attacker, blocker, withoutAbilities);
@@ -1705,18 +1757,15 @@ public class ComputerUtilCombat {
 
         int attackerDamage;
         if (attacker.toughnessAssignsDamage()) {
-            attackerDamage = attacker.getNetToughness()
-                    + predictToughnessBonusOfAttacker(attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+            attackerDamage = attacker.getNetToughness() + toughBonusAttacker;
         } else {
             attackerDamage = attacker.getNetPower()
                     + predictPowerBonusOfAttacker(attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
         }
         attackerDamage = predictDamageTo(blocker, attackerDamage, possibleDefenderPrevention, attacker, true);
 
-        final int defenderLife = getDamageToKill(blocker, false)
-                + predictToughnessBonusOfBlocker(attacker, blocker, withoutAbilities);
-        final int attackerLife = getDamageToKill(attacker, false)
-                + predictToughnessBonusOfAttacker(attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+        final int defenderLife = getDamageToKill(blocker, false) + toughBonusBlocker;
+        final int attackerLife = getDamageToKill(attacker, false) + toughBonusAttacker;
 
         // AI should be less worried about Deathtouch
         if (blocker.hasDoubleStrike()) {
@@ -1818,11 +1867,7 @@ public class ComputerUtilCombat {
         	return true;
         }
 
-        final Game game = blocker.getGame();
-        final FCollection<Trigger> theTriggers = new FCollection<>();
-        for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
-            theTriggers.addAll(card.getTriggers());
-        }
+        final List<Trigger> theTriggers = getCombatTriggers(blocker.getGame());
         for (Trigger trigger : theTriggers) {
             final Card source = trigger.getHostCard();
 
@@ -1898,18 +1943,20 @@ public class ComputerUtilCombat {
     		return false;
     	}
 
+        // Pre-compute toughness bonuses once (reused for both damage and life calculations)
+        final int toughBonusBlocker = predictToughnessBonusOfBlocker(attacker, blocker, withoutAbilities);
+        final int toughBonusAttacker = predictToughnessBonusOfAttacker(attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+
         int defenderDamage;
         int attackerDamage;
         if (blocker.toughnessAssignsDamage()) {
-            defenderDamage = blocker.getNetToughness()
-                    + predictToughnessBonusOfBlocker(attacker, blocker, withoutAbilities);
+            defenderDamage = blocker.getNetToughness() + toughBonusBlocker;
         } else {
         	defenderDamage = blocker.getNetPower()
                     + predictPowerBonusOfBlocker(attacker, blocker, withoutAbilities);
         }
         if (attacker.toughnessAssignsDamage()) {
-            attackerDamage = attacker.getNetToughness()
-                    + predictToughnessBonusOfAttacker(attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+            attackerDamage = attacker.getNetToughness() + toughBonusAttacker;
         } else {
         	attackerDamage = attacker.getNetPower()
                     + predictPowerBonusOfAttacker(attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
@@ -1942,10 +1989,8 @@ public class ComputerUtilCombat {
             }
         }
 
-        final int defenderLife = getDamageToKill(blocker, false)
-                + predictToughnessBonusOfBlocker(attacker, blocker, withoutAbilities);
-        final int attackerLife = getDamageToKill(attacker, false)
-                + predictToughnessBonusOfAttacker(attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+        final int defenderLife = getDamageToKill(blocker, false) + toughBonusBlocker;
+        final int attackerLife = getDamageToKill(attacker, false) + toughBonusAttacker;
 
         // AI should be less worried about deathtouch
         if (attacker.hasDoubleStrike()) {

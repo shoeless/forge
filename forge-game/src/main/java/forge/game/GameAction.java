@@ -1081,6 +1081,7 @@ public class GameAction {
         if (isCheckingStaticAbilitiesOnHold()) {
             return;
         }
+        long csaStart = System.currentTimeMillis();
         if (game.isGameOver()) {
             return;
         }
@@ -1284,6 +1285,12 @@ public class GameAction {
             game.fireEvent(new GameEventCardStatsChanged(affectedCards));
         }
         game.getTracker().unfreeze();
+
+        long csaElapsed = System.currentTimeMillis() - csaStart;
+        if (csaElapsed > 100) {
+            System.err.println("PERF: checkStaticAbilities took " + csaElapsed + "ms (turn="
+                    + game.getPhaseHandler().getTurn() + ")");
+        }
     }
 
     private StaticAbility findStaticAbilityToApply(StaticAbilityLayer layer, List<StaticAbility> staticsForLayer, CardCollectionView preList, Map<StaticAbility, CardCollectionView> affectedPerAbility,
