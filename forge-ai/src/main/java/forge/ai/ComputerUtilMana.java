@@ -335,6 +335,26 @@ public class ComputerUtilMana {
             }
         }
 
+        // When paying for a spell (not a recursive activation cost), prefer costly mana
+        // sources (signets, filter lands) over free-tap sources. Costly sources produce
+        // extra mana (e.g., {R}{W} for {1} activation) but need a free source to pay
+        // the activation cost. Using them first preserves free sources for activation.
+        if (!sa.isManaAbility()) {
+            List<SpellAbility> costlyFirstList = Lists.newArrayList(maList);
+            IterableUtil.sort(costlyFirstList, new java.util.Comparator<SpellAbility>() {
+                @Override
+                public int compare(SpellAbility a, SpellAbility b) {
+                    boolean aCostly = hasManaActivationCost(a);
+                    boolean bCostly = hasManaActivationCost(b);
+                    if (aCostly != bCostly) {
+                        return aCostly ? -1 : 1; // costly sources first
+                    }
+                    return 0;
+                }
+            });
+            maList = costlyFirstList;
+        }
+
         for (final SpellAbility ma : maList) {
             // this rarely seems like a good idea
             if (ma.getHostCard() == saHost) {
@@ -655,6 +675,9 @@ public class ComputerUtilMana {
         // Loop over mana needed
         while (!cost.isPaid()) {
             toPay = getNextShardToPay(cost, sourcesForShards);
+            if (toPay == null) {
+                break;
+            }
 
             Collection<SpellAbility> maList = sourcesForShards.get(toPay);
             if (maList == null) {
@@ -771,6 +794,9 @@ public class ComputerUtilMana {
             }
 
             toPay = getNextShardToPay(cost, sourcesForShards);
+            if (toPay == null) {
+                break;
+            }
 
             Collection<SpellAbility> saList = null;
             if (hasConverge &&
@@ -958,7 +984,7 @@ public class ComputerUtilMana {
             if (test) {
                 resetPayment(paymentList);
             } else {
-                System.out.println("ComputerUtilMana: payManaCost() cost was not paid for " + sa + " (" +  sa.getHostCard().getName() + "). Didn't find what to pay for " + toPay);
+                System.out.println("ComputerUtilMana: payManaCost() cost was not paid for " + sa + " (" +  sa.getHostCard().getName() + "). Didn't find what to pay for " + (toPay != null ? toPay : "unknown shard (cost: " + cost + ")"));
                 sa.setSkip(true);
             }
             return false;
@@ -1923,6 +1949,20 @@ public class ComputerUtilMana {
             convoke.put(list.get(i), ManaCostShard.GENERIC);
         }
         return convoke;
+    }
+
+    /**
+     * Check if a mana ability has a mana activation cost.
+     * E.g., Boros Signet ({1}, {T}: Add {R}{W}) returns true.
+     * Basic lands ({T}: Add {R}) return false.
+     */
+    private static boolean hasManaActivationCost(SpellAbility sa) {
+        CostPartMana costMana = sa.getPayCosts().getCostMana();
+        if (costMana == null) {
+            return false;
+        }
+        ManaCost manaCost = costMana.getMana();
+        return !manaCost.isZero();
     }
 
     /**
