@@ -3,11 +3,15 @@ package forge;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,6 +28,7 @@ import forge.game.GameRules;
 import forge.game.GameStage;
 import forge.game.GameType;
 import forge.game.Match;
+import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgePreferences;
@@ -137,6 +142,97 @@ public class DeckBattler {
         }
     }
 
+    /**
+     * Thread-safe aggregator that collects card performance stats across all games.
+     * Array: [damageDealt, manaCredit, blockingDamage, buffCredit, gamesSeen, gamesPlayed, removalValue]
+     */
+    static class CardPerformanceAggregator {
+        private final ConcurrentHashMap<String, double[]> cumulativeStats =
+                new ConcurrentHashMap<String, double[]>();
+
+        synchronized void addGameResult(Map<String, CardPerformanceTracker.CardStats> gameStats) {
+            for (Map.Entry<String, CardPerformanceTracker.CardStats> entry : gameStats.entrySet()) {
+                String cardName = entry.getKey();
+                CardPerformanceTracker.CardStats stats = entry.getValue();
+
+                double[] cumulative = cumulativeStats.get(cardName);
+                if (cumulative == null) {
+                    cumulative = new double[7];
+                    cumulativeStats.put(cardName, cumulative);
+                }
+                cumulative[0] += stats.damageDealt;
+                cumulative[1] += stats.manaCredit;
+                cumulative[2] += stats.blockingDamage;
+                cumulative[3] += stats.buffCredit;
+                cumulative[4] += 1;
+                if (stats.played) {
+                    cumulative[5] += 1;
+                }
+                cumulative[6] += stats.removalValue;
+            }
+        }
+
+        void printReport(PrintStream out, int totalGames, String playerName) {
+            if (cumulativeStats.isEmpty()) {
+                out.println("No card performance data collected.");
+                return;
+            }
+
+            // Build sorted list of entries by average score ascending (worst first)
+            List<Map.Entry<String, double[]>> entries =
+                    new ArrayList<Map.Entry<String, double[]>>(cumulativeStats.entrySet());
+            Collections.sort(entries, new Comparator<Map.Entry<String, double[]>>() {
+                @Override
+                public int compare(Map.Entry<String, double[]> a, Map.Entry<String, double[]> b) {
+                    double scoreA = avgScore(a.getValue());
+                    double scoreB = avgScore(b.getValue());
+                    return Double.compare(scoreA, scoreB);
+                }
+            });
+
+            out.println();
+            out.println("=== Card Performance Report (" + totalGames + " games, player: " + playerName + ") ===");
+            out.println(String.format("%-4s  %-32s %9s %6s %6s %6s %6s %6s %7s %6s",
+                    "Rank", "Card Name", "Avg Score", "Dmg", "Mana", "Block", "Buff", "Rmvl", "Drawn", "Played"));
+
+            int rank = 1;
+            for (Map.Entry<String, double[]> entry : entries) {
+                String name = entry.getKey();
+                double[] c = entry.getValue();
+                double games = c[4];
+                if (games <= 0) {
+                    continue;
+                }
+                double avgDmg = c[0] / games;
+                double avgMana = c[1] / games;
+                double avgBlock = c[2] / games;
+                double avgBuff = c[3] / games;
+                double avgRmvl = c[6] / games;
+                double avgScr = avgScore(c);
+                int drawn = (int) c[4];
+                int played = (int) c[5];
+
+                // Truncate long card names
+                if (name.length() > 32) {
+                    name = name.substring(0, 29) + "...";
+                }
+
+                out.println(String.format("%3d.  %-32s %9.1f %6.1f %6.1f %6.1f %6.1f %6.1f %4d/%-2d %4d/%-2d",
+                        rank, name, avgScr, avgDmg, avgMana, avgBlock, avgBuff, avgRmvl,
+                        drawn, totalGames, played, drawn));
+                rank++;
+            }
+        }
+
+        private static double avgScore(double[] c) {
+            double games = c[4];
+            if (games <= 0) {
+                return 0;
+            }
+            return (c[0] + c[1] + c[2] * 0.8 + c[3] + c[6] * 0.8) / games;
+        }
+    }
+
     public static void main(String[] args) {
         if (args.length < 2) {
             System.out.println("Usage: forge.DeckBattler <deck1.dck> <deck2.dck> [numGames] [timeoutSec] [threads]");
@@ -187,6 +283,9 @@ public class DeckBattler {
         int cards1 = deck1.getMain().countAll();
         int cards2 = deck2.getMain().countAll();
 
+        // Card performance aggregator for deck 1
+        final CardPerformanceAggregator aggregator = new CardPerformanceAggregator();
+
         String format = isCommander ? "Commander" : "Constructed";
         System.out.println("Format: " + format);
         System.out.println("Deck 1: " + name1 + " (" + cards1 + " cards)");
@@ -228,7 +327,7 @@ public class DeckBattler {
                     taggedErr.underlying.println(tag + " started on " + Thread.currentThread().getName());
                     try {
                         return runSingleGame(gameNumber, deck1File, deck2File, name1, name2,
-                                cmdFormat, timeout, maxTurns);
+                                cmdFormat, timeout, maxTurns, aggregator);
                     } finally {
                         taggedOut.clearGameTag();
                         taggedErr.clearGameTag();
@@ -315,13 +414,17 @@ public class DeckBattler {
         }
 
         taggedOut.underlying.println("  Throughput: " + String.format("%.1f", completedGames / totalTime) + " games/s");
+
+        // Print card performance report for deck 1
+        aggregator.printReport(taggedOut.underlying, completedGames, name1);
     }
 
     /**
      * Runs a single game and returns the result. Designed to be called from any thread.
      */
     private static GameResult runSingleGame(int gameNumber, File deck1File, File deck2File,
-            String name1, String name2, boolean isCommander, int timeoutSec, int maxTurns) {
+            String name1, String name2, boolean isCommander, int timeoutSec, int maxTurns,
+            CardPerformanceAggregator aggregator) {
         // Load fresh deck copies (DeckSerializer reads from files, thread-safe)
         Deck d1 = DeckSerializer.fromFile(deck1File);
         Deck d2 = DeckSerializer.fromFile(deck2File);
@@ -342,6 +445,20 @@ public class DeckBattler {
         }
         Match match = new Match(rules, players, "DeckBattler");
         Game game = match.createGame();
+
+        // Set up card performance tracker for player 1
+        Player trackedPlayer = null;
+        for (Player p : game.getPlayers()) {
+            if (p.getName().equals(name1)) {
+                trackedPlayer = p;
+                break;
+            }
+        }
+        CardPerformanceTracker tracker = null;
+        if (trackedPlayer != null) {
+            tracker = new CardPerformanceTracker(trackedPlayer);
+            game.subscribeToEvents(tracker);
+        }
 
         // Set up timeout timer
         final Game gameRef = game;
@@ -390,10 +507,18 @@ public class DeckBattler {
         } catch (Exception e) {
             System.err.println("  Game " + gameNumber + " error: " + e.getMessage());
             timer.cancel();
+            if (tracker != null) {
+                aggregator.addGameResult(tracker.getStats());
+            }
             return new GameResult(gameNumber, 0, false, 0);
         }
 
         timer.cancel();
+
+        // Collect card performance data
+        if (tracker != null) {
+            aggregator.addGameResult(tracker.getStats());
+        }
 
         // Read outcome
         GameOutcome outcome = game.getOutcome();
