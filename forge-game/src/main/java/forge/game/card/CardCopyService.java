@@ -214,9 +214,6 @@ public class CardCopyService {
             return cachedCard;
         }
 
-        // Log for debugging
-        System.err.println("CardUtil:getLKICopy copy object");
-
         final Card newCopy;
         if(copyFrom instanceof DetachedCardEffect)
             newCopy = new DetachedCardEffect((DetachedCardEffect) copyFrom, false);
