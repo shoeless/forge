@@ -8,7 +8,11 @@ public class Firebending extends KeywordWithAmount {
         if (withX) {
             fire = "X {R}";
         } else {
-            fire = "{R}".repeat(amount);
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < amount; i++) {
+                sb.append("{R}");
+            }
+            fire = sb.toString();
         }
         return String.format(reminderText, fire);
     }
