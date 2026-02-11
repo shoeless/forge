@@ -10,20 +10,27 @@ import java.util.Set;
 
 import com.google.common.eventbus.Subscribe;
 
+import forge.game.Game;
 import forge.game.GameEntity;
 import forge.game.card.Card;
 import forge.game.card.CardCollectionView;
+import forge.game.card.CounterEnumType;
+import forge.game.card.CounterType;
 import forge.game.event.GameEvent;
 import forge.game.event.GameEventBlockersDeclared;
 import forge.game.event.GameEventCardChangeZone;
+import forge.game.event.GameEventCardCounters;
 import forge.game.event.GameEventLandPlayed;
+import forge.game.event.GameEventPlayerCounters;
 import forge.game.event.GameEventPlayerDamaged;
 import forge.game.event.GameEventSpellAbilityCast;
 import forge.game.mana.Mana;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
+import forge.game.spellability.SpellAbilityStackInstance;
 import forge.game.staticability.StaticAbility;
 import forge.game.staticability.StaticAbilityMode;
+import forge.game.zone.MagicStack;
 import forge.game.zone.ZoneType;
 import forge.game.zone.Zone;
 import forge.util.maps.MapOfLists;
@@ -58,6 +65,15 @@ public class CardPerformanceTracker {
     // Maps opponent creature ID -> our spell's card name that targeted it (for removal attribution)
     private final Map<Integer, String> pendingRemovalTargets = new HashMap<Integer, String>();
 
+    // Quest counter tracking: source card name -> total quest counters placed
+    private final Map<String, Integer> questCounterSources = new HashMap<String, Integer>();
+    private int totalQuestCountersPlaced = 0;
+
+    // Energy counter tracking: source card name -> total energy produced
+    private final Map<String, Integer> energyProducers = new HashMap<String, Integer>();
+    private int totalEnergyProduced = 0;
+    private final Set<String> energySpenders = new HashSet<String>();
+
     public CardPerformanceTracker(Player trackedPlayer) {
         this.trackedPlayer = trackedPlayer;
     }
@@ -86,6 +102,10 @@ public class CardPerformanceTracker {
             handleCardChangeZone((GameEventCardChangeZone) ev);
         } else if (ev instanceof GameEventLandPlayed) {
             handleLandPlayed((GameEventLandPlayed) ev);
+        } else if (ev instanceof GameEventCardCounters) {
+            handleCardCounters((GameEventCardCounters) ev);
+        } else if (ev instanceof GameEventPlayerCounters) {
+            handlePlayerCounters((GameEventPlayerCounters) ev);
         }
     }
 
@@ -144,12 +164,46 @@ public class CardPerformanceTracker {
                 for (Card attached : source.getEquippedBy()) {
                     if (attached.getController().equals(trackedPlayer)) {
                         getOrCreateStats(attached.getName()).buffCredit += buffShare;
+                        // 3a. Mana attribution for equipment
+                        Set<String> eqManaSources = castManaSourcesMap.get(attached.getName());
+                        if (eqManaSources != null && !eqManaSources.isEmpty()) {
+                            double eqManaCredit = buffShare / eqManaSources.size();
+                            for (String manaSourceName : eqManaSources) {
+                                getOrCreateStats(manaSourceName).manaCredit += eqManaCredit;
+                            }
+                        }
+                        // 3b. Equipment token parent credit
+                        if (attached.isToken()) {
+                            try {
+                                SpellAbility spawning = attached.getTokenSpawningAbility();
+                                if (spawning != null) {
+                                    Card eqCreator = spawning.getHostCard();
+                                    if (eqCreator != null && eqCreator.getOwner() != null
+                                            && eqCreator.getOwner().equals(trackedPlayer)) {
+                                        String eqCreatorName = eqCreator.getName();
+                                        if (!eqCreatorName.equals(attached.getName())) {
+                                            getOrCreateStats(eqCreatorName).buffCredit += buffShare * 0.5;
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                // Ignore - token equipment state may be in transition
+                            }
+                        }
                     }
                 }
                 for (Card attached : source.getAttachedCards()) {
                     if (attached.isAura() && attached.getController().equals(trackedPlayer)
                             && !attached.isEquipment()) {
                         getOrCreateStats(attached.getName()).buffCredit += buffShare;
+                        // Mana attribution for auras
+                        Set<String> auraManaSources = castManaSourcesMap.get(attached.getName());
+                        if (auraManaSources != null && !auraManaSources.isEmpty()) {
+                            double auraManaCredit = buffShare / auraManaSources.size();
+                            for (String manaSourceName : auraManaSources) {
+                                getOrCreateStats(manaSourceName).manaCredit += auraManaCredit;
+                            }
+                        }
                     }
                 }
             }
@@ -174,6 +228,48 @@ public class CardPerformanceTracker {
                 }
             } catch (Exception e) {
                 // Ignore - token state may be in transition
+            }
+        }
+
+        // 5. Quest counter source credit
+        if (totalQuestCountersPlaced > 0) {
+            try {
+                boolean hasEquipment = !source.getEquippedBy().isEmpty();
+                if (hasEquipment) {
+                    // Count current quest counters on our battlefield
+                    int currentQuestCounters = 0;
+                    for (Card perm : trackedPlayer.getZone(ZoneType.Battlefield)) {
+                        currentQuestCounters += perm.getCounters(CounterEnumType.QUEST);
+                    }
+                    if (currentQuestCounters > 0) {
+                        int netPower = source.getNetPower();
+                        if (netPower > 0) {
+                            double questRatio = Math.min(currentQuestCounters, netPower)
+                                    / (double) netPower;
+                            double totalCredit = amount * questRatio * 0.3;
+                            for (Map.Entry<String, Integer> entry : questCounterSources.entrySet()) {
+                                double share = totalCredit * entry.getValue()
+                                        / totalQuestCountersPlaced;
+                                getOrCreateStats(entry.getKey()).buffCredit += share;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore - quest counter attribution errors
+            }
+        }
+
+        // 6. Energy source credit - if the damage source has spent energy, credit producers
+        if (totalEnergyProduced > 0 && energySpenders.contains(sourceName)) {
+            try {
+                double energyCredit = amount * 0.5;
+                for (Map.Entry<String, Integer> entry : energyProducers.entrySet()) {
+                    double share = energyCredit * entry.getValue() / totalEnergyProduced;
+                    getOrCreateStats(entry.getKey()).manaCredit += share;
+                }
+            } catch (Exception e) {
+                // Ignore - energy attribution errors
             }
         }
     }
@@ -309,6 +405,25 @@ public class CardPerformanceTracker {
                     for (Card blocker : blockers) {
                         if (blocker.getController().equals(trackedPlayer)) {
                             getOrCreateStats(blocker.getName()).blockingDamage += creditPerBlocker;
+                            // Token blocking parent credit
+                            if (blocker.isToken()) {
+                                try {
+                                    SpellAbility spawning = blocker.getTokenSpawningAbility();
+                                    if (spawning != null) {
+                                        Card creator = spawning.getHostCard();
+                                        if (creator != null && creator.getOwner() != null
+                                                && creator.getOwner().equals(trackedPlayer)) {
+                                            String creatorName = creator.getName();
+                                            if (!creatorName.equals(blocker.getName())) {
+                                                getOrCreateStats(creatorName).blockingDamage
+                                                        += creditPerBlocker * 0.5;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    // Ignore - token state may be in transition
+                                }
+                            }
                         }
                     }
                 }
@@ -351,7 +466,105 @@ public class CardPerformanceTracker {
                         power = 1; // Minimum 1 credit for removing any creature
                     }
                     getOrCreateStats(ourSpellName).removalValue += power;
+                    // Mana attribution for removal spells
+                    Set<String> manaSources = castManaSourcesMap.get(ourSpellName);
+                    if (manaSources != null && !manaSources.isEmpty()) {
+                        double creditPerSource = (double) power / manaSources.size();
+                        for (String manaSourceName : manaSources) {
+                            getOrCreateStats(manaSourceName).manaCredit += creditPerSource;
+                        }
+                    }
                 }
+            }
+        }
+    }
+
+    /**
+     * Peeks the game stack to find the source card of the currently resolving ability
+     * belonging to our tracked player. Returns the card name, or null if not found.
+     */
+    private String peekStackForSource() {
+        try {
+            Game game = trackedPlayer.getGame();
+            if (game == null) {
+                return null;
+            }
+            MagicStack stack = game.getStack();
+            if (stack == null || stack.isEmpty()) {
+                return null;
+            }
+            for (SpellAbilityStackInstance si : stack) {
+                if (si.getActivatingPlayer().equals(trackedPlayer)) {
+                    Card sourceCard = si.getSourceCard();
+                    if (sourceCard != null) {
+                        return sourceCard.getName();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Stack may be in transition
+        }
+        return null;
+    }
+
+    /**
+     * Tracks quest counter placements on our permanents for buff attribution.
+     */
+    private void handleCardCounters(GameEventCardCounters ev) {
+        if (ev.newValue() <= ev.oldValue()) {
+            return; // Only track counter additions
+        }
+        CounterType type = ev.type();
+        if (type == null || !type.is(CounterEnumType.QUEST)) {
+            return;
+        }
+        Card card = ev.card();
+        if (card == null || card.getController() == null
+                || !card.getController().equals(trackedPlayer)) {
+            return;
+        }
+
+        int added = ev.newValue() - ev.oldValue();
+        String sourceName = peekStackForSource();
+        if (sourceName == null) {
+            sourceName = card.getName(); // Fallback: credit the card receiving counters
+        }
+
+        Integer current = questCounterSources.get(sourceName);
+        questCounterSources.put(sourceName, (current == null ? 0 : current) + added);
+        totalQuestCountersPlaced += added;
+    }
+
+    /**
+     * Tracks energy production and spending for our player.
+     * Note: GameEventPlayerCounters(player, type, oldValue, amount) where
+     * amount() is actually the NEW counter value (not a delta).
+     */
+    private void handlePlayerCounters(GameEventPlayerCounters ev) {
+        if (ev.receiver() == null || !ev.receiver().equals(trackedPlayer)) {
+            return;
+        }
+        CounterType type = ev.type();
+        if (type == null || !type.is(CounterEnumType.ENERGY)) {
+            return;
+        }
+
+        int oldValue = ev.oldValue();
+        int newValue = ev.amount(); // misleadingly named; this is the new value
+        if (newValue > oldValue) {
+            // Energy produced
+            int produced = newValue - oldValue;
+            String sourceName = peekStackForSource();
+            if (sourceName != null) {
+                Integer current = energyProducers.get(sourceName);
+                energyProducers.put(sourceName, (current == null ? 0 : current) + produced);
+                totalEnergyProduced += produced;
+            }
+        } else if (newValue < oldValue) {
+            // Energy spent
+            String spenderName = peekStackForSource();
+            if (spenderName != null) {
+                energySpenders.add(spenderName);
             }
         }
     }
