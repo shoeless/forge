@@ -1381,9 +1381,6 @@ public class AbilityUtils {
     private static void resolveApiAbility(final SpellAbility sa, final Game game) {
         final Card card = sa.getHostCard();
 
-        // Log for debugging
-        System.err.println("AbilityUtils:resolveApiAbility: try to resolve API ability");
-
         if (!sa.isWrapper() && sa.isKeyword(Keyword.GIFT)) {
             game.getTriggerHandler().runTrigger(TriggerType.GiveGift, AbilityKey.mapFromPlayer(sa.getActivatingPlayer()), false);
         }

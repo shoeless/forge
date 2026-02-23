@@ -240,7 +240,11 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
                         break;
                     }
                 }
-                return true;
+                // Only grant universal visibility in true spectator mode (no local players)
+                if (gameControllers.isEmpty()) {
+                    return true;
+                }
+                // Otherwise fall through to per-card visibility check
             }
             // Check if game controller allows looking at all cards (dev mode, etc.)
             IGameController controller = getGameController();
