@@ -304,6 +304,7 @@ public class FSkin {
      * missing, the default picture is retrieved.
      */
     public static void loadFull(final SplashScreen splashScreen) {
+        long skinStart = System.nanoTime();
         if (splashScreen != null) {
             // Preferred skin name must be called via loadLight() method,
             // which does some cleanup and init work.
@@ -313,38 +314,18 @@ public class FSkin {
         Forge.getAssets().avatars().clear();
         Forge.getAssets().sleeves().clear();
 
-        // Grab and test various sprite files.
+        // Grab and test essential sprite files.
         final FileHandle f1 = getDefaultSkinFile(ForgeConstants.SPRITE_ICONS_FILE);
         final FileHandle f2 = getSkinFile(ForgeConstants.SPRITE_ICONS_FILE);
-        final FileHandle f3 = getDefaultSkinFile(ForgeConstants.SPRITE_FOILS_FILE);
-        final FileHandle f4 = getDefaultSkinFile(ForgeConstants.SPRITE_AVATARS_FILE);
-        final FileHandle f5 = getSkinFile(ForgeConstants.SPRITE_AVATARS_FILE);
-        final FileHandle f6 = getDefaultSkinFile(ForgeConstants.SPRITE_OLD_FOILS_FILE);
         final FileHandle f7 = getDefaultSkinFile(ForgeConstants.SPRITE_MANAICONS_FILE);
-        //final FileHandle f7b = getDefaultSkinFile(ForgeConstants.SPRITE_PHYREXIAN_FILE);
-        //final FileHandle f7c = getDefaultSkinFile(ForgeConstants.SPRITE_COLORLESS_HYBRID_FILE);
-        final FileHandle f8 = getDefaultSkinFile(ForgeConstants.SPRITE_SLEEVES_FILE);
-        final FileHandle f9 = getDefaultSkinFile(ForgeConstants.SPRITE_SLEEVES2_FILE);
         final FileHandle f10 = getDefaultSkinFile(ForgeConstants.SPRITE_BORDER_FILE);
         final FileHandle f11 = getSkinFile(ForgeConstants.SPRITE_BUTTONS_FILE);
         final FileHandle f11b = getDefaultSkinFile(ForgeConstants.SPRITE_BUTTONS_FILE);
         final FileHandle f12 = getSkinFile(ForgeConstants.SPRITE_START_FILE);
         final FileHandle f12b = getDefaultSkinFile(ForgeConstants.SPRITE_START_FILE);
-        final FileHandle f13 = getDefaultSkinFile(ForgeConstants.SPRITE_DECKBOX_FILE);
-        final FileHandle f17 = getDefaultSkinFile(ForgeConstants.SPRITE_CRACKS_FILE);
         final FileHandle f19 = getDefaultSkinFile(ForgeConstants.SPRITE_CURSOR_FILE);
-        final FileHandle f20 = getSkinFile(ForgeConstants.SPRITE_SLEEVES_FILE);
-        final FileHandle f21 = getSkinFile(ForgeConstants.SPRITE_SLEEVES2_FILE);
         final FileHandle f22 = getDefaultSkinFile(ForgeConstants.SPRITE_ADV_BUTTONS_FILE);
         final FileHandle f23 = getSkinFile(ForgeConstants.SPRITE_ADV_BUTTONS_FILE);
-
-        /*TODO Themeable
-        final FileHandle f14 = getDefaultSkinFile(ForgeConstants.SPRITE_SETLOGO_FILE);
-        final FileHandle f15 = getSkinFile(ForgeConstants.SPRITE_SETLOGO_FILE);
-        final FileHandle f16 = getDefaultSkinFile(ForgeConstants.SPRITE_WATERMARK_FILE);
-        final FileHandle f24 = getSkinFile(ForgeConstants.SPRITE_ZONE_FILE);
-        final FileHandle f24b = getDefaultSkinFile(ForgeConstants.SPRITE_ZONE_FILE);
-        */
 
         try {
             Forge.getAssets().loadTexture(f1);
@@ -361,8 +342,6 @@ public class FSkin {
                 preferredIcons = new Pixmap(f2);
             }
 
-            Forge.getAssets().loadTexture(f3);
-            Forge.getAssets().loadTexture(f6);
             Forge.getAssets().loadTexture(f7, new TextureLoader.TextureParameter(){{genMipMaps = true;}});
 
             //hdbuttons
@@ -423,6 +402,67 @@ public class FSkin {
                 FSkin.getImages().put(prop, image);
             }
 
+            //borders
+            Forge.getAssets().loadTexture(f10);
+            Forge.getAssets().borders().put(0, new TextureRegion(Forge.getAssets().getTexture(f10), 2, 2, 672, 936));
+            Forge.getAssets().borders().put(1, new TextureRegion(Forge.getAssets().getTexture(f10), 676, 2, 672, 936));
+            //cursor
+            Forge.getAssets().loadTexture(f19);
+            Forge.getAssets().cursor().put(0, new TextureRegion(Forge.getAssets().getTexture(f19), 0, 0, 32, 32)); //default
+            Forge.getAssets().cursor().put(1, new TextureRegion(Forge.getAssets().getTexture(f19), 32, 0, 32, 32)); //magnify on
+            Forge.getAssets().cursor().put(2, new TextureRegion(Forge.getAssets().getTexture(f19), 64, 0, 32, 32)); // magnify off
+
+            Forge.setCursor(Forge.getAssets().cursor().get(0), "0");
+            //set adv_progress bar colors
+            FProgressBar.ADV_BACK_COLOR = new Color(adventureButtons.getPixel(FSkinColor.Colors.ADV_CLR_BORDERS.getX(), FSkinColor.Colors.ADV_CLR_BORDERS.getY()));
+            FProgressBar.ADV_FORE_COLOR = new Color(adventureButtons.getPixel(FSkinColor.Colors.ADV_CLR_THEME.getX(), FSkinColor.Colors.ADV_CLR_THEME.getY()));
+            FProgressBar.ADV_SEL_BACK_COLOR = new Color(adventureButtons.getPixel(FSkinColor.Colors.ADV_CLR_ACTIVE.getX(), FSkinColor.Colors.ADV_CLR_ACTIVE.getY()));
+            FProgressBar.ADV_SEL_FORE_COLOR = new Color(adventureButtons.getPixel(FSkinColor.Colors.ADV_CLR_BORDERS.getX(), FSkinColor.Colors.ADV_CLR_BORDERS.getY()));
+
+            preferredIcons.dispose();
+            adventureButtons.dispose();
+        }
+        catch (final Exception e) {
+            System.err.println("FSkin$loadFull: Missing a sprite (default icons, "
+                    + "preferred icons, or foils.");
+            //e.printStackTrace();
+        }
+
+        // Run through enums and load their coords.
+        FSkinColor.updateAll();
+
+        // Images loaded; can start UI init.
+        loaded = true;
+
+        if (splashScreen != null) {
+            CardFaceSymbols.loadImages();
+        }
+        System.err.println("FORGE-TIMING: FSkin.loadFull() essential = " + (System.nanoTime() - skinStart) / 1_000_000 + "ms");
+    }
+
+    /**
+     * Loads non-essential skin assets (foils, avatars, sleeves, deckboxes, cracks).
+     * Call after the home screen is visible to avoid blocking startup.
+     * Must be called on the EDT/GL thread.
+     */
+    public static void loadDeferred() {
+        long deferredStart = System.nanoTime();
+
+        final FileHandle f3 = getDefaultSkinFile(ForgeConstants.SPRITE_FOILS_FILE);
+        final FileHandle f4 = getDefaultSkinFile(ForgeConstants.SPRITE_AVATARS_FILE);
+        final FileHandle f5 = getSkinFile(ForgeConstants.SPRITE_AVATARS_FILE);
+        final FileHandle f6 = getDefaultSkinFile(ForgeConstants.SPRITE_OLD_FOILS_FILE);
+        final FileHandle f8 = getDefaultSkinFile(ForgeConstants.SPRITE_SLEEVES_FILE);
+        final FileHandle f9 = getDefaultSkinFile(ForgeConstants.SPRITE_SLEEVES2_FILE);
+        final FileHandle f13 = getDefaultSkinFile(ForgeConstants.SPRITE_DECKBOX_FILE);
+        final FileHandle f17 = getDefaultSkinFile(ForgeConstants.SPRITE_CRACKS_FILE);
+        final FileHandle f20 = getSkinFile(ForgeConstants.SPRITE_SLEEVES_FILE);
+        final FileHandle f21 = getSkinFile(ForgeConstants.SPRITE_SLEEVES2_FILE);
+
+        try {
+            Forge.getAssets().loadTexture(f3);
+            Forge.getAssets().loadTexture(f6);
+
             //assemble avatar textures
             int counter = 0;
             int scount = 0;
@@ -454,7 +494,6 @@ public class FSkin {
                 pxPreferredAvatars.dispose();
             } else if (!FSkin.preferredName.isEmpty()){
                 //workaround bug crash fix if missing sprite avatar on preferred theme for quest tournament...
-                //i really don't know why it needs to populate the avatars twice.... needs investigation
                 final int pw = pxDefaultAvatars.getWidth();
                 final int ph = pxDefaultAvatars.getHeight();
 
@@ -534,10 +573,6 @@ public class FSkin {
                 Forge.getAssets().cracks().put(crackCount++, new TextureRegion(Forge.getAssets().getTexture(f17), x, 0, 200, 279));
             }
 
-            //borders
-            Forge.getAssets().loadTexture(f10);
-            Forge.getAssets().borders().put(0, new TextureRegion(Forge.getAssets().getTexture(f10), 2, 2, 672, 936));
-            Forge.getAssets().borders().put(1, new TextureRegion(Forge.getAssets().getTexture(f10), 676, 2, 672, 936));
             //deckboxes
             Forge.getAssets().loadTexture(f13);
             //gold bg
@@ -546,39 +581,16 @@ public class FSkin {
             Forge.getAssets().deckbox().put(1, new TextureRegion(Forge.getAssets().getTexture(f13), 492, 2, 488, 680));
             //generic deck box
             Forge.getAssets().deckbox().put(2, new TextureRegion(Forge.getAssets().getTexture(f13), 982, 2, 488, 680));
-            //cursor
-            Forge.getAssets().loadTexture(f19);
-            Forge.getAssets().cursor().put(0, new TextureRegion(Forge.getAssets().getTexture(f19), 0, 0, 32, 32)); //default
-            Forge.getAssets().cursor().put(1, new TextureRegion(Forge.getAssets().getTexture(f19), 32, 0, 32, 32)); //magnify on
-            Forge.getAssets().cursor().put(2, new TextureRegion(Forge.getAssets().getTexture(f19), 64, 0, 32, 32)); // magnify off
 
-            Forge.setCursor(Forge.getAssets().cursor().get(0), "0");
-            //set adv_progress bar colors
-            FProgressBar.ADV_BACK_COLOR = new Color(adventureButtons.getPixel(FSkinColor.Colors.ADV_CLR_BORDERS.getX(), FSkinColor.Colors.ADV_CLR_BORDERS.getY()));
-            FProgressBar.ADV_FORE_COLOR = new Color(adventureButtons.getPixel(FSkinColor.Colors.ADV_CLR_THEME.getX(), FSkinColor.Colors.ADV_CLR_THEME.getY()));
-            FProgressBar.ADV_SEL_BACK_COLOR = new Color(adventureButtons.getPixel(FSkinColor.Colors.ADV_CLR_ACTIVE.getX(), FSkinColor.Colors.ADV_CLR_ACTIVE.getY()));
-            FProgressBar.ADV_SEL_FORE_COLOR = new Color(adventureButtons.getPixel(FSkinColor.Colors.ADV_CLR_BORDERS.getX(), FSkinColor.Colors.ADV_CLR_BORDERS.getY()));
-
-            preferredIcons.dispose();
             pxDefaultAvatars.dispose();
             pxDefaultSleeves.dispose();
-            adventureButtons.dispose();
         }
         catch (final Exception e) {
-            System.err.println("FSkin$loadFull: Missing a sprite (default icons, "
-                    + "preferred icons, or foils.");
+            System.err.println("FSkin$loadDeferred: Missing a sprite (foils, avatars, sleeves, etc.)");
             //e.printStackTrace();
         }
 
-        // Run through enums and load their coords.
-        FSkinColor.updateAll();
-
-        // Images loaded; can start UI init.
-        loaded = true;
-
-        if (splashScreen != null) {
-            CardFaceSymbols.loadImages();
-        }
+        System.err.println("FORGE-TIMING: FSkin.loadDeferred() total = " + (System.nanoTime() - deferredStart) / 1_000_000 + "ms");
     }
 
     /**

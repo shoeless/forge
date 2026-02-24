@@ -132,6 +132,7 @@ public class Forge implements ApplicationListener {
     private static boolean startupComplete = false;
     private static boolean recoveryAttempted = false;
     private static long startupTime = 0;
+    private static long startupTimingNanos = 0;
 
     public static ApplicationListener getApp(HWInfo hwInfo, Clipboard clipboard0, IDeviceAdapter deviceAdapter0, String assetDir0, boolean propertyConfig, boolean androidOrientation, int totalRAM, boolean isTablet, int AndroidAPI) {
         if (app == null) {
@@ -174,6 +175,7 @@ public class Forge implements ApplicationListener {
     public void create() {
         // Record startup time for crash recovery timeout
         startupTime = System.currentTimeMillis();
+        startupTimingNanos = System.nanoTime();
         startupComplete = false;
         recoveryAttempted = false;
 
@@ -467,6 +469,7 @@ public class Forge implements ApplicationListener {
                         safeToClose = true;
                         // Mark startup complete and delete lock file
                         startupComplete = true;
+                        System.err.println("FORGE-TIMING: Splash-to-home total = " + (System.nanoTime() - startupTimingNanos) / 1_000_000 + "ms");
                         try {
                             if (FileUtil.doesFileExist(ForgeConstants.STARTUP_LOCK_FILE)) {
                                 FileUtil.deleteFile(ForgeConstants.STARTUP_LOCK_FILE);
@@ -474,6 +477,13 @@ public class Forge implements ApplicationListener {
                         } catch (Exception e) {
                             // Ignore lock file deletion errors
                         }
+                        // Load deferred skin assets (foils, avatars, sleeves, etc.) after home screen is visible
+                        Gdx.app.postRunnable(new Runnable() {
+                            @Override
+                            public void run() {
+                                FSkin.loadDeferred();
+                            }
+                        });
                         clearTransitionScreen();
                     }, takeScreenshot(), false, false, true, false));
                 });

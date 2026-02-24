@@ -79,6 +79,20 @@ public class DeckHints {
         return valid;
     }
 
+    String toRawString() {
+        StringBuilder sb = new StringBuilder();
+        if (!tokens) {
+            sb.append("MODIFIER$NoToken");
+        }
+        if (filters != null) {
+            for (Pair<Type, String> filter : filters) {
+                if (sb.length() > 0) sb.append("&");
+                sb.append(filter.getLeft().name()).append("$").append(filter.getRight());
+            }
+        }
+        return sb.toString();
+    }
+
     public boolean contains(Type type, String hint) {
         if (filters == null) {
             return false;

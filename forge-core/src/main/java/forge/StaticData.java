@@ -3,9 +3,11 @@ package forge;
 import forge.card.CardDb;
 import forge.card.CardEdition;
 import forge.card.CardRules;
+import forge.card.CardRulesCache;
 import forge.card.PrintSheet;
 import forge.item.*;
 import forge.token.TokenDb;
+import forge.util.CaseInsensitiveHashMap;
 import forge.util.FileUtil;
 import forge.util.ImageUtil;
 import forge.util.TextUtil;
@@ -29,7 +31,7 @@ public class StaticData {
     private final String blockDataFolder;
     private final CardDb commonCards;
     private final CardDb variantCards;
-    private final TokenDb allTokens;
+    private TokenDb allTokens;
     private final CardEdition.Collection editions;
 
     private Predicate<PaperCard> standardPredicate;
@@ -66,6 +68,7 @@ public class StaticData {
     }
 
     public StaticData(CardStorageReader cardReader, CardStorageReader tokenReader, CardStorageReader customCardReader, CardStorageReader customTokenReader, String editionFolder, String customEditionsFolder, String blockDataFolder, String setLookupFolder, String cardArtPreference, boolean enableUnknownCards, boolean loadNonLegalCards, boolean allowCustomCardsInDecksConformance, boolean enableSmartCardArtSelection) {
+        long staticDataStart = System.nanoTime();
         this.cardReader = cardReader;
         this.tokenReader = tokenReader;
         this.editions = new CardEdition.Collection(new CardEdition.Reader(new File(editionFolder)));
@@ -80,8 +83,8 @@ public class StaticData {
         editions.append(new CardEdition.Collection(new CardEdition.Reader(new File(customEditionsFolder), true)));
 
         {
-            final Map<String, CardRules> regularCards = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            final Map<String, CardRules> variantsCards = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            final Map<String, CardRules> regularCards = new CaseInsensitiveHashMap<>();
+            final Map<String, CardRules> variantsCards = new CaseInsensitiveHashMap<>();
 
             if (!loadNonLegalCards) {
                 for (CardEdition e : editions) {
@@ -97,20 +100,50 @@ public class StaticData {
                 }
             }
 
-            for (CardRules card : cardReader.loadCards()) {
-                if (null == card) continue;
+            // Cache version based on edition count + total card entries
+            String cacheVersion = CardRulesCache.computeCacheVersion(editions);
+            boolean loadedFromCache = false;
 
-                final String cardName = card.getName();
+            // Tier 1: Try to load CardRules from binary cache
+            long cacheStart = System.nanoTime();
+            Map<String, CardRules> cachedRules = CardRulesCache.loadRules(cacheVersion);
+            if (cachedRules != null) {
+                System.err.println("FORGE-TIMING: CardRules cache hit, loaded " + cachedRules.size()
+                        + " rules in " + (System.nanoTime() - cacheStart) / 1_000_000 + "ms");
 
-                if (!loadNonLegalCards && funnyCards.contains(cardName) && !card.getType().isBasicLand())
-                    filtered.add(cardName);
+                // Separate into regular and variant maps
+                for (Map.Entry<String, CardRules> entry : cachedRules.entrySet()) {
+                    CardRules card = entry.getValue();
+                    String cardName = card.getName();
 
-                if (card.isVariant()) {
-                    variantsCards.put(cardName, card);
-                } else {
-                    regularCards.put(cardName, card);
+                    if (!loadNonLegalCards && funnyCards.contains(cardName) && !card.getType().isBasicLand())
+                        filtered.add(cardName);
+
+                    if (card.isVariant()) {
+                        variantsCards.put(cardName, card);
+                    } else {
+                        regularCards.put(cardName, card);
+                    }
+                }
+            } else {
+                System.err.println("FORGE-TIMING: CardRules cache miss, parsing text files...");
+
+                for (CardRules card : cardReader.loadCards()) {
+                    if (null == card) continue;
+
+                    final String cardName = card.getName();
+
+                    if (!loadNonLegalCards && funnyCards.contains(cardName) && !card.getType().isBasicLand())
+                        filtered.add(cardName);
+
+                    if (card.isVariant()) {
+                        variantsCards.put(cardName, card);
+                    } else {
+                        regularCards.put(cardName, card);
+                    }
                 }
             }
+
             if (customCardReader != null) { //Load user's custom cards.
                 for (CardRules card : customCardReader.loadCards()) {
                     if (null == card) continue;
@@ -131,28 +164,89 @@ public class StaticData {
             commonCards.setCardArtPreference(cardArtPreference);
             variantCards.setCardArtPreference(cardArtPreference);
 
-            //must initialize after establish field values for the sake of card image logic
-            commonCards.initialize(false, false, enableUnknownCards);
-            variantCards.initialize(false, false, enableUnknownCards);
-        }
-
-        if (this.tokenReader != null) {
-            final Map<String, CardRules> tokens = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-
-            for (CardRules card : this.tokenReader.loadCards()) {
-                if (null == card) continue;
-                tokens.put(card.getNormalizedName(), card);
+            // Start token loading in background while CardDb initializes
+            final Map<String, CardRules>[] tokenMapHolder = new Map[1];
+            Thread tokenThread = null;
+            if (this.tokenReader != null) {
+                final CardStorageReader localTokenReader = this.tokenReader;
+                final CardStorageReader localCustomTokenReader = customTokenReader;
+                tokenThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        long tokenStart = System.nanoTime();
+                        Map<String, CardRules> tokens = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                        for (CardRules card : localTokenReader.loadCards()) {
+                            if (null == card) continue;
+                            tokens.put(card.getNormalizedName(), card);
+                        }
+                        if (localCustomTokenReader != null) {
+                            for (CardRules card : localCustomTokenReader.loadCards()) {
+                                if (null == card) continue;
+                                card.setCustom();
+                                tokens.put(card.getNormalizedName(), card);
+                            }
+                        }
+                        tokenMapHolder[0] = tokens;
+                        System.err.println("FORGE-TIMING: Token loading = " + (System.nanoTime() - tokenStart) / 1_000_000 + "ms");
+                    }
+                }, "TokenLoader");
+                tokenThread.start();
             }
-            if (customTokenReader != null){
-                for (CardRules card : customTokenReader.loadCards()){
-                    if (null == card) continue;
-                    card.setCustom();
-                    tokens.put(card.getNormalizedName(), card);
+
+            // Tier 2: Try to load PaperCards from binary cache (skip initialize)
+            if (cachedRules != null) {
+                long tier2Start = System.nanoTime();
+                // Combine all rules for PaperCard reconstruction
+                Map<String, CardRules> allRulesForLookup = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                allRulesForLookup.putAll(regularCards);
+                allRulesForLookup.putAll(variantsCards);
+
+                loadedFromCache = CardRulesCache.loadPaperCards(commonCards, variantCards, allRulesForLookup, cacheVersion);
+                if (loadedFromCache) {
+                    System.err.println("FORGE-TIMING: PaperCard cache hit, loaded in "
+                            + (System.nanoTime() - tier2Start) / 1_000_000 + "ms");
+                } else {
+                    System.err.println("FORGE-TIMING: PaperCard cache miss, running initialize()...");
                 }
             }
-            allTokens = new TokenDb(tokens, editions);
-        } else {
-            allTokens = null;
+
+            if (!loadedFromCache) {
+                //must initialize after establish field values for the sake of card image logic
+                long initStart = System.nanoTime();
+                commonCards.initialize(false, false, enableUnknownCards);
+                variantCards.initialize(false, false, enableUnknownCards);
+                System.err.println("FORGE-TIMING: CardDb.initialize() = " + (System.nanoTime() - initStart) / 1_000_000 + "ms");
+
+                // Save caches for next launch (in background thread to avoid blocking)
+                final Map<String, CardRules> allRulesToSave = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                allRulesToSave.putAll(regularCards);
+                allRulesToSave.putAll(variantsCards);
+                final String saveVersion = cacheVersion;
+                final CardDb saveCommon = commonCards;
+                final CardDb saveVariant = variantCards;
+                Thread cacheWriter = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        long saveStart = System.nanoTime();
+                        CardRulesCache.saveRules(allRulesToSave, saveVersion);
+                        CardRulesCache.savePaperCards(saveCommon, saveVariant, saveVersion);
+                        System.err.println("FORGE-TIMING: Cache saved in " + (System.nanoTime() - saveStart) / 1_000_000 + "ms");
+                    }
+                }, "CacheWriter");
+                cacheWriter.start();
+            }
+
+            // Wait for token loading to complete
+            if (tokenThread != null) {
+                try {
+                    tokenThread.join();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                allTokens = new TokenDb(tokenMapHolder[0], editions);
+            } else {
+                allTokens = null;
+            }
         }
 
         //initialize setLookup
@@ -163,6 +257,7 @@ public class StaticData {
                 }
             }
         }
+        System.err.println("FORGE-TIMING: StaticData constructor total = " + (System.nanoTime() - staticDataStart) / 1_000_000 + "ms");
     }
 
     public static StaticData instance() {

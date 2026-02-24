@@ -157,6 +157,7 @@ public final class FModel {
         initialize(progressBar, adjustPrefs, false);
     }
     public static void initialize(final IProgressBar progressBar, Function<ForgePreferences, Void> adjustPrefs, boolean isSimTest) {
+        long fmodelStart = System.nanoTime();
         System.err.println("FMODEL: initialize() - starting");
         System.err.flush();
 
@@ -290,6 +291,9 @@ public final class FModel {
         ForgePreferences.DEV_MODE = preferences.getPrefBoolean(FPref.DEV_MODE_ENABLED);
         ForgePreferences.UPLOAD_DRAFT = ForgePreferences.NET_CONN;
 
+        // Set cache directory for binary card cache (speeds up subsequent launches)
+        forge.card.CardRulesCache.setCacheDir(ForgeConstants.DB_DIR);
+
         System.err.println("FMODEL: initialize() - calling getMagicDb() for first time");
         System.err.flush();
         getMagicDb().setStandardPredicate(getFormats().getStandard().getFilterRules());
@@ -378,6 +382,7 @@ public final class FModel {
             System.err.flush();
         }
 
+        System.err.println("FORGE-TIMING: FModel.initialize() total = " + (System.nanoTime() - fmodelStart) / 1_000_000 + "ms");
         System.err.println("FMODEL: initialize() - COMPLETED SUCCESSFULLY");
         System.err.flush();
     }

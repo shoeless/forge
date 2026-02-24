@@ -25,6 +25,7 @@ import forge.card.CardEdition.Type;
 import forge.deck.generation.IDeckGenPool;
 import forge.item.IPaperCard;
 import forge.item.PaperCard;
+import forge.util.CaseInsensitiveHashMap;
 import forge.util.IterableUtil;
 import forge.util.Lang;
 import forge.util.TextUtil;
@@ -42,11 +43,12 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     public static final String FlagSeparator = "\t";
 
     // need this to obtain cardReference by name+set+artindex
-    private final ListMultimap<String, PaperCard> allCardsByName = Multimaps.newListMultimap(new TreeMap<>(String.CASE_INSENSITIVE_ORDER), Lists::newArrayList);
-    private final Map<String, PaperCard> uniqueCardsByName = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    // Use CaseInsensitiveHashMap for O(1) lookups instead of TreeMap O(log n)
+    private final ListMultimap<String, PaperCard> allCardsByName = Multimaps.newListMultimap(new CaseInsensitiveHashMap<Collection<PaperCard>>(), Lists::newArrayList);
+    private final Map<String, PaperCard> uniqueCardsByName = new CaseInsensitiveHashMap<>();
     private final Map<String, CardRules> rulesByName;
-    private final Map<String, ICardFace> facesByName = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
-    private final Map<String, String> normalizedNames = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    private final Map<String, ICardFace> facesByName = new CaseInsensitiveHashMap<>();
+    private final Map<String, String> normalizedNames = new CaseInsensitiveHashMap<>();
     private static Map<String, String> artPrefs = Maps.newHashMap();
     /**
      * Map of flavor names to the identifier of the functional variant on which they appear in their respective card rules.
@@ -581,12 +583,29 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             allCardsByName.put(name, paperCard);
     }
 
-    private void reIndex() {
+    void reIndex() {
         uniqueCardsByName.clear();
         for (Entry<String, Collection<PaperCard>> kv : allCardsByName.asMap().entrySet()) {
             PaperCard pc = getFirstNonSpeicalWithImage(kv.getValue());
             uniqueCardsByName.put(kv.getKey(), pc);
         }
+    }
+
+    /** Direct cache loading - bypasses addCard() and reIndex() entirely. */
+    void putAllCardsByName(String key, PaperCard card) {
+        allCardsByName.put(key, card);
+    }
+
+    void putUniqueCardByName(String key, PaperCard card) {
+        uniqueCardsByName.put(key, card);
+    }
+
+    Map<String, Collection<PaperCard>> getAllCardsByNameMap() {
+        return allCardsByName.asMap();
+    }
+
+    Map<String, PaperCard> getUniqueCardsByNameMap() {
+        return uniqueCardsByName;
     }
 
     private static PaperCard getFirstNonSpeicalWithImage(final Collection<PaperCard> cards) {

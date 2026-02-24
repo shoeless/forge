@@ -140,7 +140,7 @@ final class CardFace implements ICardFace, Cloneable {
     void addDraftAction(String value)        { if (null == this.draftActions) { this.draftActions = new ArrayList<>(); } this.draftActions.add(value);}
     void addStaticAbility(String value)      { if (null == this.staticAbilities) { this.staticAbilities = new ArrayList<>(); } this.staticAbilities.add(value);}
     void addReplacementEffect(String value)  { if (null == this.replacements) { this.replacements = new ArrayList<>(); } this.replacements.add(value);}
-    void addSVar(String key, String value)   { if (null == this.variables) { this.variables = new TreeMap<>(String.CASE_INSENSITIVE_ORDER); } this.variables.put(key, value); }
+    void addSVar(String key, String value)   { if (null == this.variables) { this.variables = new HashMap<>(); } this.variables.put(key, value); }
 
 
     //Functional variant methods. Used for Attractions and some Un-cards,

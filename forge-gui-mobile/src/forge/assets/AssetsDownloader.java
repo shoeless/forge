@@ -38,6 +38,12 @@ public class AssetsDownloader {
     public static void checkForUpdates(boolean exited, Runnable runnable) {
         if (exited)
             return;
+        // iOS app is deployed via Xcode, not self-updating.
+        // Skip network I/O that can block for seconds on slow/no connections.
+        if (GuiBase.isIOS()) {
+            run(runnable);
+            return;
+        }
         final String versionString = Forge.getDeviceAdapter().getVersionString();
         Forge.getSplashScreen().getProgressBar().setDescription("Checking for updates...");
         if (versionString.contains("GIT")) {
