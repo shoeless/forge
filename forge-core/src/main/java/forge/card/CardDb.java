@@ -1061,7 +1061,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     }
 
     public List<PaperCard> getUniqueCardsNoAlt(String cardName) {
-        return Lists.newArrayList(Maps.filterEntries(uniqueCardsByName, entry -> entry.getKey().equals(entry.getValue().getName())).get(getNormalizedName(cardName)));
+        return Lists.newArrayList(Maps.filterEntries(uniqueCardsByName, entry -> entry.getKey().equalsIgnoreCase(entry.getValue().getName())).get(getNormalizedName(cardName)));
     }
 
     public PaperCard getUniqueByName(final String name) {
@@ -1102,7 +1102,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     }
 
     public Collection<PaperCard> getAllCardsNoAlt() {
-        return Multimaps.filterEntries(allCardsByName, entry -> entry.getKey().equals(entry.getValue().getName())).values();
+        return Multimaps.filterEntries(allCardsByName, entry -> entry.getKey().equalsIgnoreCase(entry.getValue().getName())).values();
     }
 
     // iOS compatibility: Stream API methods removed - use getAllCards() or getUniqueCards() instead
@@ -1127,7 +1127,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
         List<PaperCard> result = new ArrayList<>();
         for (Map.Entry<String, PaperCard> entry : allCardsByName.entries()) {
-            if (entry.getKey().equals(entry.getValue().getName()) && EDITION_NON_REPRINT.test(entry.getValue())) {
+            if (entry.getKey().equalsIgnoreCase(entry.getValue().getName()) && EDITION_NON_REPRINT.test(entry.getValue())) {
                 result.add(entry.getValue());
             }
         }
@@ -1145,7 +1145,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     }
 
     public List<PaperCard> getAllCardsNoAlt(String cardName) {
-        return Lists.newArrayList(Multimaps.filterEntries(allCardsByName, entry -> entry.getKey().equals(entry.getValue().getName())).get(getNormalizedName(cardName)));
+        return Lists.newArrayList(Multimaps.filterEntries(allCardsByName, entry -> entry.getKey().equalsIgnoreCase(entry.getValue().getName())).get(getNormalizedName(cardName)));
     }
 
     /**
@@ -1182,7 +1182,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         // iOS compatibility: Use traditional loop instead of Stream + filter + Collectors (not available on iOS runtime)
         List<PaperCard> result = new ArrayList<>();
         for (Map.Entry<String, PaperCard> entry : allCardsByName.entries()) {
-            if (entry.getKey().equals(entry.getValue().getName()) && predicate.test(entry.getValue())) {
+            if (entry.getKey().equalsIgnoreCase(entry.getValue().getName()) && predicate.test(entry.getValue())) {
                 result.add(entry.getValue());
             }
         }
