@@ -1,3 +1,7 @@
+# Ignore env config file
+.env
+
+
 # Ignore IDEA config files
 
 *.idea

@@ -230,7 +230,10 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
             return true; //if not in game, card can be shown
         }
         if (GuiBase.getInterface().isLibgdxPort()){
-            if (gameView != null && gameView.isGameOver()) {
+            // In single-player (no network), reveal all cards when game is over.
+            // In multiplayer, respect per-card visibility even after game over
+            // to prevent leaking opponent hands on concession.
+            if (gameView != null && gameView.isGameOver() && !GuiBase.isNetworkplay()) {
                 return true;
             }
             if (spectator != null) { //workaround fix!! this is needed on above code or it will
@@ -389,6 +392,10 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
                     if (((PlayerControllerHuman) c).getPlayer().getOutcome() == null) {
                         concedeNeeded = true;
                     }
+                } else {
+                    // Network controller — can't check outcome from client,
+                    // assume concede is needed (server will validate)
+                    concedeNeeded = true;
                 }
             }
             if (concedeNeeded) {
@@ -407,6 +414,38 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
             } else {
                 return !ignoreConcedeChain;
             }
+            // For network games, the concede message was sent to the server.
+            // Wait for the server to process it and end the game.
+            boolean isNetworkGame = false;
+            for (final IGameController c : getOriginalGameControllers()) {
+                if (!(c instanceof PlayerControllerHuman)) {
+                    isNetworkGame = true;
+                    break;
+                }
+            }
+            if (isNetworkGame) {
+                // Poll for game-over state — server needs time to process concede
+                for (int i = 0; i < 50; i++) { // up to 10 seconds
+                    if (gameView.isGameOver()) {
+                        return false; // Game ended cleanly, wait for win/lose screen
+                    }
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+                // Server didn't respond in time — force quit
+                ignoreConcedeChain = true;
+                for (PlayerView player : getLocalPlayers()) {
+                    if (!player.isAI()) {
+                        getGameController(player).nextGameDecision(NextGameDecision.QUIT);
+                    }
+                }
+                ignoreConcedeChain = false;
+                return true; // force close the game screen
+            }
+
             if (gameView.isGameOver()) {
                 // Don't immediately close, wait for win/lose screen
                 return false;
@@ -882,6 +921,11 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
             awaitNextInputTimer = null;
         }
         daytime = null;
+        // Clear controller state so stale entries don't leak into the next game.
+        // Controllers are re-registered via setOriginalGameController() when the next game starts.
+        gameControllers.clear();
+        originalGameControllers.clear();
+        spectator = null;
     }
 
     public void updateDependencies() {        

@@ -45,6 +45,7 @@ public final class FServerManager {
     private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private UpnpService upnpService = null;
+    private ServerBroadcaster broadcaster;
     private ServerGameLobby localLobby;
     private ILobbyListener lobbyListener;
     private boolean UPnPMapped = false;
@@ -130,6 +131,21 @@ public final class FServerManager {
             }
             Runtime.getRuntime().addShutdownHook(shutdownHook);
             isHosting = true;
+
+            // Start LAN broadcast for server discovery
+            String playerName = FModel.getPreferences().getPref(
+                    forge.localinstance.properties.ForgePreferences.FPref.PLAYER_NAME);
+            if (playerName == null || playerName.isEmpty()) {
+                playerName = "Host";
+            }
+            broadcaster = new ServerBroadcaster(playerName, port, 4);
+            String tailscaleApiKey = FModel.getNetPreferences().getPref(
+                    ForgeNetPreferences.FNetPref.TAILSCALE_API_KEY);
+            if (tailscaleApiKey != null && !tailscaleApiKey.isEmpty()) {
+                broadcaster.setTailscaleApiKey(tailscaleApiKey);
+                System.out.println("ServerBroadcaster: Tailscale Cloud API key configured");
+            }
+            broadcaster.start();
         } catch (final InterruptedException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
@@ -164,6 +180,10 @@ public final class FServerManager {
     }
 
     private void stopServer(final boolean removeShutdownHook) {
+        if (broadcaster != null) {
+            broadcaster.stop();
+            broadcaster = null;
+        }
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
         if (upnpService != null) {
@@ -281,7 +301,52 @@ public final class FServerManager {
         return "localhost";
     }
 
+    /**
+     * Returns all non-VPN, non-loopback IPv4 LAN addresses on this machine.
+     */
+    public static List<String> getAllLanAddresses() {
+        List<String> result = new ArrayList<String>();
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
+                    NetworkInterface ni = interfaces.nextElement();
+                    System.out.println("NET: Interface " + ni.getName()
+                            + " up=" + ni.isUp() + " loopback=" + ni.isLoopback());
+                    if (!ni.isUp() || ni.isLoopback()) {
+                        continue;
+                    }
+                    // Skip VPN tunnel interfaces
+                    String name = ni.getName().toLowerCase();
+                    if (name.startsWith("tun") || name.startsWith("utun")
+                            || name.startsWith("ppp") || name.startsWith("tap")) {
+                        continue;
+                    }
+                    Enumeration<InetAddress> addresses = ni.getInetAddresses();
+                    while (addresses.hasMoreElements()) {
+                        InetAddress addr = addresses.nextElement();
+                        System.out.println("NET:   " + ni.getName() + " -> " + addr.getHostAddress()
+                                + " (IPv4=" + (addr instanceof Inet4Address) + ")");
+                        if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                            result.add(addr.getHostAddress());
+                        }
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            System.err.println("Failed to enumerate network interfaces: " + e.getMessage());
+        }
+        System.out.println("NET: getAllLanAddresses result: " + result);
+        return result;
+    }
+
     public static String getLocalAddress() {
+        // Prefer LAN addresses (skips VPN interfaces)
+        List<String> lanAddresses = getAllLanAddresses();
+        if (!lanAddresses.isEmpty()) {
+            return lanAddresses.get(0);
+        }
+        // Fall back to routable address detection
         try {
             return getRoutableAddress(true, false);
         } catch (final Exception e) {

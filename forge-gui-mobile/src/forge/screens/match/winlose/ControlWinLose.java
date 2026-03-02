@@ -72,7 +72,11 @@ public class ControlWinLose {
                 MatchController.getHostedMatch().subGameCount--;
             }
             MatchController.getHostedMatch().endCurrentGame();
-        } catch (NullPointerException e) {}
+        } catch (NullPointerException e) {
+            // Network guest: no hosted match exists, manually trigger game cleanup
+            // so the match screen navigates back to the lobby
+            MatchController.instance.afterGameEnd();
+        }
         view.hide();
         if (openHomeScreen || humancount == 0)
             Forge.openHomeScreen(Forge.lastButtonIndex, Forge.getCurrentScreen());

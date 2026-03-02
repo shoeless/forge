@@ -71,12 +71,16 @@
     <true/>
     <key>UIUserInterfaceStyle</key>
     <string>Light</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Forge uses the local network to discover and connect to multiplayer game servers.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
         <false/>
         <key>NSAllowsArbitraryLoadsInWebContent</key>
         <false/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
         <key>NSExceptionDomains</key>
         <dict>
             <key>scryfall.com</key>

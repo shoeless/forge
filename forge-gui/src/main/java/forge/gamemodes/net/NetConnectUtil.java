@@ -103,22 +103,41 @@ public class NetConnectUtil {
     }
 
     public static void copyHostedServerUrl() {
-        String internalAddress = FServerManager.getLocalAddress();
+        int port = FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_PORT);
+        java.util.List<String> lanAddresses = FServerManager.getAllLanAddresses();
         String externalAddress = FServerManager.getExternalAddress();
-        String internalUrl = internalAddress + ":" + FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_PORT);
-        String externalUrl = null;
-        if (externalAddress != null) {
-            externalUrl = externalAddress + ":" + FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_PORT);
-            GuiBase.getInterface().copyToClipboard(externalUrl);
+
+        // Build internal URL string — show all LAN addresses if multiple found
+        String internalUrl;
+        if (lanAddresses.size() > 1) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < lanAddresses.size(); i++) {
+                if (i > 0) {
+                    sb.append("\n");
+                }
+                sb.append(lanAddresses.get(i)).append(":").append(port);
+            }
+            internalUrl = sb.toString();
+        } else if (!lanAddresses.isEmpty()) {
+            internalUrl = lanAddresses.get(0) + ":" + port;
         } else {
-            GuiBase.getInterface().copyToClipboard(internalAddress);
+            internalUrl = FServerManager.getLocalAddress() + ":" + port;
         }
 
-        String message = "";
+        String externalUrl = null;
+        if (externalAddress != null) {
+            externalUrl = externalAddress + ":" + port;
+            GuiBase.getInterface().copyToClipboard(externalUrl);
+        } else {
+            String primaryAddress = lanAddresses.isEmpty() ? FServerManager.getLocalAddress() : lanAddresses.get(0);
+            GuiBase.getInterface().copyToClipboard(primaryAddress + ":" + port);
+        }
+
+        String message;
         if (externalUrl != null) {
             message = Localizer.getInstance().getMessage("lblShareURLToMakePlayerJoinServer", externalUrl, internalUrl);
         } else {
-            message = Localizer.getInstance().getMessage("lblForgeUnableDetermineYourExternalIP", message + internalUrl);
+            message = Localizer.getInstance().getMessage("lblForgeUnableDetermineYourExternalIP", internalUrl);
         }
         SOptionPane.showMessageDialog(message, Localizer.getInstance().getMessage("lblServerURL"), SOptionPane.INFORMATION_ICON);
     }
