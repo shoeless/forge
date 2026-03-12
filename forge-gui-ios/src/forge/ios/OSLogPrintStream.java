@@ -4,14 +4,37 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
+import org.robovm.apple.foundation.Foundation;
+import org.robovm.apple.uikit.UIDevice;
+
 /**
- * A PrintStream that redirects output to os_log for iOS 26+ compatibility.
- * Use this to redirect System.out and System.err so all logging is visible.
+ * A PrintStream that redirects output to os_log (iOS 26+) or NSLog (older iOS)
+ * so all logging is visible via idevicesyslog on any iOS version.
+ *
+ * iOS 26+ redacts NSLog output as {@code <private>}, so os_log with
+ * {@code %{public}s} is required. Older iOS versions expose NSLog via
+ * idevicesyslog but may not surface os_log entries.
  */
 public class OSLogPrintStream extends PrintStream {
     private final String prefix;
     private final boolean isError;
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    // Lazy-initialized: UIDevice may not be available during early class loading
+    static volatile Boolean useOSLog;
+
+    static boolean shouldUseOSLog() {
+        if (useOSLog == null) {
+            try {
+                String ver = UIDevice.getCurrentDevice().getSystemVersion();
+                int major = Integer.parseInt(ver.split("\\.")[0]);
+                useOSLog = Boolean.valueOf(major >= 26);
+            } catch (Throwable t) {
+                // Default to NSLog if we can't detect version
+                useOSLog = Boolean.FALSE;
+            }
+        }
+        return useOSLog.booleanValue();
+    }
 
     public OSLogPrintStream(String prefix, boolean isError) {
         super(new OutputStream() {
@@ -170,13 +193,17 @@ public class OSLogPrintStream extends PrintStream {
         }
         String fullMessage = prefix + message;
         try {
-            if (isError) {
-                ForgeOSLog.logError(fullMessage);
+            if (shouldUseOSLog()) {
+                if (isError) {
+                    ForgeOSLog.logError(fullMessage);
+                } else {
+                    ForgeOSLog.logPublic(fullMessage);
+                }
             } else {
-                ForgeOSLog.logPublic(fullMessage);
+                Foundation.log("%@", new org.robovm.apple.foundation.NSString(fullMessage));
             }
         } catch (Throwable t) {
-            // If os_log fails, we can't do much - avoid infinite recursion
+            // If logging fails, we can't do much - avoid infinite recursion
         }
     }
 }

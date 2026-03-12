@@ -1,11 +1,13 @@
 package forge.gamemodes.net.client;
 
 import forge.game.card.CardView;
+import forge.game.phase.PhaseType;
 import forge.game.player.PlayerView;
 import forge.game.player.actions.PlayerAction;
 import forge.game.spellability.SpellAbilityView;
 import forge.gamemodes.match.NextGameDecision;
 import forge.gamemodes.net.GameProtocolSender;
+import forge.gamemodes.net.NetStubs;
 import forge.gamemodes.net.ProtocolMethod;
 import forge.interfaces.IDevModeCheats;
 import forge.interfaces.IGameController;
@@ -22,11 +24,11 @@ public class NetGameController implements IGameController {
     }
 
     private void send(final ProtocolMethod method, final Object... args) {
-        sender.send(method, args);
+        sender.send(method, NetStubs.stripArgs(args));
     }
 
     private <T> T sendAndWait(final ProtocolMethod method, final Object... args) {
-        return sender.sendAndWait(method, args);
+        return sender.sendAndWait(method, NetStubs.stripArgs(args));
     }
 
     @Override
@@ -119,6 +121,11 @@ public class NetGameController implements IGameController {
     @Override
     public void reorderHand(final CardView card, final int index) {
         send(ProtocolMethod.reorderHand, card, index);
+    }
+
+    @Override
+    public void updatePhaseStop(final PlayerView playerTurn, final PhaseType phase, final boolean stop) {
+        send(ProtocolMethod.updatePhaseStop, playerTurn, phase, stop);
     }
 
     private IMacroSystem macros;

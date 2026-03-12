@@ -4,11 +4,13 @@ import com.google.common.collect.Lists;
 import forge.LobbyPlayer;
 import forge.util.IterableUtil;
 import forge.game.*;
+import forge.game.card.CardView;
 import forge.game.player.PlayerView;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.net.GameProtocolHandler;
 import forge.gamemodes.net.IRemote;
+import forge.gamemodes.net.NetStubs;
 import forge.gamemodes.net.ProtocolMethod;
 import forge.gamemodes.net.ReplyPool;
 import forge.gamemodes.net.event.LoginEvent;
@@ -67,24 +69,25 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> {
     @SuppressWarnings("unchecked")
     @Override
     protected void beforeCall(final ProtocolMethod protocolMethod, final Object[] args) {
-        System.out.println("CLIENT beforeCall: protocolMethod=" + protocolMethod);
+        long beforeMs = System.currentTimeMillis();
+        System.err.println("[ERR] CLIENT beforeCall: " + protocolMethod.name() + " args=" + args.length);
         switch (protocolMethod) {
             case openView:
                 try {
-                    System.out.println("CLIENT openView: Creating match...");
+                    System.err.println("[ERR] CLIENT openView: Creating match...");
                     // only need one **match**
                     if (this.match == null) {
                         this.match = createMatch();
                     }
-                    System.out.println("CLIENT openView: Match created, creating game...");
+                    System.err.println("[ERR] CLIENT openView: Match created, creating game...");
 
                     // openView is called **once** per game, for now create a new Game instance each time
                     this.game = createGame();
-                    System.out.println("CLIENT openView: Game created, creating tracker...");
+                    System.err.println("[ERR] CLIENT openView: Game created, creating tracker...");
 
                     // get a tracker
                     this.tracker = createTracker();
-                    System.out.println("CLIENT openView: Tracker created, setting up players...");
+                    System.err.println("[ERR] CLIENT openView: Tracker created, setting up players...");
 
                     for (PlayerView myPlayer : (TrackableCollection<PlayerView>) args[0]) {
                         if (myPlayer.getTracker() == null) {
@@ -94,9 +97,9 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> {
 
                     final TrackableCollection<PlayerView> myPlayers = (TrackableCollection<PlayerView>) args[0];
                     client.setGameControllers(myPlayers);
-                    System.out.println("CLIENT openView: Setup complete, myPlayers count=" + myPlayers.size());
+                    System.err.println("[ERR] CLIENT openView: Setup complete, myPlayers count=" + myPlayers.size());
                 } catch (Exception e) {
-                    System.err.println("CLIENT openView: ERROR - " + e.getClass().getName() + ": " + e.getMessage());
+                    System.err.println("[ERR] CLIENT openView: ERROR - " + e.getClass().getName() + ": " + e.getMessage());
                     e.printStackTrace();
                 }
                 break;
@@ -106,6 +109,40 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> {
         if (!(this.tracker == null)) {
             updateTrackers(args);
             replicateProps(args);
+            // setGameView carries full state. Replicate server PlayerView data
+            // to local tracker objects so zone/card data is available locally.
+            if (protocolMethod == ProtocolMethod.setGameView
+                    && args.length > 0 && args[0] instanceof GameView) {
+                GameView gv = (GameView) args[0];
+                if (gv.getPlayers() != null) {
+                    for (PlayerView pv : gv.getPlayers()) {
+                        replicatePlayerView(pv);
+                    }
+                    // Force-refresh tracker with all CardViews from replicated data.
+                    // TrackableObjectType.updateObjLookup skips objects already in
+                    // the tracker (!hasObj check), so after the first setGameView,
+                    // modified CardViews aren't updated. This causes resolveAllViews
+                    // to return stale CardViews without current images/descriptions.
+                    for (PlayerView pv : gv.getPlayers()) {
+                        PlayerView localPV = tracker.getObj(TrackableTypes.PlayerViewType, pv.getId());
+                        if (localPV != null) {
+                            refreshTrackerCards(localPV);
+                        }
+                    }
+                }
+            }
+            // Resolve ALL view stubs (PlayerView, CardView, SpellAbilityView
+            // HostCard) to full local objects from the tracker. Safe because
+            // flushPendingUpdates() always sends setGameView before any
+            // user-facing operation, keeping the tracker current.
+            if (protocolMethod != ProtocolMethod.openView
+                    && protocolMethod != ProtocolMethod.setGameView) {
+                NetStubs.resolveAllViews(args, this.tracker);
+            }
+        }
+        long elapsed = System.currentTimeMillis() - beforeMs;
+        if (elapsed > 10) {
+            System.err.println("[ERR] CLIENT beforeCall: " + protocolMethod.name() + " took " + elapsed + "ms");
         }
     }
 
@@ -258,6 +295,12 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> {
                     Object objCollection = itrCollection.next();
                     updateTrackers(new Object[]{objCollection});
                 }
+            } else if (obj instanceof Iterable) {
+                // Handle plain Iterables (e.g., HashSet<PlayerView> from updateManaPool/updateLives)
+                // This must come after TrackableCollection since it also implements Iterable
+                for (Object item : (Iterable<?>) obj) {
+                    updateTrackers(new Object[]{item});
+                }
             }
         }
     }
@@ -283,12 +326,58 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> {
                     replicatePlayerView(newPlayerView);
                 }
             }
-            /*
-            else {
-                System.err.println("replicateProps - did not handle : " + obj.getClass().toString());
+            else if (obj instanceof Iterable && !(obj instanceof TrackableCollection)) {
+                // Handle plain Iterables (e.g., HashSet<PlayerView> from updateManaPool/updateLives)
+                // Exclude TrackableCollection — it wasn't iterated here before, and during openView
+                // the client-side PlayerViews may not have all properties populated yet
+                for (Object item : (Iterable<?>) obj) {
+                    replicateProps(new Object[]{item});
+                }
             }
-             */
         }
+    }
+
+    /**
+     * Force-adds all CardViews found in a PlayerView's properties to the tracker.
+     * This ensures the tracker has the latest server CardViews for stub resolution
+     * via resolveAllViews, even when updateObjLookup's !hasObj guard prevents
+     * replacing existing (stale) entries during copyChangedProps.
+     */
+    @SuppressWarnings("unchecked")
+    private void refreshTrackerCards(final PlayerView pv) {
+        EnumMap props = pv.getProps();
+        if (props == null) return;
+        int count = 0;
+        for (Object value : props.values()) {
+            if (value instanceof TrackableCollection) {
+                for (Object item : (TrackableCollection<?>) value) {
+                    if (item instanceof CardView) {
+                        CardView cv = (CardView) item;
+                        clearAnimationFlags(cv);
+                        tracker.putObj(TrackableTypes.CardViewType, cv.getId(), cv);
+                        count++;
+                    }
+                }
+            } else if (value instanceof CardView) {
+                CardView cv = (CardView) value;
+                clearAnimationFlags(cv);
+                tracker.putObj(TrackableTypes.CardViewType, cv.getId(), cv);
+                count++;
+            }
+        }
+        if (count > 0) {
+            System.err.println("[ERR] CLIENT refreshTrackerCards: " + count + " cards for player " + pv.getId());
+        }
+    }
+
+    /**
+     * Clears tap/untap animation flags on server CardViews before adding to tracker.
+     * The server never clears these flags (only the client animation onEnd does),
+     * so without this, every setGameView would replay tap/untap animations.
+     */
+    private void clearAnimationFlags(final CardView cv) {
+        cv.updateNeedsTapAnimation(false);
+        cv.updateNeedsUntapAnimation(false);
     }
 
     private void replicatePlayerView(final PlayerView newPlayerView) {
@@ -304,8 +393,18 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> {
         int avatarIndex = Integer.parseInt(FModel.getPreferences().getPref(FPref.UI_AVATARS).split(",")[0]);
         int sleeveIndex = Integer.parseInt(FModel.getPreferences().getPref(FPref.UI_SLEEVES).split(",")[0]);
         System.out.println("CLIENT: Sending LoginEvent - name=" + playerName + ", avatar=" + avatarIndex + ", sleeve=" + sleeveIndex);
-        ctx.channel().writeAndFlush(new LoginEvent(playerName, avatarIndex, sleeveIndex));
-        System.out.println("CLIENT: LoginEvent sent");
+        ctx.channel().writeAndFlush(new LoginEvent(playerName, avatarIndex, sleeveIndex)).addListener(new io.netty.channel.ChannelFutureListener() {
+            @Override
+            public void operationComplete(io.netty.channel.ChannelFuture future) {
+                if (future.isSuccess()) {
+                    System.out.println("CLIENT: LoginEvent write SUCCESS");
+                } else {
+                    System.err.println("CLIENT: LoginEvent write FAILED: " + future.cause());
+                    future.cause().printStackTrace();
+                }
+            }
+        });
+        System.out.println("CLIENT: LoginEvent queued");
     }
 
 }

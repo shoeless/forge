@@ -28,7 +28,6 @@ public abstract class GameProtocolHandler<T> extends ChannelInboundHandlerAdapte
     @Override
     public final void channelRead(final ChannelHandlerContext ctx, final Object msg) {
         final String[] catchedError = {""};
-        System.out.println("Received: " + msg);
         if (msg instanceof ReplyEvent) {
             final ReplyEvent event = (ReplyEvent) msg;
             getReplyPool(ctx).complete(event.getIndex(), event.getReply());
@@ -82,6 +81,14 @@ public abstract class GameProtocolHandler<T> extends ChannelInboundHandlerAdapte
                         SOptionPane.showMessageDialog(catchedError[0], "Error", FSkinProp.ICO_WARNING);
                         System.err.println(e.toString());
                     }
+                    // Strip view objects from reply to reduce size (e.g.,
+                    // getAbilityToPlay returns a SpellAbilityView — 28KB full
+                    // vs ~200 bytes stripped). Server matches by ID via equals().
+                    if (reply != null) {
+                        Object[] wrapped = new Object[] { reply };
+                        NetStubs.stripArgs(wrapped);
+                        reply = (java.io.Serializable) wrapped[0];
+                    }
                     getRemote(ctx).send(new ReplyEvent(event.getId(), reply));
                 }
             };
@@ -96,8 +103,15 @@ public abstract class GameProtocolHandler<T> extends ChannelInboundHandlerAdapte
 
     @Override
     public final void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) {
+        System.err.println("[ERR] NET EXCEPTION: " + cause.getClass().getName() + ": " + cause.getMessage());
         cause.printStackTrace();
-        ctx.close();
+        // Only close on fatal errors; transient I/O errors should not kill the game
+        if (cause instanceof java.io.IOException) {
+            System.err.println("[ERR] NET EXCEPTION: I/O error, closing connection");
+            ctx.close();
+        }
+        // Non-I/O exceptions (serialization, class cast, etc.) are logged but
+        // the connection stays open so the game can continue
     }
 
 }

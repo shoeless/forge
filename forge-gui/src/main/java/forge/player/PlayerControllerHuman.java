@@ -28,6 +28,7 @@ import forge.game.event.GameEventPlayerStatsChanged;
 import forge.game.keyword.Keyword;
 import forge.game.keyword.KeywordInterface;
 import forge.game.mana.Mana;
+import forge.game.phase.PhaseType;
 import forge.game.mana.ManaConversionMatrix;
 import forge.game.mana.ManaCostBeingPaid;
 import forge.game.player.*;
@@ -48,6 +49,7 @@ import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.NextGameDecision;
 import forge.gamemodes.match.input.*;
+import forge.gamemodes.net.server.NetGuiGame;
 import forge.gui.FThreads;
 import forge.gui.GuiBase;
 import forge.gui.control.FControlGamePlayback;
@@ -3370,6 +3372,13 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         final PlayerZone hand = player.getZone(ZoneType.Hand);
         hand.reorder(getCard(card), index);
         player.updateZoneForView(hand);
+    }
+
+    @Override
+    public void updatePhaseStop(final PlayerView playerTurn, final PhaseType phase, final boolean stop) {
+        if (getGui() instanceof NetGuiGame) {
+            ((NetGuiGame) getGui()).setCachedPhaseStop(playerTurn, phase, stop);
+        }
     }
 
     @Override

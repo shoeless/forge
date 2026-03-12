@@ -43,6 +43,7 @@ import forge.gamemodes.match.AbstractGuiGame;
 import forge.gamemodes.match.HostedMatch;
 import forge.gui.FThreads;
 import forge.gui.GuiBase;
+import forge.interfaces.IGameController;
 import forge.gui.util.SGuiChoose;
 import forge.gui.util.SOptionPane;
 import forge.item.PaperCard;
@@ -204,6 +205,23 @@ public class MatchController extends AbstractGuiGame {
         }
 
         actuateMatchPreferences();
+
+        // In network games, set up listeners to push phase stop changes to the server
+        if (GuiBase.isNetworkplay()) {
+            for (final VPlayerPanel panel : view.getPlayerPanels().values()) {
+                final PlayerView panelPlayer = panel.getPlayer();
+                panel.getPhaseIndicator().setPhaseStopListener(new VPhaseIndicator.PhaseStopChangeListener() {
+                    @Override
+                    public void onPhaseStopChanged(PhaseType phase, boolean stop) {
+                        IGameController controller = getGameController();
+                        if (controller != null) {
+                            controller.updatePhaseStop(panelPlayer, phase, stop);
+                        }
+                    }
+                });
+            }
+        }
+
         //reset daytime every match
         updateDayTime(null);
         Forge.openScreen(view);
@@ -726,6 +744,28 @@ public class MatchController extends AbstractGuiGame {
     @Override
     public boolean isUiSetToSkipPhase(final PlayerView playerTurn, final PhaseType phase) {
         return !view.stopAtPhase(playerTurn, phase);
+    }
+
+    @Override
+    public java.util.HashMap<String, Boolean> getAllPhaseStops(final PlayerView playerTurn) {
+        java.util.HashMap<String, Boolean> stops = new java.util.HashMap<String, Boolean>();
+        final VPlayerPanel panel = view.getPlayerPanel(playerTurn);
+        if (panel == null) {
+            return stops;
+        }
+        int playerId = playerTurn.getId();
+        for (PhaseType phase : PhaseType.values()) {
+            VPhaseIndicator.PhaseLabel label = panel.getPhaseIndicator().getLabel(phase);
+            if (label != null) {
+                stops.put(playerId + ":" + phase.name(), label.getStopAtPhase());
+            }
+        }
+        return stops;
+    }
+
+    @Override
+    public long ping() {
+        return System.currentTimeMillis();
     }
 
     public static HostedMatch hostMatch() {

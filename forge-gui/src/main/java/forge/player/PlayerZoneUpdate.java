@@ -25,6 +25,15 @@ public class PlayerZoneUpdate implements Serializable {
         }
     }
 
+    /** Creates a PlayerZoneUpdate with a pre-built set of zones. */
+    public PlayerZoneUpdate(final PlayerView player, final Set<ZoneType> zones) {
+        if (player == null) {
+            throw new NullPointerException();
+        }
+        this.player = player;
+        this.zones = zones.isEmpty() ? EnumSet.noneOf(ZoneType.class) : EnumSet.copyOf(zones);
+    }
+
     public PlayerView getPlayer() {
         return player;
     }

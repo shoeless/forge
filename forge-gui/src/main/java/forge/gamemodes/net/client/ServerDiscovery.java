@@ -105,7 +105,7 @@ public class ServerDiscovery {
     }
 
     private void processPacket(String sourceAddress, String message) {
-        // Format: FORGE_SERVER|<version>|<hostName>|<gamePort>|<current>/<max>
+        // Format: FORGE_SERVER|<version>|<hostName>|<gamePort>|<current>/<max>[|<hostIPs>]
         String[] parts = message.split("\\|");
         if (parts.length < 5 || !PROTOCOL_PREFIX.equals(parts[0])) {
             return;
@@ -121,19 +121,42 @@ public class ServerDiscovery {
             int gamePort = Integer.parseInt(parts[3]);
             String playerCount = parts[4];
 
+            // Use UDP source IP as primary (it delivered this packet, so it's routable).
+            // Keep all host-reported IPs for fallback in case UDP source is unreachable.
+            String serverAddress = sourceAddress;
+            String fallback = null;
+            List<String> allHostIps = new ArrayList<String>();
+            if (parts.length >= 6 && parts[5].length() > 0) {
+                String[] hostIps = parts[5].split(",");
+                for (int i = 0; i < hostIps.length; i++) {
+                    String ip = hostIps[i].trim();
+                    if (ip.length() > 0) {
+                        allHostIps.add(ip);
+                    }
+                }
+                if (allHostIps.size() > 0) {
+                    String hostReported = allHostIps.get(0);
+                    if (!hostReported.equals(sourceAddress)) {
+                        fallback = hostReported;
+                    }
+                }
+                System.out.println("ServerDiscovery: UDP source=" + sourceAddress
+                        + " host-reported=" + allHostIps.size() + " IPs");
+            }
+
             boolean updated = false;
             synchronized (servers) {
                 // Update existing server entry or add new one
                 for (int i = 0; i < servers.size(); i++) {
                     DiscoveredServer existing = servers.get(i);
-                    if (existing.address.equals(sourceAddress) && existing.gamePort == gamePort) {
-                        servers.set(i, new DiscoveredServer(sourceAddress, hostName, gamePort, playerCount));
+                    if (existing.address.equals(serverAddress) && existing.gamePort == gamePort) {
+                        servers.set(i, new DiscoveredServer(serverAddress, fallback, allHostIps, hostName, gamePort, playerCount));
                         updated = true;
                         break;
                     }
                 }
                 if (!updated) {
-                    servers.add(new DiscoveredServer(sourceAddress, hostName, gamePort, playerCount));
+                    servers.add(new DiscoveredServer(serverAddress, fallback, allHostIps, hostName, gamePort, playerCount));
                 }
             }
 
@@ -168,13 +191,19 @@ public class ServerDiscovery {
      */
     public static final class DiscoveredServer {
         public final String address;
+        public final String fallbackAddress;
+        /** All host-reported IPs (for multi-address fallback). */
+        public final List<String> allHostIps;
         public final String hostName;
         public final int gamePort;
         public final String playerCount;
         public final long lastSeen;
 
-        DiscoveredServer(String address, String hostName, int gamePort, String playerCount) {
+        DiscoveredServer(String address, String fallbackAddress, List<String> allHostIps,
+                         String hostName, int gamePort, String playerCount) {
             this.address = address;
+            this.fallbackAddress = fallbackAddress;
+            this.allHostIps = allHostIps != null ? allHostIps : new ArrayList<String>();
             this.hostName = hostName;
             this.gamePort = gamePort;
             this.playerCount = playerCount;
@@ -183,7 +212,10 @@ public class ServerDiscovery {
 
         @Override
         public String toString() {
-            return hostName + " (" + address + ":" + gamePort + ") [" + playerCount + "]";
+            String addrDisplay = address.contains(":")
+                    ? "[" + address + "]:" + gamePort
+                    : address + ":" + gamePort;
+            return hostName + " (" + addrDisplay + ") [" + playerCount + "]";
         }
     }
 

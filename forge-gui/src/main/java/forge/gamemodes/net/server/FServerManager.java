@@ -6,6 +6,7 @@ import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
+import forge.gamemodes.net.HeartbeatHandler;
 import forge.gamemodes.net.event.*;
 import forge.gui.GuiBase;
 import forge.gui.interfaces.IGuiGame;
@@ -25,6 +26,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 
 import org.jupnp.UpnpService;
 import org.jupnp.UpnpServiceImpl;
@@ -98,14 +100,18 @@ public final class FServerManager {
             final ServerBootstrap b = new ServerBootstrap()
                     .group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
+                    .childOption(ChannelOption.TCP_NODELAY, true)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(final SocketChannel ch) throws Exception {
                             final ChannelPipeline p = ch.pipeline();
                             p.addLast(
+                                    new IdleStateHandler(60, 10, 0, java.util.concurrent.TimeUnit.SECONDS),
                                     new CompatibleObjectEncoder(),
                                     new CompatibleObjectDecoder(9766 * 1024, ClassResolvers.cacheDisabled(null)),
+                                    new HeartbeatHandler(),
                                     new MessageHandler(),
                                     new RegisterClientHandler(),
                                     new LobbyInputHandler(),
@@ -114,8 +120,16 @@ public final class FServerManager {
                         }
                     });
 
-            // Bind and start to accept incoming connections.
-            final ChannelFuture ch = b.bind(port).sync().channel().closeFuture();
+            // Try IPv6 dual-stack bind first (accepts both IPv4 and IPv6),
+            // fall back to IPv4-only if it fails (e.g. RoboVM on iOS).
+            ChannelFuture bindFuture;
+            try {
+                bindFuture = b.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), port)).sync();
+            } catch (Exception e) {
+                System.err.println("Bind failed: " + e.getMessage());
+                throw e instanceof InterruptedException ? (InterruptedException) e : new InterruptedException(e.getMessage());
+            }
+            final ChannelFuture ch = bindFuture.channel().closeFuture();
             new Thread(() -> {
                 try {
                     ch.sync();
@@ -337,6 +351,54 @@ public final class FServerManager {
             System.err.println("Failed to enumerate network interfaces: " + e.getMessage());
         }
         System.out.println("NET: getAllLanAddresses result: " + result);
+        return result;
+    }
+
+    /**
+     * Returns all non-loopback, non-link-local addresses on this machine,
+     * including both IPv4 and IPv6. Unlike getAllLanAddresses(), this does NOT
+     * skip VPN/tunnel interfaces — we want Tailscale addresses for discovery.
+     * IPv6 addresses are listed first to encourage direct connections.
+     */
+    public static List<String> getAllAddressesForDiscovery() {
+        List<String> ipv6 = new ArrayList<String>();
+        List<String> ipv4 = new ArrayList<String>();
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            if (interfaces != null) {
+                while (interfaces.hasMoreElements()) {
+                    NetworkInterface ni = interfaces.nextElement();
+                    if (!ni.isUp() || ni.isLoopback()) {
+                        continue;
+                    }
+                    Enumeration<InetAddress> addresses = ni.getInetAddresses();
+                    while (addresses.hasMoreElements()) {
+                        InetAddress addr = addresses.nextElement();
+                        if (addr.isLoopbackAddress() || addr.isLinkLocalAddress()) {
+                            continue;
+                        }
+                        String hostAddr = addr.getHostAddress();
+                        // Strip IPv6 scope ID (e.g. "%en0") if present
+                        int scopeIdx = hostAddr.indexOf('%');
+                        if (scopeIdx >= 0) {
+                            hostAddr = hostAddr.substring(0, scopeIdx);
+                        }
+                        if (addr instanceof Inet6Address) {
+                            ipv6.add(hostAddr);
+                        } else if (addr instanceof Inet4Address) {
+                            ipv4.add(hostAddr);
+                        }
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            System.err.println("Failed to enumerate network interfaces: " + e.getMessage());
+        }
+        // IPv6 first — better chance of direct connection over Tailscale
+        List<String> result = new ArrayList<String>(ipv6.size() + ipv4.size());
+        result.addAll(ipv6);
+        result.addAll(ipv4);
+        System.out.println("NET: getAllAddressesForDiscovery: " + result);
         return result;
     }
 

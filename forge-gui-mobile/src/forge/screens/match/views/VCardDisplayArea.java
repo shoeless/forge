@@ -18,6 +18,7 @@ import forge.card.CardZoom;
 import forge.card.CardZoom.ActivateHandler;
 import forge.game.card.CardView;
 import forge.game.player.PlayerView;
+import forge.interfaces.IGameController;
 import forge.game.zone.ZoneType;
 import forge.gui.FThreads;
 import forge.gui.GuiBase;
@@ -393,6 +394,9 @@ public abstract class VCardDisplayArea extends VDisplayArea implements ActivateH
             if (cardView != null) {
                 PlayerView cardController = cardView.getController();
                 PlayerView currentPlayer = MatchController.instance.getCurrentPlayer();
+                System.err.println("SELECT_CARD: card=" + cardView + " id=" + cardView.getId()
+                    + " zone=" + cardView.getZone() + " controller=" + cardController
+                    + " currentPlayer=" + currentPlayer);
                 if (cardController != null) {
                     /* TODO:
                         IIRC this check is for mobile UI BUG that can cast nonland card as long as you can view it
@@ -408,7 +412,9 @@ public abstract class VCardDisplayArea extends VDisplayArea implements ActivateH
                         }
                 }
             }
-            if (MatchController.instance.getGameController().selectCard(getCard(), getOtherCardsToSelect(selectEntireStack), null)) {
+            IGameController gc = MatchController.instance.getGameController();
+            System.err.println("SELECT_CARD: gameController=" + (gc != null ? gc.getClass().getSimpleName() : "null"));
+            if (gc != null && gc.selectCard(getCard(), getOtherCardsToSelect(selectEntireStack), null)) {
                 Gdx.graphics.requestRendering();
                 return true;
             }

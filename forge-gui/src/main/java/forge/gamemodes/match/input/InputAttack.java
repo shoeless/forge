@@ -97,6 +97,11 @@ public class InputAttack extends InputSyncronizedBase {
     }
 
     @Override
+    protected boolean allowAwaitNextInput() {
+        return true; // prevent attack prompt getting stuck during opponent's next phase
+    }
+
+    @Override
     protected final void onOk() {
         // Propaganda costs could have been paid here.
         setCurrentDefender(null); // remove highlights
@@ -232,7 +237,14 @@ public class InputAttack extends InputSyncronizedBase {
             }
         }
 
-        if (playerAttacks.getZone(ZoneType.Battlefield).contains(card) && CombatUtil.canAttack(card, currentDefender)) {
+        boolean onBF = playerAttacks.getZone(ZoneType.Battlefield).contains(card);
+        boolean canAtk = currentDefender != null && CombatUtil.canAttack(card, currentDefender);
+        System.err.println("ATTACK_SELECT: card=" + card.getName() + " id=" + card.getId()
+            + " onBattlefield=" + onBF + " canAttack=" + canAtk
+            + " currentDefender=" + currentDefender
+            + " isTapped=" + card.isTapped() + " hasSickness=" + card.hasSickness()
+            + " isCreature=" + card.isCreature());
+        if (onBF && canAtk) {
             if (activeBand != null && !activeBand.canJoinBand(card)) {
                 activateBand(null);
                 updateMessage();

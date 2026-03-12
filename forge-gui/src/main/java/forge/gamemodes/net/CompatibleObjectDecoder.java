@@ -6,10 +6,10 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.serialization.ClassResolver;
-import net.jpountz.lz4.LZ4BlockInputStream;
 
 import java.io.ObjectInputStream;
 import java.io.StreamCorruptedException;
+import java.util.zip.GZIPInputStream;
 
 public class CompatibleObjectDecoder extends LengthFieldBasedFrameDecoder {
     private final ClassResolver classResolver;
@@ -29,21 +29,28 @@ public class CompatibleObjectDecoder extends LengthFieldBasedFrameDecoder {
         if (frame == null) {
             return null;
         }
+        GZIPInputStream gzipIn = new GZIPInputStream(new ByteBufInputStream(frame, true));
         ObjectInputStream ois = GuiBase.hasPropertyConfig() ?
-                new ObjectInputStream(new LZ4BlockInputStream(new ByteBufInputStream(frame, true))):
-                    new CObjectInputStream(new LZ4BlockInputStream(new ByteBufInputStream(frame, true)),this.classResolver);
+                new ObjectInputStream(gzipIn) :
+                new CObjectInputStream(gzipIn, this.classResolver);
 
         Object var5 = null;
+        long decodeStart = System.currentTimeMillis();
         try {
             var5 = ois.readObject();
-            System.out.println("NET DECODER: Successfully decoded object type=" + (var5 != null ? var5.getClass().getName() : "null"));
         } catch (StreamCorruptedException e) {
-            System.err.printf("NET DECODER: Version Mismatch: %s%n", e.getMessage());
+            System.err.printf("[ERR] NET DECODER: Version Mismatch: %s%n", e.getMessage());
         } catch (Exception e) {
-            System.err.println("NET DECODER: Error decoding object: " + e.getClass().getName() + " - " + e.getMessage());
+            System.err.println("[ERR] NET DECODER: Error decoding object: " + e.getClass().getName() + " - " + e.getMessage());
             e.printStackTrace();
         } finally {
             ois.close();
+        }
+        long decodeElapsed = System.currentTimeMillis() - decodeStart;
+        int frameSize = frame.readableBytes();
+        String objName = var5 != null ? var5.getClass().getSimpleName() : "null";
+        if (decodeElapsed > 10) {
+            System.err.println("[ERR] NET DECODER: " + objName + " " + frameSize + " bytes in " + decodeElapsed + "ms");
         }
 
         return var5;

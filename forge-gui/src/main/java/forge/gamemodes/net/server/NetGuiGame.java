@@ -14,6 +14,7 @@ import forge.game.spellability.SpellAbilityView;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.AbstractGuiGame;
 import forge.gamemodes.net.GameProtocolSender;
+import forge.gamemodes.net.NetStubs;
 import forge.gamemodes.net.ProtocolMethod;
 import forge.item.PaperCard;
 import forge.localinstance.skin.FSkinProp;
@@ -24,38 +25,192 @@ import forge.util.FSerializableFunction;
 import forge.util.ITriggerEvent;
 
 import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
 public class NetGuiGame extends AbstractGuiGame {
 
     private final GameProtocolSender sender;
+    private final HashMap<String, Boolean> phaseStopCache = new HashMap<String, Boolean>();
+    private boolean gameViewDirty = false;
+    private int gameViewSkipCount = 0;
+
+    // Coalescing buffers: accumulate updateCards/updateZones calls and flush
+    // once before user-facing operations. Since flushGameView() always sends
+    // full state first, the coalesced sends only need IDs as refresh signals.
+    private final HashSet<Integer> pendingCardIds = new HashSet<Integer>();
+    private final HashMap<Integer, EnumSet<ZoneType>> pendingZonePlayerIds = new HashMap<Integer, EnumSet<ZoneType>>();
+
     public NetGuiGame(final IToClient client) {
         this.sender = new GameProtocolSender(client);
     }
 
+    public void setCachedPhaseStop(final PlayerView playerTurn, final PhaseType phase, final boolean stop) {
+        String key = playerTurn.getId() + ":" + phase.name();
+        phaseStopCache.put(key, stop);
+    }
+
     private void send(final ProtocolMethod method, final Object... args) {
-        sender.send(method, args);
+        if (method == ProtocolMethod.setGameView || method == ProtocolMethod.openView) {
+            sender.send(method, args);
+        } else {
+            sender.send(method, NetStubs.stripArgs(args));
+        }
     }
 
     private <T> T sendAndWait(final ProtocolMethod method, final Object... args) {
-        return sender.sendAndWait(method, args);
+        // Always flush all pending state before blocking for client response
+        flushPendingUpdates();
+        if (method == ProtocolMethod.setGameView || method == ProtocolMethod.openView) {
+            return sender.sendAndWait(method, args);
+        }
+        return sender.sendAndWait(method, NetStubs.stripArgs(args));
     }
 
+    /**
+     * Marks the game view as needing to be sent. The actual send is deferred
+     * until a user-facing operation or sendAndWait requires the client to have
+     * current state. This coalesces 5-10 redundant full GameView serializations
+     * per game action down to 1-2.
+     */
     public void updateGameView() {
-        send(ProtocolMethod.setGameView, getGameView());
+        if (gameViewDirty) {
+            gameViewSkipCount++;
+        }
+        gameViewDirty = true;
+    }
+
+    /**
+     * Sends the full GameView to the client if it has been marked dirty.
+     * Called before user-facing operations that need the client to display
+     * current game state (prompts, selectables, dialogs).
+     */
+    private void flushGameView() {
+        if (gameViewDirty) {
+            if (gameViewSkipCount > 0) {
+                System.err.println("[ERR] NET GAMEVIEW: flush (skipped " + gameViewSkipCount + " redundant sends)");
+            }
+            send(ProtocolMethod.setGameView, getGameView());
+            gameViewDirty = false;
+            gameViewSkipCount = 0;
+        }
+    }
+
+    /**
+     * Flushes all pending state: full GameView first, then coalesced
+     * updateCards/updateZones with ID-only stubs. Since setGameView carries
+     * the complete game state, the client only needs card/zone IDs to know
+     * which UI elements to refresh. This replaces direct flushGameView()
+     * calls at user-facing operation boundaries.
+     */
+    private void flushPendingUpdates() {
+        flushGameView();
+
+        if (!pendingCardIds.isEmpty()) {
+            TrackableCollection<CardView> stubs = new TrackableCollection<CardView>();
+            for (Integer cardId : pendingCardIds) {
+                stubs.add(new CardView(cardId));
+            }
+            System.err.println("[ERR] NET COALESCE: updateCards " + pendingCardIds.size() + " cards");
+            pendingCardIds.clear();
+            sender.send(ProtocolMethod.updateCards, new Object[] { stubs });
+        }
+
+        if (!pendingZonePlayerIds.isEmpty()) {
+            PlayerZoneUpdates stubs = new PlayerZoneUpdates();
+            for (Map.Entry<Integer, EnumSet<ZoneType>> entry : pendingZonePlayerIds.entrySet()) {
+                PlayerView stubPlayer = new PlayerView(entry.getKey(), null);
+                stubs.add(new PlayerZoneUpdate(stubPlayer, entry.getValue()));
+            }
+            System.err.println("[ERR] NET COALESCE: updateZones " + pendingZonePlayerIds.size() + " players");
+            pendingZonePlayerIds.clear();
+            sender.send(ProtocolMethod.updateZones, new Object[] { stubs });
+        }
     }
 
     @Override
     public void setGameView(final GameView gameView) {
         super.setGameView(gameView);
-        updateGameView();
+        // Always send immediately during initialization
+        send(ProtocolMethod.setGameView, getGameView());
+        gameViewDirty = false;
     }
 
     @Override
     public void openView(final TrackableCollection<PlayerView> myPlayers) {
+        // Warm up the network connection before sending game data.
+        // Over Tailscale, the first packets go through a DERP relay (~100-500ms RTT).
+        // After a few seconds, Tailscale establishes a direct WireGuard connection
+        // (~5-50ms RTT). We ping until RTT drops below the threshold or timeout.
+        waitForDirectConnection();
+
         send(ProtocolMethod.openView, myPlayers);
-        updateGameView();
+        // Always send immediately during initialization
+        send(ProtocolMethod.setGameView, getGameView());
+        gameViewDirty = false;
+
+        // Populate phase stop cache from client for ALL players (not just
+        // myPlayers). The client has phase indicators for both their own turn
+        // and the opponent's turn. Without the opponent's stops, the host
+        // skips all opponent phases and never gives the client priority.
+        GameView gv = getGameView();
+        if (gv != null && gv.getPlayers() != null) {
+            for (final PlayerView player : gv.getPlayers()) {
+                HashMap<String, Boolean> stops = sendAndWait(ProtocolMethod.getAllPhaseStops, player);
+                if (stops != null) {
+                    phaseStopCache.putAll(stops);
+                }
+            }
+        }
+    }
+
+    /**
+     * Sends ping/pong round-trips until the RTT drops below 100ms
+     * (indicating a direct Tailscale WireGuard connection), or 10 seconds
+     * elapse. With message size optimizations, the game is playable even
+     * over DERP relay, so we don't wait longer than 10 seconds.
+     */
+    private void waitForDirectConnection() {
+        final long DIRECT_THRESHOLD_MS = 100;
+        final long TIMEOUT_MS = 10000;
+        final long RETRY_DELAY_MS = 2000;
+
+        long startTime = System.currentTimeMillis();
+        int attempt = 0;
+
+        while (System.currentTimeMillis() - startTime < TIMEOUT_MS) {
+            attempt++;
+            long pingStart = System.currentTimeMillis();
+            try {
+                sendAndWait(ProtocolMethod.ping);
+            } catch (Exception e) {
+                System.err.println("[ERR] NET WARMUP: ping failed: " + e.getMessage());
+                break;
+            }
+            long rtt = System.currentTimeMillis() - pingStart;
+            long elapsed = System.currentTimeMillis() - startTime;
+            System.err.println("[ERR] NET WARMUP: ping #" + attempt + " RTT=" + rtt + "ms"
+                    + (rtt < DIRECT_THRESHOLD_MS ? " (direct)" : " (relayed)")
+                    + " elapsed=" + (elapsed / 1000) + "s");
+
+            if (rtt < DIRECT_THRESHOLD_MS) {
+                System.err.println("[ERR] NET WARMUP: direct connection established after "
+                        + elapsed + "ms (" + attempt + " pings)");
+                return;
+            }
+
+            try {
+                Thread.sleep(RETRY_DELAY_MS);
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+
+        System.err.println("[ERR] NET WARMUP: timed out after " + attempt + " pings ("
+                + ((System.currentTimeMillis() - startTime) / 1000) + "s), proceeding with relayed connection");
     }
 
     @Override
@@ -70,13 +225,13 @@ public class NetGuiGame extends AbstractGuiGame {
 
     @Override
     public void showPromptMessage(final PlayerView playerView, final String message) {
-        updateGameView();
+        flushPendingUpdates();
         send(ProtocolMethod.showPromptMessage, playerView, message);
     }
 
     @Override
     public void showCardPromptMessage(final PlayerView playerView, final String message, final CardView card) {
-        updateGameView();
+        flushPendingUpdates();
         send(ProtocolMethod.showCardPromptMessage, playerView, message, card);
     }
 
@@ -95,13 +250,19 @@ public class NetGuiGame extends AbstractGuiGame {
 
     @Override
     public void updatePhase(boolean saveState) {
-        updateGameView();
+        // Phase/turn data is set directly on the GameView by the game engine.
+        // The client reads getGameView().getPhase() when processing updatePhase,
+        // so it needs the GameView to have current data. Flush all pending state
+        // (GameView + buffered cards/zones) so cards reflect current tapped state etc.
+        gameViewDirty = true;
+        flushPendingUpdates();
         send(ProtocolMethod.updatePhase, saveState);
     }
 
     @Override
     public void updateTurn(final PlayerView player) {
-        updateGameView();
+        // Don't flush here — updatePhase/showPromptMessage follows immediately
+        // and will flush all accumulated state in one shot.
         send(ProtocolMethod.updateTurn, player);
     }
 
@@ -138,19 +299,34 @@ public class NetGuiGame extends AbstractGuiGame {
 
     @Override
     public void updateStack() {
-        updateGameView();
+        // Client reads stack data from the GameView. Flush all pending state
+        // (GameView + buffered cards/zones) so everything is current.
+        gameViewDirty = true;
+        flushPendingUpdates();
         send(ProtocolMethod.updateStack);
     }
 
     @Override
     public void updateZones(final Iterable<PlayerZoneUpdate> zonesToUpdate) {
-        updateGameView();
-        send(ProtocolMethod.updateZones, zonesToUpdate);
+        // Buffer zone updates — flushPendingUpdates() will send a single
+        // coalesced message with ID-only stubs after setGameView.
+        // Mark GameView dirty so flushPendingUpdates() sends full state
+        // before the ID-only stubs (client needs current data to resolve them).
+        gameViewDirty = true;
+        for (PlayerZoneUpdate pzu : zonesToUpdate) {
+            int playerId = pzu.getPlayer().getId();
+            EnumSet<ZoneType> existing = pendingZonePlayerIds.get(playerId);
+            if (existing == null) {
+                existing = EnumSet.noneOf(ZoneType.class);
+                pendingZonePlayerIds.put(playerId, existing);
+            }
+            existing.addAll(pzu.getZones());
+        }
     }
 
     @Override
     public Iterable<PlayerZoneUpdate> tempShowZones(final PlayerView controller, final Iterable<PlayerZoneUpdate> zonesToUpdate) {
-        updateGameView();
+        // sendAndWait already calls flushPendingUpdates()
         return sendAndWait(ProtocolMethod.tempShowZones, controller, zonesToUpdate);
     }
 
@@ -162,19 +338,33 @@ public class NetGuiGame extends AbstractGuiGame {
 
     @Override
     public void updateCards(final Iterable<CardView> cards) {
-        updateGameView();
-        send(ProtocolMethod.updateCards, cards);
+        // Buffer card IDs — flushPendingUpdates() will send a single
+        // coalesced message with ID-only stubs after setGameView.
+        // Mark GameView dirty so flushPendingUpdates() sends full state
+        // before the ID-only stubs (client needs current data to resolve them).
+        gameViewDirty = true;
+        for (CardView card : cards) {
+            pendingCardIds.add(card.getId());
+        }
     }
 
     @Override
     public void updateManaPool(final Iterable<PlayerView> manaPoolUpdate) {
-        updateGameView();
+        // Client reads mana data from the resolved PlayerView, so it needs
+        // the GameView to have current data. Flush all pending state
+        // (GameView + buffered cards/zones) so cards reflect current tapped state etc.
+        gameViewDirty = true;
+        flushPendingUpdates();
         send(ProtocolMethod.updateManaPool, manaPoolUpdate);
     }
 
     @Override
     public void updateLives(final Iterable<PlayerView> livesUpdate) {
-        updateGameView();
+        // Client reads life data from the resolved PlayerView, so it needs
+        // the GameView to have current data. Flush all pending state
+        // (GameView + buffered cards/zones) so everything is current.
+        gameViewDirty = true;
+        flushPendingUpdates();
         send(ProtocolMethod.updateLives, livesUpdate);
     }
 
@@ -277,19 +467,22 @@ public class NetGuiGame extends AbstractGuiGame {
 
     @Override
     public void setCard(final CardView card) {
-        updateGameView();
         send(ProtocolMethod.setCard, card);
     }
 
     @Override
+    public void setUsedToPay(final CardView card, final boolean value) {
+        super.setUsedToPay(card, value);
+        send(ProtocolMethod.setUsedToPay, card, value);
+    }
+
+    @Override
     public void setSelectables(final Iterable<CardView> cards) {
-        updateGameView();
         send(ProtocolMethod.setSelectables, cards);
     }
 
     @Override
     public void clearSelectables() {
-        updateGameView();
         send(ProtocolMethod.clearSelectables);
     }
 
@@ -300,7 +493,7 @@ public class NetGuiGame extends AbstractGuiGame {
 
     @Override
     public PlayerZoneUpdates openZones(PlayerView controller, final Collection<ZoneType> zones, final Map<PlayerView, Object> players, boolean backupLastZones) {
-        updateGameView();
+        // sendAndWait already calls flushPendingUpdates()
         return sendAndWait(ProtocolMethod.openZones, controller, zones, players, backupLastZones);
     }
 
@@ -311,7 +504,11 @@ public class NetGuiGame extends AbstractGuiGame {
 
     @Override
     public boolean isUiSetToSkipPhase(final PlayerView playerTurn, final PhaseType phase) {
-        return sendAndWait(ProtocolMethod.isUiSetToSkipPhase, playerTurn, phase);
+        String key = playerTurn.getId() + ":" + phase.name();
+        Boolean cached = phaseStopCache.get(key);
+        // If cached: stopAtPhase=true means "stop" (don't skip), so return !cached
+        // If not cached: default to skip (return true)
+        return cached == null || !cached;
     }
 
     @Override

@@ -123,8 +123,11 @@ public class InputProxy implements Observer {
 
     public final boolean selectCard(final CardView cardView, final List<CardView> otherCardViewsToSelect, final ITriggerEvent triggerEvent) {
         final Input inp = getInput();
+        System.err.println("PROXY_SELECT: inp=" + (inp != null ? inp.getClass().getSimpleName() : "null")
+            + " cardView=" + cardView + " id=" + (cardView != null ? cardView.getId() : "null"));
         if (inp != null) {
             final Card card = getCard(cardView);
+            System.err.println("PROXY_SELECT: card=" + (card != null ? card.getName() + " id=" + card.getId() : "null"));
             if (card != null) {
                 List<Card> otherCardsToSelect = null;
                 if (otherCardViewsToSelect != null) {

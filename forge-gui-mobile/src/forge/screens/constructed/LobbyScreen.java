@@ -237,6 +237,18 @@ public abstract class LobbyScreen extends LaunchScreen implements ILobbyView {
         while (lobby.getNumberOfSlots() < getNumPlayers()){
             lobby.addSlot();
         }
+
+        // Restore saved variant preferences when switching lobbies (e.g., hosting)
+        if (hasControl && !lobby.hasAnyVariant()) {
+            Set<GameType> gameTypes = FModel.getPreferences().getGameType(FPref.UI_APPLIED_VARIANTS);
+            if (!gameTypes.isEmpty()) {
+                for (GameType gameType : gameTypes) {
+                    lobby.applyVariant(gameType);
+                }
+                updateVariantSelection();
+                updateLayoutForVariants();
+            }
+        }
     }
 
     private void updateVariantSelection() {

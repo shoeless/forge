@@ -129,9 +129,22 @@ public class ServerBroadcaster {
 
             while (running) {
                 try {
+                    // Build host IP list for cross-network discovery.
+                    // Includes IPv6 addresses (listed first) for better Tailscale
+                    // direct connections. IPv6 bypasses CGNAT.
+                    StringBuilder hostIps = new StringBuilder();
+                    List<String> allAddresses = FServerManager.getAllAddressesForDiscovery();
+                    for (String addr : allAddresses) {
+                        if (hostIps.length() > 0) {
+                            hostIps.append(",");
+                        }
+                        hostIps.append(addr);
+                    }
+
                     String message = PROTOCOL_PREFIX + "|" + PROTOCOL_VERSION + "|"
                             + playerName + "|" + gamePort + "|"
-                            + currentPlayers + "/" + maxPlayers;
+                            + currentPlayers + "/" + maxPlayers + "|"
+                            + hostIps.toString();
                     byte[] data = message.getBytes("UTF-8");
 
                     // Send to all subnet broadcast addresses

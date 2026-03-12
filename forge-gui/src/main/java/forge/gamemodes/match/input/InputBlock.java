@@ -89,6 +89,11 @@ public class InputBlock extends InputSyncronizedBase {
         getController().getGui().showCombat();
     }
 
+    @Override
+    protected boolean allowAwaitNextInput() {
+        return true; // prevent blocking prompt getting stuck during opponent's next phase
+    }
+
     /** {@inheritDoc} */
     @Override
     public final void onOk() {

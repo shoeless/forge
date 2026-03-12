@@ -70,6 +70,7 @@ public enum ProtocolMethod {
     chooseEntitiesForEffect(Mode.SERVER, List.class, String.class, List.class, Integer.TYPE, Integer.TYPE, DelayedReveal.class),
     manipulateCardList   (Mode.SERVER, List.class, String.class, Iterable.class, Iterable.class, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE),
     setCard             (Mode.SERVER, Void.TYPE, CardView.class),
+    setUsedToPay        (Mode.SERVER, Void.TYPE, CardView.class, Boolean.TYPE),
     setSelectables      (Mode.SERVER, Void.TYPE, Iterable/*CardView*/.class),
     clearSelectables    (Mode.SERVER, Void.TYPE),
     refreshField        (Mode.SERVER, Void.TYPE),
@@ -77,6 +78,8 @@ public enum ProtocolMethod {
     openZones           (Mode.SERVER, PlayerZoneUpdates.class, PlayerView.class, Collection/*ZoneType*/.class, Map/*PlayerView,Object*/.class, Boolean.TYPE),
     restoreOldZones     (Mode.SERVER, Void.TYPE, PlayerView.class, PlayerZoneUpdates.class),
     isUiSetToSkipPhase  (Mode.SERVER, Boolean.TYPE, PlayerView.class, PhaseType.class),
+    getAllPhaseStops     (Mode.SERVER, java.util.HashMap.class, PlayerView.class),
+    ping                (Mode.SERVER, Long.TYPE),
     setRememberedActions(Mode.SERVER, Void.TYPE),
     nextRememberedAction(Mode.SERVER, Void.TYPE),
 
@@ -97,7 +100,8 @@ public enum ProtocolMethod {
     getActivateDescription    (Mode.CLIENT, String.class, CardView.class),
     concede                   (Mode.CLIENT, Void.TYPE),
     alphaStrike               (Mode.CLIENT, Void.TYPE),
-    reorderHand               (Mode.CLIENT, Void.TYPE, CardView.class, Integer.TYPE);
+    reorderHand               (Mode.CLIENT, Void.TYPE, CardView.class, Integer.TYPE),
+    updatePhaseStop           (Mode.CLIENT, Void.TYPE, PlayerView.class, PhaseType.class, Boolean.TYPE);
 
     private enum Mode {
         SERVER(IGuiGame.class),

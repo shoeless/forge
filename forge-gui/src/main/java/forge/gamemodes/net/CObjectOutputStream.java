@@ -8,7 +8,7 @@ import java.io.OutputStream;
 public class CObjectOutputStream extends ObjectOutputStream {
     static final int TYPE_THIN_DESCRIPTOR = 1;
 
-    CObjectOutputStream(OutputStream out) throws IOException {
+    public CObjectOutputStream(OutputStream out) throws IOException {
         super(out);
     }
 

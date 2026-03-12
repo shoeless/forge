@@ -928,7 +928,17 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
         spectator = null;
     }
 
-    public void updateDependencies() {        
+    public void updateDependencies() {
+    }
+
+    @Override
+    public HashMap<String, Boolean> getAllPhaseStops(final PlayerView playerTurn) {
+        return new HashMap<String, Boolean>();
+    }
+
+    @Override
+    public long ping() {
+        return System.currentTimeMillis();
     }
     // End of Choice code
 }

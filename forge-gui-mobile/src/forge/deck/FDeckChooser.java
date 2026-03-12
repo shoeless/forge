@@ -1281,7 +1281,7 @@ public class FDeckChooser extends FScreen {
 
     public void saveState() {
         if (stateSetting == null) {
-            throw new NullPointerException("State setting missing. Specify first using the initialize() method.");
+            return; // Not yet initialized, skip saving
         }
         prefs.setPref(stateSetting, getState());
         prefs.save();

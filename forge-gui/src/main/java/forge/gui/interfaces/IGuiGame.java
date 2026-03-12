@@ -26,6 +26,7 @@ import forge.util.FSerializableFunction;
 import forge.util.ITriggerEvent;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -252,6 +253,10 @@ public interface IGuiGame {
     void cancelAwaitNextInput();
 
     boolean isUiSetToSkipPhase(PlayerView playerTurn, PhaseType phase);
+
+    HashMap<String, Boolean> getAllPhaseStops(PlayerView playerTurn);
+
+    long ping();
 
     void autoPassUntilEndOfTurn(PlayerView player);
 

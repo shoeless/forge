@@ -79,6 +79,12 @@ public class CardView extends GameEntityView {
         return false;
     }
 
+    /** Creates a lightweight ID-only stub for network transfer. */
+    public CardView(final int id0) {
+        super(id0, null);
+        // Do NOT initialize CurrentState — stub only carries an ID.
+    }
+
     public CardView(final int id0, final Tracker tracker) {
         super(id0, tracker);
         set(TrackableProperty.CurrentState, new CardStateView(id0, CardStateName.Original, tracker));

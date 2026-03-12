@@ -201,8 +201,18 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
                 startTailscaleSetupFlow();
             } else if (choice >= 0 && choice < discovered.size()) {
                 final ServerDiscovery.DiscoveredServer server = discovered.get(choice);
-                final String url = server.address + ":" + server.gamePort;
-                FThreads.invokeInEdtLater(() -> startJoinFlow(url));
+                // Build ordered list of all addresses to try:
+                // 1. UDP source IP (primary — it delivered the packet)
+                // 2. All host-reported IPs (skipping duplicates of primary)
+                final java.util.List<String> allUrls = new java.util.ArrayList<String>();
+                allUrls.add(formatAddressPort(server.address, server.gamePort));
+                for (String ip : server.allHostIps) {
+                    String candidate = formatAddressPort(ip, server.gamePort);
+                    if (!allUrls.contains(candidate)) {
+                        allUrls.add(candidate);
+                    }
+                }
+                FThreads.invokeInEdtLater(() -> startJoinFlow(allUrls));
             } else {
                 FThreads.invokeInEdtLater(() -> closeConn(""));
             }
@@ -338,7 +348,7 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
             FThreads.invokeInEdtLater(() -> closeConn(""));
             return;
         }
-        FThreads.invokeInEdtLater(() -> startJoinFlow(url));
+        FThreads.invokeInEdtLater(() -> startJoinFlow(url, null));
     }
 
     /** Called from background thread. */
@@ -386,19 +396,51 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
         });
     }
 
-    private void startJoinFlow(final String url) {
+    /**
+     * Formats an address and port for URL parsing. Brackets IPv6 addresses
+     * so the URI parser can distinguish address from port.
+     */
+    private static String formatAddressPort(String address, int port) {
+        if (address.contains(":")) {
+            // IPv6 — needs brackets
+            return "[" + address + "]:" + port;
+        }
+        return address + ":" + port;
+    }
+
+    private void startJoinFlow(final java.util.List<String> urls) {
         LoadingOverlay.show(Forge.getLocalizer().getMessage("lblConnectingToServer"), true, () -> {
             final IOnlineChatInterface chatInterface = (IOnlineChatInterface) OnlineScreen.Chat.getScreen();
-            ChatMessage result = NetConnectUtil.join(url, OnlineLobbyScreen.this, chatInterface);
-            if (result.getMessage() == ForgeConstants.CLOSE_CONN_COMMAND) {
-                closeConn(Forge.getLocalizer().getMessage("UnableConnectToServer", url));
+            ChatMessage result = null;
+            String lastUrl = null;
+            for (String url : urls) {
+                lastUrl = url;
+                System.out.println("Trying connection to " + url + " (" + urls.indexOf(url) + "/" + urls.size() + ")");
+                result = NetConnectUtil.join(url, OnlineLobbyScreen.this, chatInterface);
+                if (result.getMessage() != ForgeConstants.CLOSE_CONN_COMMAND) {
+                    break; // Connected successfully
+                }
+                System.out.println("Connection to " + url + " failed, trying next address...");
+            }
+            if (result == null || result.getMessage() == ForgeConstants.CLOSE_CONN_COMMAND) {
+                closeConn(Forge.getLocalizer().getMessage("UnableConnectToServer", lastUrl));
                 return;
             } else if (result.getMessage() == ForgeConstants.INVALID_HOST_COMMAND) {
-                closeConn(Forge.getLocalizer().getMessage("lblDetectedInvalidHostAddress", url));
+                closeConn(Forge.getLocalizer().getMessage("lblDetectedInvalidHostAddress", lastUrl));
                 return;
             }
             chatInterface.addMessage(result);
             OnlineScreen.Lobby.update();
         });
+    }
+
+    /** Overload for manual IP entry (single URL, no fallbacks). */
+    private void startJoinFlow(final String url, final String fallbackUrl) {
+        java.util.List<String> urls = new java.util.ArrayList<String>();
+        urls.add(url);
+        if (fallbackUrl != null) {
+            urls.add(fallbackUrl);
+        }
+        startJoinFlow(urls);
     }
 }

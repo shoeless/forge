@@ -1,5 +1,8 @@
 package forge.trackable;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -15,8 +18,11 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
 
     private final int id;
     protected transient Tracker tracker;
-    private final Map<TrackableProperty, Object> props;
-    private final Set<TrackableProperty> changedProps;
+    // transient so we can snapshot them in writeObject() to prevent
+    // ConcurrentModificationException when background threads modify props
+    // while the game thread is serializing for network send.
+    private transient Map<TrackableProperty, Object> props;
+    private transient Set<TrackableProperty> changedProps;
     private boolean copyingProps;
 
     protected TrackableObject(final int id0, final Tracker tracker) {
@@ -24,6 +30,26 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
         this.tracker = tracker;
         props = new EnumMap<>(TrackableProperty.class);
         changedProps = EnumSet.noneOf(TrackableProperty.class);
+    }
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+        // Snapshot the maps so concurrent modifications by the background thread
+        // (FThreads.invokeInBackgroundThread processing remote player actions)
+        // don't corrupt the serialized bytes.
+        out.writeObject(new EnumMap<TrackableProperty, Object>(props));
+        if (changedProps.isEmpty()) {
+            out.writeObject(EnumSet.noneOf(TrackableProperty.class));
+        } else {
+            out.writeObject(EnumSet.copyOf(changedProps));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        props = (Map<TrackableProperty, Object>) in.readObject();
+        changedProps = (Set<TrackableProperty>) in.readObject();
     }
 
     public final int getId() {

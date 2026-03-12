@@ -33,19 +33,23 @@ public class Main extends IOSApplication.Delegate {
     private static final Object initLock = new Object();
 
     // iOS 26+ requires os_log with public specifier - NSLog is fully redacted
-    // Use our native ForgeOSLog wrapper which calls os_log with %{public}s
-    private static boolean osLogAvailable = true;
+    // Older iOS: use NSLog (Foundation.log) which idevicesyslog captures reliably
     private static void log(String message) {
-        if (osLogAvailable) {
-            try {
+        try {
+            if (OSLogPrintStream.shouldUseOSLog()) {
                 ForgeOSLog.log(message);
-            } catch (Throwable t) {
-                osLogAvailable = false;
-                System.err.println("FORGE (stderr): ForgeOSLog failed: " + t.getMessage());
-                System.err.println("FORGE (stderr): " + message);
+            } else {
+                org.robovm.apple.foundation.Foundation.log("%@",
+                        new org.robovm.apple.foundation.NSString("FORGE: " + message));
             }
-        } else {
-            System.err.println("FORGE (stderr): " + message);
+        } catch (Throwable t) {
+            // Last resort - may not be visible on older iOS
+            try {
+                org.robovm.apple.foundation.Foundation.log("%@",
+                        new org.robovm.apple.foundation.NSString("FORGE: " + message));
+            } catch (Throwable t2) {
+                // Nothing we can do
+            }
         }
     }
 

@@ -20,6 +20,7 @@ package forge.game.cost;
 import forge.game.ability.AbilityKey;
 import forge.game.card.Card;
 import forge.game.card.CardCollection;
+import forge.game.event.GameEventCardTapped;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.trigger.TriggerType;
@@ -61,6 +62,7 @@ public class CostTap extends CostPart {
     @Override
     public final void refund(final Card source) {
         source.setTapped(false);
+        source.getGame().fireEvent(new GameEventCardTapped(source, false));
     }
 
     @Override

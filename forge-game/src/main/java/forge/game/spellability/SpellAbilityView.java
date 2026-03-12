@@ -34,6 +34,10 @@ public class SpellAbilityView extends TrackableObject implements IHasCardView {
         updateDescription(sa);
         updatePromptIfOnlyPossibleAbility(sa);
     }
+    /** Creates a lightweight stub for network ID-based lookups. */
+    public SpellAbilityView(final int id) {
+        super(id, null);
+    }
 
     @Override
     public String toString() {

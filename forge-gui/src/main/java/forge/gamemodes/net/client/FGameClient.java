@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import forge.game.player.PlayerView;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
+import forge.gamemodes.net.HeartbeatHandler;
 import forge.gamemodes.net.ReplyPool;
 import forge.gamemodes.net.event.IdentifiableNetEvent;
 import forge.gamemodes.net.event.LobbyUpdateEvent;
@@ -17,9 +18,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
-
+import io.netty.handler.timeout.IdleStateHandler;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class FGameClient implements IToServer {
@@ -49,13 +51,17 @@ public class FGameClient implements IToServer {
             final Bootstrap b = new Bootstrap()
              .group(group)
              .channel(NioSocketChannel.class)
+             .option(ChannelOption.TCP_NODELAY, true)
+             .option(ChannelOption.SO_KEEPALIVE, true)
              .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(final SocketChannel ch) throws Exception {
                     final ChannelPipeline pipeline = ch.pipeline();
                     pipeline.addLast(
+                            new IdleStateHandler(60, 10, 0, TimeUnit.SECONDS),
                             new CompatibleObjectEncoder(),
                             new CompatibleObjectDecoder(9766*1024, ClassResolvers.cacheDisabled(null)),
+                            new HeartbeatHandler(),
                             new MessageHandler(),
                             new LobbyUpdateHandler(),
                             new GameClientHandler(FGameClient.this));
@@ -88,7 +94,6 @@ public class FGameClient implements IToServer {
 
     @Override
     public void send(final NetEvent event) {
-        System.out.println("Client sent " + event);
         channel.writeAndFlush(event);
     }
 
@@ -132,10 +137,8 @@ public class FGameClient implements IToServer {
     private class LobbyUpdateHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-            System.out.println("CLIENT LobbyUpdateHandler: Received message type=" + (msg != null ? msg.getClass().getName() : "null"));
             if (msg instanceof LobbyUpdateEvent) {
                 final LobbyUpdateEvent event = (LobbyUpdateEvent) msg;
-                System.out.println("CLIENT: Received LobbyUpdateEvent, slot=" + event.getSlot());
                 for (final ILobbyListener listener : lobbyListeners) {
                     listener.update(event.getState(), event.getSlot());
                 }

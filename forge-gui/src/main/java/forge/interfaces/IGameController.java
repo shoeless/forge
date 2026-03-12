@@ -3,6 +3,7 @@ package forge.interfaces;
 import java.util.List;
 
 import forge.game.card.CardView;
+import forge.game.phase.PhaseType;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
 import forge.gamemodes.match.NextGameDecision;
@@ -45,4 +46,6 @@ public interface IGameController {
     String getActivateDescription(CardView card);
 
     void reorderHand(CardView card, int index);
+
+    void updatePhaseStop(PlayerView playerTurn, PhaseType phase, boolean stop);
 }

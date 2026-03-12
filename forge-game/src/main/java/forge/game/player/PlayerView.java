@@ -49,7 +49,13 @@ public class PlayerView extends GameEntityView {
     public PlayerView(final int id0, final Tracker tracker) {
         super(id0, tracker);
 
-        set(TrackableProperty.Mana, Maps.newHashMapWithExpectedSize(MagicColor.NUMBER_OR_COLORS + 1));
+        if (tracker != null) {
+            // Only initialize Mana for real PlayerViews, not lightweight
+            // network stubs (tracker==null). Setting Mana on stubs marks it
+            // as "changed" and replication would overwrite the real player's
+            // mana with an empty map.
+            set(TrackableProperty.Mana, Maps.newHashMapWithExpectedSize(MagicColor.NUMBER_OR_COLORS + 1));
+        }
     }
 
     public boolean isAI()   {

@@ -22,7 +22,12 @@ public class VPhaseIndicator extends FContainer {
     public static final float PADDING_X = Utils.scale(1);
     public static final float PADDING_Y = Utils.scale(2);
 
+    public interface PhaseStopChangeListener {
+        void onPhaseStopChanged(PhaseType phase, boolean stop);
+    }
+
     private final Map<PhaseType, PhaseLabel> phaseLabels = new HashMap<>();
+    private PhaseStopChangeListener phaseStopListener;
     private FSkinFont font;
 
     public VPhaseIndicator() {
@@ -46,6 +51,10 @@ public class VPhaseIndicator extends FContainer {
 
     public PhaseLabel getLabel(PhaseType phaseType) {
         return phaseLabels.get(phaseType);
+    }
+
+    public void setPhaseStopListener(PhaseStopChangeListener listener) {
+        this.phaseStopListener = listener;
     }
 
     public void resetPhaseButtons() {
@@ -137,6 +146,9 @@ public class VPhaseIndicator extends FContainer {
         @Override
         public boolean tap(float x, float y, int count) {
             stopAtPhase = !stopAtPhase;
+            if (phaseStopListener != null) {
+                phaseStopListener.onPhaseStopChanged(phaseType, stopAtPhase);
+            }
             return true;
         }
 
