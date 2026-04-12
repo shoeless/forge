@@ -13,6 +13,7 @@ import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.Zone;
 import forge.gui.FThreads;
+import forge.gui.GuiBase;
 import forge.player.PlayerControllerHuman;
 import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
@@ -68,7 +69,15 @@ public class InputSelectEntitiesFromList<T extends GameEntity> extends InputSele
         }
         FThreads.invokeInEdtNowOrLater(() -> {
             getController().getGui().updateZones(zonesToUpdate);
-            zonesShown = getController().getGui().tempShowZones(controller.getPlayer().getView(), zonesToUpdate);
+            // In network play, tempShowZones goes through NetGuiGame.sendAndWait() which
+            // blocks the server EDT. This delays showMessageInitial (which sends updateButtons
+            // to the client), leaving the client with no enabled buttons and a stuck UI.
+            // tempShowZones is a no-op on mobile (returns zonesToUpdate unchanged), so skip it.
+            if (GuiBase.isNetworkplay()) {
+                zonesShown = zonesToUpdate;
+            } else {
+                zonesShown = getController().getGui().tempShowZones(controller.getPlayer().getView(), zonesToUpdate);
+            }
         });
     }
     
