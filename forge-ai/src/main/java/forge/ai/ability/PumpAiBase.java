@@ -12,6 +12,8 @@ import forge.game.phase.PhaseHandler;
 import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
+import forge.game.trigger.Trigger;
+import forge.game.trigger.TriggerType;
 import forge.game.zone.ZoneType;
 
 import java.util.List;
@@ -398,7 +400,41 @@ public abstract class PumpAiBase extends SpellAbilityAi {
             final List<String> keywords, final boolean immediately) {
         CardCollection list = CardLists.getTargetableCards(ai.getCreaturesInPlay(), sa);
         list = CardLists.filter(list, c -> ComputerUtilCard.shouldPumpCard(ai, sa, c, defense, attack, keywords, immediately));
+
+        // Include creatures with BecomesTarget triggers (e.g. Blanka/The Howling
+        // Abomination, Heroic creatures) even if shouldPumpCard wouldn't normally
+        // select them. The trigger benefit (pump, damage, counters) makes targeting
+        // these creatures worthwhile beyond the spell's direct effect.
+        if (sa.isSpell()) {
+            for (Card c : CardLists.getTargetableCards(ai.getCreaturesInPlay(), sa)) {
+                if (!list.contains(c) && hasBecomesTargetTrigger(c)) {
+                    list.add(c);
+                }
+            }
+        }
+
         return list;
+    }
+
+    /**
+     * Checks if a card has a trigger that benefits from being targeted by a spell.
+     * Covers BecomesTarget (e.g. Blanka) and SpellCast with TargetsValid (Heroic).
+     */
+    protected static boolean hasBecomesTargetTrigger(Card c) {
+        for (Trigger t : c.getTriggers()) {
+            if (t.getMode() == TriggerType.BecomesTarget || t.getMode() == TriggerType.BecomesTargetOnce) {
+                if ("Card.Self".equals(t.getParam("ValidTarget"))) {
+                    return true;
+                }
+            }
+            // Heroic: SpellCast trigger with TargetsValid$ Card.Self
+            if (t.getMode() == TriggerType.SpellCast) {
+                if ("Card.Self".equals(t.getParam("TargetsValid"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
