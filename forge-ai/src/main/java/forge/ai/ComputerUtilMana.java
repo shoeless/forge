@@ -1184,18 +1184,16 @@ public class ComputerUtilMana {
         // Released on opponent's turn so the counter can actually be cast.
         if (AiCardMemory.isRememberedCard(ai, sourceCard, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL)) {
             if (ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
-                if (sa != null && sa.getPayCosts() != null && sa.getPayCosts().getTotalMana() != null) {
-                    int spellCost = sa.getPayCosts().getTotalMana().getCMC();
-                    Set<Card> reserved = AiCardMemory.getMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
-                    int reservedCount = reserved != null ? reserved.size() : 0;
-                    int totalMana = getAvailableManaEstimate(ai);
-                    if (totalMana >= spellCost + reservedCount) {
-                        // Enough mana for both — enforce reservation
-                        return true;
-                    }
-                    // Not enough for both — let the spell use this source
+                // Only bypass reservation for the AI's own commander — that's
+                // the one proactive play worth tapping out for. Everything else
+                // (Bident, Docent, equipment) should wait until there's enough
+                // mana for both the spell and the counter.
+                if (sa != null && sa.getHostCard() != null
+                        && sa.getHostCard().isCommander()
+                        && sa.getHostCard().getOwner().equals(ai)) {
+                    // AI's own commander — allow using reserved mana
                 } else {
-                    return true; // no spell context, enforce reservation
+                    return true; // enforce reservation for non-commander spells
                 }
             } else {
                 // It's opponent's turn — release reservation so we can actually cast the counter
