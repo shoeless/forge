@@ -1511,6 +1511,12 @@ public class AiController {
         }
 
         CardCollection inHand = CardLists.filter(player.getCardsIn(ZoneType.Hand), CardPredicates.NON_LANDS);
+        // Include commanders in command zone — the AI needs to play lands to cast them
+        for (Card cmdr : player.getCommanders()) {
+            if (cmdr.isInZone(ZoneType.Command)) {
+                inHand.add(cmdr);
+            }
+        }
         CardCollectionView otb = player.getCardsIn(ZoneType.Battlefield);
 
         if (getBoolProperty(AiProps.HOLD_LAND_DROP_ONLY_IF_HAVE_OTHER_PERMS)) {
