@@ -831,6 +831,79 @@ public class AiController {
         return false;
     }
 
+    /**
+     * Reserves mana for a counterspell if an opponent could cast their commander
+     * on their next turn. This prevents the AI from tapping out when it should
+     * hold up interaction against a threatening commander.
+     */
+    private void reserveManaForCounterSpellIfNeeded() {
+        // Only reserve during our own main phases
+        PhaseType phase = game.getPhaseHandler().getPhase();
+        if (phase != PhaseType.MAIN1 && phase != PhaseType.MAIN2) {
+            return;
+        }
+        if (!game.getPhaseHandler().isPlayerTurn(player)) {
+            return;
+        }
+
+        // Clear any prior counterspell reservation from a previous priority
+        memory.clearMemorySet(AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+
+        // Check if any opponent has a commander in the command zone that they
+        // could cast with their current mana sources (available next turn)
+        boolean commanderThreat = false;
+        for (Player opp : player.getOpponents()) {
+            for (Card commander : opp.getCommanders()) {
+                if (!commander.isInZone(ZoneType.Command)) {
+                    continue;
+                }
+                int commanderTax = opp.getCommanderCast(commander) * 2;
+                int commanderCMC = commander.getCMC() + commanderTax;
+                int oppMana = getAvailableManaEstimate(opp);
+                if (oppMana >= commanderCMC) {
+                    commanderThreat = true;
+                    break;
+                }
+            }
+            if (commanderThreat) {
+                break;
+            }
+        }
+
+        if (!commanderThreat) {
+            return;
+        }
+
+        // Find the cheapest counterspell in hand
+        CardCollection hand = new CardCollection(player.getCardsIn(ZoneType.Hand));
+        List<SpellAbility> counters = getPlayableCounters(hand);
+        if (counters.isEmpty()) {
+            return;
+        }
+
+        // Pick the cheapest counter to reserve mana for
+        SpellAbility cheapestCounter = null;
+        int cheapestCMC = Integer.MAX_VALUE;
+        for (SpellAbility counter : counters) {
+            int cmc = counter.getPayCosts().getTotalMana().getCMC();
+            if (cmc < cheapestCMC) {
+                cheapestCMC = cmc;
+                cheapestCounter = counter;
+            }
+        }
+
+        if (cheapestCounter != null) {
+            ManaCostBeingPaid cost = ComputerUtilMana.calculateManaCost(
+                    cheapestCounter.getPayCosts(), cheapestCounter, player, true, 0, false);
+            CardCollection manaSources = ComputerUtilMana.getManaSourcesToPayCost(cost, cheapestCounter, player);
+            if (manaSources.size() >= cost.getConvertedManaCost()) {
+                for (Card c : manaSources) {
+                    memory.rememberCard(c, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+                }
+            }
+        }
+    }
+
     private AiPlayDecision canPlayAndPayFor(final SpellAbility sa) {
         final Card host = sa.getHostCard();
         Card altHost = host;
@@ -1607,6 +1680,9 @@ public class AiController {
             saList.removeAll(skipped);
         //update LivingEndPlayer
         useLivingEnd = IterableUtil.any(player.getZone(ZoneType.Library), CardPredicates.nameEquals("Living End"));
+
+        // Reserve mana for counterspells if opponent could cast their commander
+        reserveManaForCounterSpellIfNeeded();
 
         System.err.println("AI: calling chooseSpellAbilityToPlayFromList with " + saList.size() + " abilities");
         SpellAbility chosenSa = chooseSpellAbilityToPlayFromList(saList, true);

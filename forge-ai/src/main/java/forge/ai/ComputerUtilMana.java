@@ -1178,6 +1178,17 @@ public class ComputerUtilMana {
             return true;
         }
 
+        // Mana reserved for counterspells against opponent threats (e.g. commander)
+        // Released when it's no longer our turn (opponent's turn = we're responding, not proactively casting)
+        if (AiCardMemory.isRememberedCard(ai, sourceCard, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL)) {
+            if (ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
+                return true;
+            } else {
+                // It's opponent's turn — release reservation so we can actually cast the counter
+                AiCardMemory.clearMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+            }
+        }
+
         PhaseType curPhase = ai.getGame().getPhaseHandler().getPhase();
         AiController aic = ((PlayerControllerAi)ai.getController()).getAi();
         int chanceToReserve = aic.getIntProperty(AiProps.RESERVE_MANA_FOR_MAIN2_CHANCE);
