@@ -176,6 +176,40 @@ public class CounterAi extends SpellAbilityAi {
             dontCounter = false;
         }
 
+        // Don't waste hard counters on low-value targets (mana dorks, ramp
+        // spells, cheap utility). Save them for real threats. Only applies to
+        // hard counters (not bounce-counters which have Destination$ Hand).
+        if (tgtSA != null && !dontCounter
+                && (tgtSA.getHostCard() == null || !tgtSA.getHostCard().isCommander())
+                && !sa.hasParam("Destination")) {
+            boolean isLowValueTarget = false;
+            Card tgtCard = tgtSA.getHostCard();
+            if (tgtCard != null) {
+                // Mana dorks and ramp spells
+                if (tgtCMC <= 2 && tgtCard.isCreature() && !tgtCard.getManaAbilities().isEmpty()) {
+                    isLowValueTarget = true; // mana dork
+                }
+                if (tgtCMC <= 2 && (tgtSA.getApi() == ApiType.ChangeZone || tgtSA.getApi() == ApiType.Mana)
+                        && !tgtCard.isCreature()) {
+                    isLowValueTarget = true; // ramp spell (Farseek, etc.)
+                }
+            }
+            if (isLowValueTarget) {
+                int countersInHand = 0;
+                for (Card c : ai.getCardsIn(ZoneType.Hand)) {
+                    for (SpellAbility ability : c.getNonManaAbilities()) {
+                        if (ability.getApi() == ApiType.Counter) {
+                            countersInHand++;
+                            break;
+                        }
+                    }
+                }
+                if (countersInHand <= 3) {
+                    dontCounter = true;
+                }
+            }
+        }
+
         if (tgtSA != null && tgtCMC < AiProfileUtil.getIntProperty(ai, AiProps.MIN_SPELL_CMC_TO_COUNTER)) {
             dontCounter = true;
             Card tgtSource = tgtSA.getHostCard();

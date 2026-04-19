@@ -1003,8 +1003,14 @@ public class AiBlockController {
 
         // Remove token-engine creatures from the blocker pool — they are
         // far more valuable alive generating tokens than as a one-time blocker.
-        // Only allow them to block if life is in serious danger.
-        if (!ComputerUtilCombat.lifeInSeriousDanger(ai, combat)) {
+        // Only allow them to block if unblocked damage would be outright lethal.
+        int totalUnblockedDamage = 0;
+        for (Card a : attackersLeft) {
+            if (combat.isAttacking(a, ai)) {
+                totalUnblockedDamage += ComputerUtilCombat.damageIfUnblocked(a, ai, combat, false);
+            }
+        }
+        if (totalUnblockedDamage < ai.getLife()) {
             Iterator<Card> it = blockersLeft.iterator();
             while (it.hasNext()) {
                 Card b = it.next();

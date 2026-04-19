@@ -2131,15 +2131,31 @@ public class ComputerUtil {
             return score;
         }
 
-        // Interaction-heavy decks (25%+ instants among non-lands) should mulligan
-        // hands with zero instants — missing the deck's core gameplan
-        int instantsInDeck = CardLists.count(library, c -> c.isInstant());
+        // Counter-heavy decks should mulligan hands with zero counterspells.
+        // A hand full of cantrips but no counters can't protect against threats.
+        int countersInDeck = 0;
+        for (Card c : library) {
+            for (SpellAbility ability : c.getNonManaAbilities()) {
+                if (ability.getApi() == ApiType.Counter) {
+                    countersInDeck++;
+                    break;
+                }
+            }
+        }
         int nonLandsInDeck = library.size() - landsInDeck;
-        if (nonLandsInDeck > 0 && instantsInDeck * 4 >= nonLandsInDeck) {
-            // Deck is 25%+ instants — check for interaction in hand
-            int instantsInHand = CardLists.count(handList, c -> c.isInstant());
-            if (instantsInHand == 0 && finalHandSize >= 6) {
-                // No interaction in a 6+ card hand from a control deck — mulligan
+        if (nonLandsInDeck > 0 && countersInDeck * 5 >= nonLandsInDeck) {
+            // Deck is 20%+ counterspells — check for counters in hand
+            int countersInHand = 0;
+            for (Card c : handList) {
+                for (SpellAbility ability : c.getNonManaAbilities()) {
+                    if (ability.getApi() == ApiType.Counter) {
+                        countersInHand++;
+                        break;
+                    }
+                }
+            }
+            if (countersInHand == 0 && finalHandSize >= 6) {
+                // No counterspells in a 6+ card hand from a counter deck — mulligan
                 return 0;
             }
         }
