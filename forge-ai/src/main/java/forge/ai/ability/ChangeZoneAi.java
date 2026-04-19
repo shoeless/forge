@@ -1611,7 +1611,26 @@ public class ChangeZoneAi extends SpellAbilityAi {
                     }
                 }
 
-                if (origin.contains(ZoneType.Hand)) {
+                if (sa.hasParam("Imprint") && origin.contains(ZoneType.Hand)) {
+                    // Imprinting from hand — pick the best reusable card.
+                    // Prefer counterspells (reusable interaction is extremely strong)
+                    CardCollection counters = CardLists.filter(fetchList, card -> {
+                        for (SpellAbility ability : card.getNonManaAbilities()) {
+                            if (ability.getApi() == ApiType.Counter) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                    if (!counters.isEmpty()) {
+                        c = ComputerUtilCard.getCheapestSpellAI(counters);
+                        if (c == null) {
+                            c = counters.get(0);
+                        }
+                    } else {
+                        c = ComputerUtilCard.getBestAI(fetchList);
+                    }
+                } else if (origin.contains(ZoneType.Hand)) {
                     c = ComputerUtilCard.getWorstCardInHand(decider, fetchList);
                 } else {
                     c = ComputerUtilCard.getWorstAI(fetchList);
