@@ -516,6 +516,21 @@ public class ComputerUtilCard {
         return getCheapestPermanentAI(list, null, false);
     }
 
+    /**
+     * Chooses the worst card to put back from hand into library (e.g. See Beyond).
+     * Prefers excess lands when flooded, then falls back to getWorstPermanentAI
+     * with land bias.
+     */
+    public static Card getWorstCardInHand(Player ai, CardCollectionView cards) {
+        if (cards.size() == 1) {
+            return cards.get(0);
+        }
+        int landsInPlay = CardLists.filter(ai.getCardsIn(ZoneType.Battlefield), CardPredicates.LANDS).size();
+        boolean hasExcessLands = landsInPlay >= 4
+                && CardLists.filter(cards, CardPredicates.LANDS).size() >= 2;
+        return getWorstPermanentAI(cards, false, hasExcessLands, false, false);
+    }
+
     public static final Card getCheapestSpellAI(final Iterable<Card> list) {
         if (!Iterables.isEmpty(list)) {
             CardCollection cc = CardLists.filter(list, CardPredicates.INSTANTS_AND_SORCERIES);
