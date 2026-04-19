@@ -1169,8 +1169,31 @@ public class ChangeZoneAi extends SpellAbilityAi {
                     if (mostExpensive.isCreature()) {
                         // if a creature is most expensive take the best one
                         if (destination.equals(ZoneType.Exile)) {
-                            // If Exiling things, don't give bonus to Tokens
-                            choice = ComputerUtilCard.getBestCreatureAI(list);
+                            // Filter exile targets: skip commanders (they go to command zone,
+                            // not exile) and skip small creatures if replacement tokens are created
+                            CardCollection exileList = new CardCollection();
+                            boolean createsTokens = false;
+                            SpellAbility sub = sa.getSubAbility();
+                            while (sub != null) {
+                                if (ApiType.Token.equals(sub.getApi()) || ApiType.RepeatEach.equals(sub.getApi())) {
+                                    createsTokens = true;
+                                    break;
+                                }
+                                sub = sub.getSubAbility();
+                            }
+                            for (Card cr : list) {
+                                if (cr.isCommander()) {
+                                    continue;
+                                }
+                                if (createsTokens && cr.getNetPower() <= 2 && cr.getNetToughness() <= 2) {
+                                    continue;
+                                }
+                                exileList.add(cr);
+                            }
+                            if (exileList.isEmpty()) {
+                                return false; // no worthwhile exile targets
+                            }
+                            choice = ComputerUtilCard.getBestCreatureAI(exileList);
                         } else if (origin.contains(ZoneType.Graveyard)) {
                             choice = mostExpensive;
                             // Karmic Guide can chain another creature
