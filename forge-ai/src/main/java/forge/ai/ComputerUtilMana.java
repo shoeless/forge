@@ -1179,10 +1179,24 @@ public class ComputerUtilMana {
         }
 
         // Mana reserved for counterspells against opponent threats (e.g. commander)
-        // Released when it's no longer our turn (opponent's turn = we're responding, not proactively casting)
+        // Only enforce if total mana covers both this spell AND the counter.
+        // If not, the proactive play takes priority over holding up a counter.
+        // Released on opponent's turn so the counter can actually be cast.
         if (AiCardMemory.isRememberedCard(ai, sourceCard, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL)) {
             if (ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
-                return true;
+                if (sa != null && sa.getPayCosts() != null && sa.getPayCosts().getTotalMana() != null) {
+                    int spellCost = sa.getPayCosts().getTotalMana().getCMC();
+                    Set<Card> reserved = AiCardMemory.getMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+                    int reservedCount = reserved != null ? reserved.size() : 0;
+                    int totalMana = getAvailableManaEstimate(ai);
+                    if (totalMana >= spellCost + reservedCount) {
+                        // Enough mana for both — enforce reservation
+                        return true;
+                    }
+                    // Not enough for both — let the spell use this source
+                } else {
+                    return true; // no spell context, enforce reservation
+                }
             } else {
                 // It's opponent's turn — release reservation so we can actually cast the counter
                 AiCardMemory.clearMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
