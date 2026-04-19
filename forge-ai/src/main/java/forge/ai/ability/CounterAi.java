@@ -182,7 +182,7 @@ public class CounterAi extends SpellAbilityAi {
         // since they're lower-commitment tempo plays acceptable on weaker targets.
         if (tgtSA != null && !dontCounter
                 && (tgtSA.getHostCard() == null || !tgtSA.getHostCard().isCommander())
-                && !sa.hasParam("Destination")) {
+                && !"Hand".equals(sa.getParam("Destination"))) {
             int countersInHand = 0;
             for (Card c : ai.getCardsIn(ZoneType.Hand)) {
                 for (SpellAbility ability : c.getNonManaAbilities()) {

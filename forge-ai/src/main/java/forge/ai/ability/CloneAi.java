@@ -216,6 +216,17 @@ public class CloneAi extends SpellAbilityAi {
             options = CardLists.filter(options, CardPredicates.sharesNameWith(host).negate());
         }
 
+        // If the clone will have "sacrifice when targeted" (Phantasmal Image),
+        // strongly prefer copying own creatures — opponent can easily kill
+        // the copy by targeting it, and copying opponent creatures with
+        // BecomesTarget triggers (like Blanka) is especially bad.
+        if (host.hasSVar("Targeting") && "Dies".equals(host.getSVar("Targeting"))) {
+            CardCollection ownCreatures = CardLists.filterControlledBy(options, ctrl);
+            if (!ownCreatures.isEmpty()) {
+                return ComputerUtilCard.getBestAI(ownCreatures);
+            }
+        }
+
         Card choice = isOpp ? ComputerUtilCard.getWorstAI(options) : ComputerUtilCard.getBestAI(options);
 
         return choice;

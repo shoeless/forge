@@ -2154,8 +2154,8 @@ public class ComputerUtil {
                     }
                 }
             }
-            if (countersInHand == 0 && finalHandSize >= 6) {
-                // No counterspells in a 6+ card hand from a counter deck — mulligan
+            if (countersInHand == 0 && finalHandSize >= 5) {
+                // No counterspells in a 5+ card hand from a counter deck — mulligan
                 return 0;
             }
         }
