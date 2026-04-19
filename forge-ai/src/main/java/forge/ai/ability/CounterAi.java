@@ -176,35 +176,40 @@ public class CounterAi extends SpellAbilityAi {
             dontCounter = false;
         }
 
-        // Don't waste hard counters on low-value targets (mana dorks, ramp
-        // spells, cheap utility). Save them for real threats. Only applies to
-        // hard counters (not bounce-counters which have Destination$ Hand).
+        // When counters are scarce (3 or fewer in hand), only counter
+        // high-priority targets. Save counters for what matters.
+        // Skip this check for bounce-counters (Destination$ Hand like Remand)
+        // since they're lower-commitment tempo plays acceptable on weaker targets.
         if (tgtSA != null && !dontCounter
                 && (tgtSA.getHostCard() == null || !tgtSA.getHostCard().isCommander())
                 && !sa.hasParam("Destination")) {
-            boolean isLowValueTarget = false;
-            Card tgtCard = tgtSA.getHostCard();
-            if (tgtCard != null) {
-                // Mana dorks and ramp spells
-                if (tgtCMC <= 2 && tgtCard.isCreature() && !tgtCard.getManaAbilities().isEmpty()) {
-                    isLowValueTarget = true; // mana dork
-                }
-                if (tgtCMC <= 2 && (tgtSA.getApi() == ApiType.ChangeZone || tgtSA.getApi() == ApiType.Mana)
-                        && !tgtCard.isCreature()) {
-                    isLowValueTarget = true; // ramp spell (Farseek, etc.)
-                }
-            }
-            if (isLowValueTarget) {
-                int countersInHand = 0;
-                for (Card c : ai.getCardsIn(ZoneType.Hand)) {
-                    for (SpellAbility ability : c.getNonManaAbilities()) {
-                        if (ability.getApi() == ApiType.Counter) {
-                            countersInHand++;
-                            break;
-                        }
+            int countersInHand = 0;
+            for (Card c : ai.getCardsIn(ZoneType.Hand)) {
+                for (SpellAbility ability : c.getNonManaAbilities()) {
+                    if (ability.getApi() == ApiType.Counter) {
+                        countersInHand++;
+                        break;
                     }
                 }
-                if (countersInHand <= 3) {
+            }
+            if (countersInHand <= 3) {
+                Card tgtCard = tgtSA.getHostCard();
+                boolean isHighPriority = false;
+                if (tgtCard != null) {
+                    // Enchantments are high priority (persistent value, strategy multipliers)
+                    isHighPriority |= tgtCard.isEnchantment();
+                    // CMC 4+ creatures are real threats
+                    isHighPriority |= tgtCard.isCreature() && tgtCMC >= 4;
+                    // Planeswalkers
+                    isHighPriority |= tgtCard.isPlaneswalker();
+                    // Pump spells when opponent has a threatening creature
+                    isHighPriority |= (tgtSA.getApi() == ApiType.Pump || tgtSA.getApi() == ApiType.PumpAll);
+                    // Damage/removal targeting the AI
+                    isHighPriority |= tgtSA.getApi() == ApiType.DealDamage || tgtSA.getApi() == ApiType.Destroy;
+                    // Other counterspells
+                    isHighPriority |= tgtSA.getApi() == ApiType.Counter;
+                }
+                if (!isHighPriority) {
                     dontCounter = true;
                 }
             }
