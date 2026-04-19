@@ -1000,6 +1000,41 @@ public class AiBlockController {
 
         attackersLeft = new ArrayList<>(attackers); // keeps track of all currently unblocked attackers
         blockersLeft = new ArrayList<>(possibleBlockers); // keeps track of all unassigned blockers
+
+        // Remove token-engine creatures from the blocker pool — they are
+        // far more valuable alive generating tokens than as a one-time blocker.
+        // Only allow them to block if life is in serious danger.
+        if (!ComputerUtilCombat.lifeInSeriousDanger(ai, combat)) {
+            Iterator<Card> it = blockersLeft.iterator();
+            while (it.hasNext()) {
+                Card b = it.next();
+                if (b.isToken()) {
+                    continue; // tokens themselves are fine as blockers
+                }
+                boolean isTokenEngine = false;
+                for (Trigger t : b.getTriggers()) {
+                    SpellAbility tSa = t.ensureAbility();
+                    if (tSa == null) {
+                        continue;
+                    }
+                    SpellAbility cur = tSa;
+                    while (cur != null) {
+                        if (ApiType.Token.equals(cur.getApi())) {
+                            isTokenEngine = true;
+                            break;
+                        }
+                        cur = cur.getSubAbility();
+                    }
+                    if (isTokenEngine) {
+                        break;
+                    }
+                }
+                if (isTokenEngine) {
+                    it.remove();
+                }
+            }
+        }
+
         blockedButUnkilled = new ArrayList<>(); // keeps track of all blocked attackers that currently wouldn't be destroyed
     }
 
