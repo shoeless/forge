@@ -257,7 +257,10 @@ public class HostedMatch {
         game.getAction().invoke(() -> {
             if (humanCount == 0) {
                 // Create FControlGamePlayback in game thread to allow pausing
+                // Preserve playback speed from previous game in the match
+                PlaybackSpeed previousSpeed = playbackControl != null ? playbackControl.getSpeed() : PlaybackSpeed.NORMAL;
                 playbackControl = new FControlGamePlayback(humanControllers.get(0));
+                playbackControl.setSpeed(previousSpeed);
                 playbackControl.setGame(game);
                 game.subscribeToEvents(playbackControl);
             }
