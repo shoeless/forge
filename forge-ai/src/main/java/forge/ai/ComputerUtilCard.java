@@ -1206,6 +1206,21 @@ public class ComputerUtilCard {
                     (phaseType.isBefore(PhaseType.COMBAT_BEGIN) || phaseType.isAfter(PhaseType.COMBAT_DECLARE_BLOCKERS))) {
                 threat *= 0.1f;
             }
+
+            // Commanders return to command zone when removed, so removal is
+            // less effective. Reduce threat unless the commander could be pumped
+            // to lethal (power >= half AI's life suggests voltron/pump danger).
+            if (c.isCommander() && c.getController().isOpponentOf(ai)) {
+                if (c.getNetPower() >= ai.getLife()) {
+                    // Already lethal — still worth removing
+                } else if (c.getNetPower() * 2 >= ai.getLife()) {
+                    // Could be pumped to lethal — moderate reduction
+                    threat *= 0.5f;
+                } else {
+                    // Not an immediate lethal threat — heavily deprioritize
+                    threat *= 0.15f;
+                }
+            }
         } else if (c.isPlaneswalker()) {
             threat = 1;
         } else if (AiProfileUtil.getBoolProperty(ai, AiProps.ACTIVELY_DESTROY_ARTS_AND_NONAURA_ENCHS) && ((c.isArtifact() && !c.isCreature()) || (c.isEnchantment() && !c.isAura()))) {
