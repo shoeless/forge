@@ -140,6 +140,13 @@ public class CounterAi extends SpellAbilityAi {
                 if (!SpecialCardAi.NullBrooch.consider(ai, sa)) {
                     return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
                 }
+            } else if ("NoCommander".equals(logic)) {
+                // Bounce-counters (Remand, Memory Lapse) shouldn't target commanders
+                // since the spell goes to hand/library — no command tax increase,
+                // opponent just recasts it next turn
+                if (tgtSA != null && tgtSA.getHostCard() != null && tgtSA.getHostCard().isCommander()) {
+                    return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+                }
             }
         }
 
