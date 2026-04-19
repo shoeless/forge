@@ -1245,16 +1245,19 @@ public class ComputerUtilCard {
             }
 
             // Commanders return to command zone when removed, so removal is
-            // less effective. Reduce threat unless the commander could be pumped
-            // to lethal (power >= half AI's life suggests voltron/pump danger).
+            // less effective. But factor in accumulated commander damage —
+            // a commander approaching 21 damage is an urgent threat regardless.
             if (c.isCommander() && c.getController().isOpponentOf(ai)) {
-                if (c.getNetPower() >= ai.getLife()) {
-                    // Already lethal — still worth removing
-                } else if (c.getNetPower() * 2 >= ai.getLife()) {
-                    // Could be pumped to lethal — moderate reduction
-                    threat *= 0.5f;
+                int cmdDmg = ai.getCommanderDamage(c);
+                if (cmdDmg >= 14 || c.getNetPower() >= ai.getLife()) {
+                    // Commander damage is critical or power is lethal — worth removing
+                    // even though it comes back, buying time is essential
+                    threat *= 1.5f;
+                } else if (cmdDmg >= 10 || c.getNetPower() * 2 >= ai.getLife()) {
+                    // Approaching danger zone — moderate priority
+                    threat *= 0.8f;
                 } else {
-                    // Not an immediate lethal threat — heavily deprioritize
+                    // Low commander damage, not an immediate threat
                     threat *= 0.15f;
                 }
             }

@@ -476,7 +476,12 @@ public class ComputerUtilCombat {
         for (Card c : combat.getAttackers()) {
             if (c.isCommander() && combat.isAttacking(c, ai)) {
                 int currentCommanderDamage = ai.getCommanderDamage(c);
-                if (damageIfUnblocked(c, ai, combat, false) + currentCommanderDamage >= 21) {
+                int projectedDamage = damageIfUnblocked(c, ai, combat, false);
+                // Flag if this swing would be lethal OR if cumulative damage
+                // is getting dangerously close (within two more hits)
+                if (projectedDamage + currentCommanderDamage >= 21
+                        || currentCommanderDamage >= 14
+                        || (currentCommanderDamage >= 10 && projectedDamage >= 4)) {
                     res.add(c);
                 }
             }
