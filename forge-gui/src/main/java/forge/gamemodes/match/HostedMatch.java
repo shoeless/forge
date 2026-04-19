@@ -133,6 +133,10 @@ public class HostedMatch {
         } else {
             title = TextUtil.concatNoSpace("Multiplayer Game (", String.valueOf(sortedPlayers.size()), " players)");
         }
+        // Clean up old match event subscribers if restarting
+        if (this.match != null) {
+            this.match.unsubscribeAllEvents();
+        }
         this.match = new Match(gameRules, sortedPlayers, title);
         this.match.subscribeToEvents(SoundSystem.instance);
         this.match.subscribeToEvents(visitor);
@@ -320,6 +324,16 @@ public class HostedMatch {
     public void endCurrentGame() {
         if (game == null) { return; }
         boolean isMatchOver = game.getView().isMatchOver();
+
+        // Save game log before cleanup so it's available for match-level review
+        if (match != null) {
+            String logText = IterableUtil.joinObjects("\r\n",
+                    game.getGameLog().getLogEntries(null)).replace("[COMPUTER]", "[AI]");
+            match.addCompletedGameLog(logText);
+        }
+
+        // Unregister all event subscribers to allow the game to be garbage collected
+        game.unsubscribeAllEvents();
 
         game = null;
 

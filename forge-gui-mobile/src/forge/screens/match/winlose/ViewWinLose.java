@@ -62,8 +62,19 @@ public class ViewWinLose extends FOverlay implements IWinLoseView<FButton> {
         btnContinue.setEnabled(!game0.isMatchOver());
 
         lblLog = add(new FLabel.Builder().text(Forge.getLocalizer().getMessage("lblGameLog")).align(Align.center).font(FSkinFont.get(18)).build());
-        // iOS compatibility: Use IterableUtil.joinObjects() instead of StringUtils.join() which uses Stream API
-        txtLog = add(new FTextArea(true, IterableUtil.joinObjects("\r\n", game.getGameLog().getLogEntries(null)).replace("[COMPUTER]", "[AI]")) {
+        // Build log text: include prior game logs from the match, then current game log
+        StringBuilder allLogs = new StringBuilder();
+        List<String> priorLogs = game.getMatch().getCompletedGameLogs();
+        for (int i = 0; i < priorLogs.size(); i++) {
+            allLogs.append("=== Game ").append(i + 1).append(" ===\r\n");
+            allLogs.append(priorLogs.get(i));
+            allLogs.append("\r\n\r\n");
+        }
+        if (!priorLogs.isEmpty()) {
+            allLogs.append("=== Game ").append(priorLogs.size() + 1).append(" ===\r\n");
+        }
+        allLogs.append(IterableUtil.joinObjects("\r\n", game.getGameLog().getLogEntries(null)).replace("[COMPUTER]", "[AI]"));
+        txtLog = add(new FTextArea(true, allLogs.toString()) {
             @Override
             public boolean tap(float x, float y, int count) {
                 if (txtLog.getMaxScrollTop() > 0) {

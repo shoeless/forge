@@ -35,7 +35,9 @@ public class Match {
     private final String title;
 
     private final EventBus events = new EventBus("match events");
+    private final List<Object> eventSubscribers = new ArrayList<Object>();
     private final Map<Integer, GameOutcome> gameOutcomes = Maps.newHashMap();
+    private final List<String> completedGameLogs = new ArrayList<String>();
 
     private GameOutcome lastOutcome = null;
 
@@ -460,6 +462,24 @@ public class Match {
     }
     public void subscribeToEvents(final Object subscriber) {
         events.register(subscriber);
+        eventSubscribers.add(subscriber);
+    }
+    public void addCompletedGameLog(String log) {
+        completedGameLogs.add(log);
+    }
+    public List<String> getCompletedGameLogs() {
+        return completedGameLogs;
+    }
+
+    public void unsubscribeAllEvents() {
+        for (Object subscriber : eventSubscribers) {
+            try {
+                events.unregister(subscriber);
+            } catch (IllegalArgumentException e) {
+                // already unregistered, ignore
+            }
+        }
+        eventSubscribers.clear();
     }
 
 }
