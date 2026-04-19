@@ -201,16 +201,40 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
                 startTailscaleSetupFlow();
             } else if (choice >= 0 && choice < discovered.size()) {
                 final ServerDiscovery.DiscoveredServer server = discovered.get(choice);
-                // Build ordered list of all addresses to try:
-                // 1. UDP source IP (primary — it delivered the packet)
-                // 2. All host-reported IPs (skipping duplicates of primary)
-                final java.util.List<String> allUrls = new java.util.ArrayList<String>();
-                allUrls.add(formatAddressPort(server.address, server.gamePort));
+                // Build ordered list of addresses to try, prioritized:
+                // 1. Tailscale CGNAT (100.64-127.x.x) — most likely to work cross-network
+                // 2. UDP source IP (it delivered the packet, so it's routable)
+                // 3. Private LAN IPs (192.168.x, 10.x, 172.16-31.x)
+                // 4. Everything else (public IPv6, etc.)
+                final java.util.List<String> allIps = new java.util.ArrayList<String>();
+                allIps.add(server.address);
                 for (String ip : server.allHostIps) {
-                    String candidate = formatAddressPort(ip, server.gamePort);
-                    if (!allUrls.contains(candidate)) {
-                        allUrls.add(candidate);
+                    if (!allIps.contains(ip)) {
+                        allIps.add(ip);
                     }
+                }
+                // Sort by priority: Tailscale first, then private IPv4, then rest
+                final java.util.List<String> tailscale = new java.util.ArrayList<String>();
+                final java.util.List<String> privateIps = new java.util.ArrayList<String>();
+                final java.util.List<String> other = new java.util.ArrayList<String>();
+                for (String ip : allIps) {
+                    if (isTailscaleAddress(ip)) {
+                        tailscale.add(ip);
+                    } else if (isPrivateAddress(ip)) {
+                        privateIps.add(ip);
+                    } else {
+                        other.add(ip);
+                    }
+                }
+                final java.util.List<String> allUrls = new java.util.ArrayList<String>();
+                for (String ip : tailscale) {
+                    allUrls.add(formatAddressPort(ip, server.gamePort));
+                }
+                for (String ip : privateIps) {
+                    allUrls.add(formatAddressPort(ip, server.gamePort));
+                }
+                for (String ip : other) {
+                    allUrls.add(formatAddressPort(ip, server.gamePort));
                 }
                 FThreads.invokeInEdtLater(() -> startJoinFlow(allUrls));
             } else {
@@ -432,6 +456,45 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
             chatInterface.addMessage(result);
             OnlineScreen.Lobby.update();
         });
+    }
+
+    /** Returns true if the IP is in Tailscale's CGNAT range (100.64.0.0/10). */
+    private static boolean isTailscaleAddress(String ip) {
+        if (ip.contains(":")) {
+            return false; // IPv6
+        }
+        try {
+            String[] octets = ip.split("\\.");
+            if (octets.length != 4) {
+                return false;
+            }
+            int first = Integer.parseInt(octets[0]);
+            int second = Integer.parseInt(octets[1]);
+            // 100.64.0.0/10 = 100.64.0.0 - 100.127.255.255
+            return first == 100 && second >= 64 && second <= 127;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /** Returns true if the IP is a private/LAN address (192.168.x, 10.x, 172.16-31.x). */
+    private static boolean isPrivateAddress(String ip) {
+        if (ip.contains(":")) {
+            return false; // IPv6
+        }
+        try {
+            String[] octets = ip.split("\\.");
+            if (octets.length != 4) {
+                return false;
+            }
+            int first = Integer.parseInt(octets[0]);
+            int second = Integer.parseInt(octets[1]);
+            return first == 10
+                    || (first == 172 && second >= 16 && second <= 31)
+                    || (first == 192 && second == 168);
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /** Overload for manual IP entry (single URL, no fallbacks). */

@@ -16,12 +16,59 @@ import java.util.zip.GZIPOutputStream;
 
 public final class RemoteClient implements IToClient {
 
-    private final Channel channel;
+    private Channel channel;
     private String username;
     private int index;
     private ReplyPool replies = new ReplyPool();
+    private NetGuiGame activeGame;
+    private final Object reconnectLock = new Object();
+    private volatile boolean disconnected = false;
+
     public RemoteClient(final Channel channel) {
         this.channel = channel;
+    }
+
+    /** Called when channel dies during active game. Unblocks all pending sendAndWait calls. */
+    public void markDisconnected() {
+        disconnected = true;
+        replies.failAll();
+    }
+
+    /** Called when client reconnects with new channel. Wakes up waitForReconnection(). */
+    public void markReconnected(final Channel newChannel) {
+        this.channel = newChannel;
+        this.replies = new ReplyPool();
+        this.disconnected = false;
+        synchronized (reconnectLock) {
+            reconnectLock.notifyAll();
+        }
+    }
+
+    /** Blocks until client reconnects or timeout. Returns true if reconnected. */
+    public boolean waitForReconnection(final long timeoutMs) {
+        synchronized (reconnectLock) {
+            if (!disconnected) {
+                return true;
+            }
+            try {
+                reconnectLock.wait(timeoutMs);
+            } catch (InterruptedException e) {
+                return false;
+            }
+            return !disconnected;
+        }
+    }
+
+    public boolean isDisconnected() {
+        return disconnected;
+    }
+
+    public void setActiveGame(final NetGuiGame game) {
+        this.activeGame = game;
+    }
+
+    public NetGuiGame getActiveGame() {
+        return activeGame;
     }
 
     @Override

@@ -27,6 +27,15 @@ public class ReplyPool {
         }
     }
 
+    public void failAll() {
+        synchronized (pool) {
+            for (CompletableFuture future : pool.values()) {
+                future.set(null);
+            }
+            pool.clear();
+        }
+    }
+
     public Object get(final int index) throws TimeoutException {
         final CompletableFuture future;
         synchronized (pool) {

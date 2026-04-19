@@ -52,6 +52,7 @@ public final class FServerManager {
     private ILobbyListener lobbyListener;
     private boolean UPnPMapped = false;
     private int port;
+    private final Map<String, RemoteClient> disconnectedClients = new HashMap<String, RemoteClient>();
     private static final Localizer localizer = Localizer.getInstance();
     private final Thread shutdownHook = new Thread(() -> {
         if (isHosting()) {
@@ -281,7 +282,17 @@ public final class FServerManager {
         } else if (type == LobbySlotType.REMOTE) {
             for (final RemoteClient client : clients.values()) {
                 if (client.getIndex() == index) {
-                    return new NetGuiGame(client);
+                    NetGuiGame game = new NetGuiGame(client);
+                    client.setActiveGame(game);
+                    return game;
+                }
+            }
+            // Also check disconnected clients (game start may race with disconnect)
+            for (final RemoteClient client : disconnectedClients.values()) {
+                if (client.getIndex() == index) {
+                    NetGuiGame game = new NetGuiGame(client);
+                    client.setActiveGame(game);
+                    return game;
                 }
             }
         }
@@ -510,6 +521,25 @@ public final class FServerManager {
             if (msg instanceof LoginEvent) {
                 final LoginEvent event = (LoginEvent) msg;
                 System.out.println("SERVER LobbyInputHandler: Processing LoginEvent for " + event.getUsername());
+
+                // Check for reconnection during active match
+                RemoteClient existingClient = disconnectedClients.remove(event.getUsername());
+                if (existingClient != null && localLobby != null && localLobby.isMatchActive()) {
+                    System.err.println("[ERR] NET: Client " + event.getUsername() + " reconnected");
+                    // Remove the temporary RemoteClient that RegisterClientHandler created
+                    clients.remove(ctx.channel());
+                    // Swap channel on the original client
+                    existingClient.markReconnected(ctx.channel());
+                    clients.put(ctx.channel(), existingClient);
+                    // Re-sync game state
+                    NetGuiGame game = existingClient.getActiveGame();
+                    if (game != null) {
+                        game.resync();
+                    }
+                    updateLobbyState();
+                    return; // skip normal login flow
+                }
+
                 final int index = localLobby.connectPlayer(event.getUsername(), event.getAvatarIndex(), event.getSleeveIndex());
                 System.out.println("SERVER LobbyInputHandler: Player assigned to slot " + index);
                 if (index == -1) {
@@ -536,10 +566,22 @@ public final class FServerManager {
         @Override
         public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
             final RemoteClient client = clients.remove(ctx.channel());
-            final String username = client.getUsername();
-            localLobby.disconnectPlayer(client.getIndex());
-            broadcast(new MessageEvent(String.format("%s left the room", username)));
-            broadcast(new LogoutEvent(username));
+            if (client == null) {
+                super.channelInactive(ctx);
+                return;
+            }
+            if (localLobby != null && localLobby.isMatchActive()) {
+                // Keep client for reconnection during active match
+                System.err.println("[ERR] NET: Client " + client.getUsername()
+                        + " disconnected during active match, awaiting reconnection");
+                disconnectedClients.put(client.getUsername(), client);
+                client.markDisconnected();
+            } else {
+                // Normal lobby disconnect
+                localLobby.disconnectPlayer(client.getIndex());
+                broadcast(new MessageEvent(String.format("%s left the room", client.getUsername())));
+                broadcast(new LogoutEvent(client.getUsername()));
+            }
             super.channelInactive(ctx);
         }
     }

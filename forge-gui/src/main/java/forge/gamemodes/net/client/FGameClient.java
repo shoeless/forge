@@ -25,12 +25,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class FGameClient implements IToServer {
+    private static final int CONNECT_TIMEOUT_MS = 5000;
     private final IGuiGame clientGui;
     private final String hostname;
     private final Integer port;
     private final List<ILobbyListener> lobbyListeners = Lists.newArrayList();
     private final ReplyPool replies = new ReplyPool();
     private Channel channel;
+    private volatile boolean reconnecting = false;
 
     public FGameClient(String username, String roomKey, IGuiGame clientGui, String hostname, int port) {
         this.clientGui = clientGui;
@@ -53,6 +55,7 @@ public class FGameClient implements IToServer {
              .channel(NioSocketChannel.class)
              .option(ChannelOption.TCP_NODELAY, true)
              .option(ChannelOption.SO_KEEPALIVE, true)
+             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_MS)
              .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(final SocketChannel ch) throws Exception {
@@ -90,6 +93,47 @@ public class FGameClient implements IToServer {
     public void close() {
         if (channel != null)
             channel.close();
+    }
+
+    private void reconnect() throws InterruptedException {
+        final EventLoopGroup group = new NioEventLoopGroup();
+        final Bootstrap b = new Bootstrap()
+                .group(group)
+                .channel(NioSocketChannel.class)
+                .option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_MS)
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(final SocketChannel ch) throws Exception {
+                        final ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast(
+                                new IdleStateHandler(60, 10, 0, TimeUnit.SECONDS),
+                                new CompatibleObjectEncoder(),
+                                new CompatibleObjectDecoder(9766 * 1024,
+                                        ClassResolvers.cacheDisabled(null)),
+                                new HeartbeatHandler(),
+                                new MessageHandler(),
+                                new LobbyUpdateHandler(),
+                                new GameClientHandler(FGameClient.this));
+                    }
+                });
+
+        channel = b.connect(hostname, port).sync().channel();
+        final ChannelFuture ch = channel.closeFuture();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ch.sync();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    group.shutdownGracefully();
+                }
+            }
+        }).start();
+        // GameClientHandler.channelActive() sends LoginEvent automatically
     }
 
     @Override
@@ -148,9 +192,40 @@ public class FGameClient implements IToServer {
 
         @Override
         public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-            for (final ILobbyListener listener : lobbyListeners) {
-                listener.close();
+            if (reconnecting) {
+                // Old channel closing during reconnect, ignore
+                super.channelInactive(ctx);
+                return;
             }
+
+            System.err.println("[ERR] NET: Connection lost, attempting reconnection...");
+            reconnecting = true;
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int attempt = 1; attempt <= 10; attempt++) {
+                        try {
+                            long delay = Math.min(1000L * attempt, 5000L);
+                            Thread.sleep(delay);
+                            System.err.println("[ERR] NET: Reconnect attempt " + attempt);
+                            reconnect();
+                            System.err.println("[ERR] NET: Reconnected successfully");
+                            reconnecting = false;
+                            return;
+                        } catch (Exception e) {
+                            System.err.println("[ERR] NET: Reconnect attempt " + attempt
+                                    + " failed: " + e.getMessage());
+                        }
+                    }
+                    System.err.println("[ERR] NET: All reconnection attempts failed");
+                    reconnecting = false;
+                    for (final ILobbyListener listener : lobbyListeners) {
+                        listener.close();
+                    }
+                }
+            }).start();
+
             super.channelInactive(ctx);
         }
     }

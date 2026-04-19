@@ -33,6 +33,7 @@ import java.util.Map;
 
 public class NetGuiGame extends AbstractGuiGame {
 
+    private final RemoteClient remoteClient;
     private final GameProtocolSender sender;
     private final HashMap<String, Boolean> phaseStopCache = new HashMap<String, Boolean>();
     private boolean gameViewDirty = false;
@@ -44,8 +45,18 @@ public class NetGuiGame extends AbstractGuiGame {
     private final HashSet<Integer> pendingCardIds = new HashSet<Integer>();
     private final HashMap<Integer, EnumSet<ZoneType>> pendingZonePlayerIds = new HashMap<Integer, EnumSet<ZoneType>>();
 
-    public NetGuiGame(final IToClient client) {
+    public NetGuiGame(final RemoteClient client) {
+        this.remoteClient = client;
         this.sender = new GameProtocolSender(client);
+    }
+
+    /** Re-sends full game state to the client after reconnection. */
+    public void resync() {
+        GameView gv = getGameView();
+        if (gv != null) {
+            send(ProtocolMethod.setGameView, gv);
+            gameViewDirty = false;
+        }
     }
 
     public void setCachedPhaseStop(final PlayerView playerTurn, final PhaseType phase, final boolean stop) {
@@ -64,10 +75,29 @@ public class NetGuiGame extends AbstractGuiGame {
     private <T> T sendAndWait(final ProtocolMethod method, final Object... args) {
         // Always flush all pending state before blocking for client response
         flushPendingUpdates();
-        if (method == ProtocolMethod.setGameView || method == ProtocolMethod.openView) {
-            return sender.sendAndWait(method, args);
+
+        boolean skipStrip = (method == ProtocolMethod.setGameView || method == ProtocolMethod.openView);
+        Object[] sendArgs = skipStrip ? args : NetStubs.stripArgs(args);
+
+        T result = sender.sendAndWait(method, sendArgs);
+
+        // If result is null and client disconnected, wait for reconnection and retry
+        if (result == null && remoteClient.isDisconnected()) {
+            System.err.println("[ERR] NET: sendAndWait(" + method.name()
+                    + ") interrupted by disconnect, waiting for reconnection...");
+            if (remoteClient.waitForReconnection(60000)) {
+                System.err.println("[ERR] NET: Client reconnected, resyncing and retrying "
+                        + method.name());
+                resync();
+                // Re-strip args (stripArgs modifies in-place, need fresh copy from original)
+                sendArgs = skipStrip ? args : NetStubs.stripArgs(args);
+                result = sender.sendAndWait(method, sendArgs);
+            } else {
+                System.err.println("[ERR] NET: Reconnection timeout for " + method.name());
+            }
         }
-        return sender.sendAndWait(method, NetStubs.stripArgs(args));
+
+        return result;
     }
 
     /**
