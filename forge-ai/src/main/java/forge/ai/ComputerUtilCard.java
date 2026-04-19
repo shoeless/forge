@@ -50,6 +50,7 @@ import forge.game.spellability.SpellAbility;
 import forge.game.staticability.StaticAbility;
 import forge.game.staticability.StaticAbilityMode;
 import forge.game.trigger.Trigger;
+import forge.game.trigger.TriggerType;
 import forge.game.zone.MagicStack;
 import forge.game.zone.ZoneType;
 import forge.item.PaperCard;
@@ -1087,6 +1088,27 @@ public class ComputerUtilCard {
 
         if (!sa.isSpell()) {
             return true;
+        }
+
+        // Avoid targeting creatures with "becomes the target" triggers that
+        // punish the caster (e.g. Blanka dealing damage, Bonecrusher Giant).
+        // Only target them if the AI would die without removing the threat.
+        if (sa.usesTargeting() && c.getController().isOpponentOf(ai)) {
+            for (Trigger t : c.getTriggers()) {
+                if (t.getMode() == TriggerType.BecomesTarget || t.getMode() == TriggerType.BecomesTargetOnce) {
+                    SpellAbility tSa = t.ensureAbility();
+                    if (tSa != null && (ApiType.DealDamage.equals(tSa.getApi())
+                            || ApiType.Pump.equals(tSa.getApi())
+                            || ApiType.PutCounter.equals(tSa.getApi()))) {
+                        // This creature punishes targeting — only target if lethal threat
+                        boolean lethalThreat = ai.getLife() > 0
+                                && ComputerUtilCombat.damageIfUnblocked(c, ai, game.getCombat(), true) >= ai.getLife();
+                        if (!lethalThreat) {
+                            return false;
+                        }
+                    }
+                }
+            }
         }
 
         //Check for cards that profit from spells - for example Prowess or Threshold

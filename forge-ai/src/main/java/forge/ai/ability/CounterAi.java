@@ -164,6 +164,11 @@ public class CounterAi extends SpellAbilityAi {
             dontCounter = true;
         }
 
+        // Always counter commander casts — they are the highest priority target
+        if (tgtSA != null && tgtSA.getHostCard() != null && tgtSA.getHostCard().isCommander()) {
+            dontCounter = false;
+        }
+
         if (tgtSA != null && tgtCMC < AiProfileUtil.getIntProperty(ai, AiProps.MIN_SPELL_CMC_TO_COUNTER)) {
             dontCounter = true;
             Card tgtSource = tgtSA.getHostCard();
@@ -328,12 +333,26 @@ public class CounterAi extends SpellAbilityAi {
             if (bestOption == null) {
                 bestOption = tgtSA;
             } else {
-                // TODO Determine if this option is better than the current best option
+                // Prefer countering commander casts — they are high-impact
+                // threats that the entire opponent deck is built around
                 boolean betterThanBest = false;
+                Card tgtCard = tgtSA.getHostCard();
+                Card bestCard = bestOption.getHostCard();
+                boolean tgtIsCommander = tgtCard != null && tgtCard.isCommander();
+                boolean bestIsCommander = bestCard != null && bestCard.isCommander();
+                if (tgtIsCommander && !bestIsCommander) {
+                    betterThanBest = true;
+                } else if (!tgtIsCommander && !bestIsCommander) {
+                    // Neither is a commander — prefer higher CMC
+                    int tgtCmc = tgtSA.getPayCosts().getTotalMana() != null
+                            ? tgtSA.getPayCosts().getTotalMana().getCMC() : 0;
+                    int bestCmc = bestOption.getPayCosts().getTotalMana() != null
+                            ? bestOption.getPayCosts().getTotalMana().getCMC() : 0;
+                    betterThanBest = tgtCmc > bestCmc;
+                }
                 if (betterThanBest) {
                     bestOption = tgtSA;
                 }
-                // Don't really need to keep updating leastBadOption once we have a bestOption
             }
         }
 
