@@ -275,6 +275,24 @@ public class CreatureEvaluator implements Function<Card, Integer> {
             }
         }
 
+        // Token-generating triggers make a creature much more valuable as an engine
+        // (e.g. Talrand creating Drakes on spell cast, Murmuring Mystic creating Birds)
+        for (Trigger t : c.getTriggers()) {
+            SpellAbility tSa = t.ensureAbility();
+            if (tSa == null) {
+                continue;
+            }
+            // Walk the sub-ability chain looking for token creation
+            SpellAbility cur = tSa;
+            while (cur != null) {
+                if (ApiType.Token.equals(cur.getApi())) {
+                    value += addValue(50, "token-engine");
+                    break;
+                }
+                cur = cur.getSubAbility();
+            }
+        }
+
         // card-specific evaluation modifier
         if (c.hasSVar("AIEvaluationModifier")) {
             value += AbilityUtils.calculateAmount(c, c.getSVar("AIEvaluationModifier"), null);
