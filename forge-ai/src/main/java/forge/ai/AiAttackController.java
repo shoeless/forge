@@ -270,6 +270,10 @@ public class AiAttackController {
      *
      */
     public final static List<Card> sortAttackers(final List<Card> in) {
+        return sortAttackers(in, null);
+    }
+
+    public final static List<Card> sortAttackers(final List<Card> in, final GameEntity defender) {
         final List<Card> result = new ArrayList<>();
 
         // Cards with triggers should come first (for Battle Cry)
@@ -285,6 +289,36 @@ public class AiAttackController {
         for (final Card attacker : in) {
             if (!result.contains(attacker)) {
                 result.add(attacker);
+            }
+        }
+
+        // If the defender is a player, check whether non-ONLY_ALONE creatures
+        // can deal lethal damage on their own. If so, move ONLY_ALONE creatures
+        // to the end so they don't lock out the group attack.
+        if (defender instanceof Player) {
+            Player defPlayer = (Player) defender;
+            int defLife = defPlayer.getLife();
+            int groupPower = 0;
+            boolean hasOnlyAlone = false;
+            for (Card c : result) {
+                if (c.hasKeyword("CARDNAME can only attack alone.")) {
+                    hasOnlyAlone = true;
+                } else {
+                    groupPower += c.getNetPower();
+                }
+            }
+            if (hasOnlyAlone && groupPower >= defLife) {
+                List<Card> reordered = new ArrayList<>();
+                List<Card> onlyAlone = new ArrayList<>();
+                for (Card c : result) {
+                    if (c.hasKeyword("CARDNAME can only attack alone.")) {
+                        onlyAlone.add(c);
+                    } else {
+                        reordered.add(c);
+                    }
+                }
+                reordered.addAll(onlyAlone);
+                return reordered;
             }
         }
 
@@ -1347,7 +1381,7 @@ public class AiAttackController {
 
         List<Card> left = new ArrayList<>(attackersLeft);
         left = notNeededAsBlockers(combat.getAttackers(), left);
-        left = sortAttackers(left);
+        left = sortAttackers(left, defender);
 
         if ( LOG_AI_ATTACKS )
             System.out.println("attackersLeft = " + left);
