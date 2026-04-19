@@ -117,6 +117,18 @@ public class CardCollections {
         return commander;
     }
 
+    /** Invalidates all cached deck storages so they reload from disk on next access. */
+    public void invalidateDeckCaches() {
+        constructed = null;
+        commander = null;
+        commanderPrecons = null;
+        oathbreaker = null;
+        tinyLeaders = null;
+        brawl = null;
+        scheme = null;
+        plane = null;
+    }
+
     public IStorage<Deck> getOathbreaker() {
         if (oathbreaker == null) {
             oathbreaker = new StorageImmediatelySerialized<>("Oathbreaker decks",

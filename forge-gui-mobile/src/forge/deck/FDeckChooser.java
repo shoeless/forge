@@ -275,6 +275,8 @@ public class FDeckChooser extends FScreen {
             }
         } else if (needRefreshOnActivate) {
             needRefreshOnActivate = false;
+            // Invalidate cached deck storage so edits are picked up from disk
+            FModel.getDecks().invalidateDeckCaches();
             refreshDecksList(selectedDeckType, true, null);
             switch (lstDecks.getGameType()) {
                 case Commander:
