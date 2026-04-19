@@ -2131,6 +2131,19 @@ public class ComputerUtil {
             return score;
         }
 
+        // Interaction-heavy decks (25%+ instants among non-lands) should mulligan
+        // hands with zero instants — missing the deck's core gameplan
+        int instantsInDeck = CardLists.count(library, c -> c.isInstant());
+        int nonLandsInDeck = library.size() - landsInDeck;
+        if (nonLandsInDeck > 0 && instantsInDeck * 4 >= nonLandsInDeck) {
+            // Deck is 25%+ instants — check for interaction in hand
+            int instantsInHand = CardLists.count(handList, c -> c.isInstant());
+            if (instantsInHand == 0 && finalHandSize >= 6) {
+                // No interaction in a 6+ card hand from a control deck — mulligan
+                return 0;
+            }
+        }
+
         // otherwise, reject bad hands or return score
         if (landSize < 2) {
             // BAD Hands, 0 or 1 lands
