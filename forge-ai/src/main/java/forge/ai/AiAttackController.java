@@ -38,6 +38,7 @@ import forge.game.spellability.SpellAbility;
 import forge.game.spellability.SpellAbilityPredicates;
 import forge.game.staticability.StaticAbility;
 import forge.game.staticability.StaticAbilityAssignCombatDamageAsUnblocked;
+import forge.game.staticability.StaticAbilityCantAttackBlock;
 import forge.game.staticability.StaticAbilityMode;
 import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
@@ -1366,6 +1367,26 @@ public class AiAttackController {
             } else if (aiTurnsToKill < oppTurnsToKill) {
                 // AI wins the damage race
                 aiAggression = Math.max(aiAggression, 3);
+            }
+        }
+
+        // Evasion aggression: if flying/unblockable creatures can clock the
+        // opponent in ~3 turns, push aggression so the AI actually attacks
+        if (defendingOpponent.canLoseLife() && !defendingOpponent.cantLoseForZeroOrLessLife()) {
+            int evasivePower = 0;
+            for (Card attacker : this.attackers) {
+                if (attacker.hasKeyword(Keyword.FLYING) || attacker.hasKeyword(Keyword.HORSEMANSHIP)
+                        || StaticAbilityCantAttackBlock.cantBlockBy(attacker, null)) {
+                    evasivePower += attacker.getNetCombatDamage();
+                }
+            }
+            int oppLife = defendingOpponent.getLife();
+            if (evasivePower > 0 && oppLife > 0) {
+                if (evasivePower * 3 >= oppLife) {
+                    aiAggression = Math.max(aiAggression, 4);
+                } else if (evasivePower * 5 >= oppLife) {
+                    aiAggression = Math.max(aiAggression, 3);
+                }
             }
         }
 
