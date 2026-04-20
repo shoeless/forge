@@ -2092,33 +2092,20 @@ public class ComputerUtil {
         int currentHandSize = handList.size();
         int finalHandSize = currentHandSize - cardsToReturn;
 
-        // Counter-heavy decks mulligan aggressively for interaction — even
-        // below the normal threshold, down to 4 cards if necessary.
+        // Instant-heavy decks (like counter-spell decks) mulligan aggressively
+        // for interaction — even below the normal threshold, down to 4 cards.
+        // Use isInstant() as a robust check since API-based detection can be
+        // unreliable at mulligan time before abilities are fully initialized.
         CardCollectionView library = ai.getCardsIn(ZoneType.Library);
         int landsInDeck = CardLists.count(library, CardPredicates.LANDS);
         if (finalHandSize >= 4) {
-            int countersInDeck = 0;
-            for (Card c : library) {
-                for (SpellAbility ability : c.getNonManaAbilities()) {
-                    if (ability.getApi() == ApiType.Counter) {
-                        countersInDeck++;
-                        break;
-                    }
-                }
-            }
+            int instantsInDeck = CardLists.count(library, c -> c.isInstant());
             int nonLandsInDeck = library.size() - landsInDeck;
-            if (nonLandsInDeck > 0 && countersInDeck * 5 >= nonLandsInDeck) {
-                int countersInHand = 0;
-                for (Card c : handList) {
-                    for (SpellAbility ability : c.getNonManaAbilities()) {
-                        if (ability.getApi() == ApiType.Counter) {
-                            countersInHand++;
-                            break;
-                        }
-                    }
-                }
-                if (countersInHand == 0) {
-                    return 0; // mulligan — no counterspells
+            if (nonLandsInDeck > 0 && instantsInDeck * 4 >= nonLandsInDeck) {
+                // Deck is 25%+ instants — need at least one in hand
+                int instantsInHand = CardLists.count(handList, c -> c.isInstant());
+                if (instantsInHand == 0) {
+                    return 0; // mulligan — no instants in an instant-heavy deck
                 }
             }
         }
