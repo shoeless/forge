@@ -2092,13 +2092,41 @@ public class ComputerUtil {
         int currentHandSize = handList.size();
         int finalHandSize = currentHandSize - cardsToReturn;
 
+        // Counter-heavy decks mulligan aggressively for interaction — even
+        // below the normal threshold, down to 4 cards if necessary.
+        CardCollectionView library = ai.getCardsIn(ZoneType.Library);
+        int landsInDeck = CardLists.count(library, CardPredicates.LANDS);
+        if (finalHandSize >= 4) {
+            int countersInDeck = 0;
+            for (Card c : library) {
+                for (SpellAbility ability : c.getNonManaAbilities()) {
+                    if (ability.getApi() == ApiType.Counter) {
+                        countersInDeck++;
+                        break;
+                    }
+                }
+            }
+            int nonLandsInDeck = library.size() - landsInDeck;
+            if (nonLandsInDeck > 0 && countersInDeck * 5 >= nonLandsInDeck) {
+                int countersInHand = 0;
+                for (Card c : handList) {
+                    for (SpellAbility ability : c.getNonManaAbilities()) {
+                        if (ability.getApi() == ApiType.Counter) {
+                            countersInHand++;
+                            break;
+                        }
+                    }
+                }
+                if (countersInHand == 0) {
+                    return 0; // mulligan — no counterspells
+                }
+            }
+        }
+
         // don't mulligan when already too low
         if (finalHandSize < aic.getIntProperty(AiProps.MULLIGAN_THRESHOLD)) {
             return finalHandSize;
         }
-
-        CardCollectionView library = ai.getCardsIn(ZoneType.Library);
-        int landsInDeck = CardLists.count(library, CardPredicates.LANDS);
 
         // no land deck, can't do anything better
         if (landsInDeck == 0) {
@@ -2129,35 +2157,6 @@ public class ComputerUtil {
         // if at mulligan threshold, and we have any lands accept the hand
         if (handSize == aic.getIntProperty(AiProps.MULLIGAN_THRESHOLD) && landSize > 0) {
             return score;
-        }
-
-        // Counter-heavy decks should mulligan hands with zero counterspells.
-        // A hand full of cantrips but no counters can't protect against threats.
-        int countersInDeck = 0;
-        for (Card c : library) {
-            for (SpellAbility ability : c.getNonManaAbilities()) {
-                if (ability.getApi() == ApiType.Counter) {
-                    countersInDeck++;
-                    break;
-                }
-            }
-        }
-        int nonLandsInDeck = library.size() - landsInDeck;
-        if (nonLandsInDeck > 0 && countersInDeck * 5 >= nonLandsInDeck) {
-            // Deck is 20%+ counterspells — check for counters in hand
-            int countersInHand = 0;
-            for (Card c : handList) {
-                for (SpellAbility ability : c.getNonManaAbilities()) {
-                    if (ability.getApi() == ApiType.Counter) {
-                        countersInHand++;
-                        break;
-                    }
-                }
-            }
-            if (countersInHand == 0 && finalHandSize >= 5) {
-                // No counterspells in a 5+ card hand from a counter deck — mulligan
-                return 0;
-            }
         }
 
         // otherwise, reject bad hands or return score
