@@ -70,6 +70,10 @@ public class InputPlaybackControl extends InputSyncronizedBase {
         }
     }
 
+    public void setSpeed(PlaybackSpeed newSpeed) {
+        speed = newSpeed;
+    }
+
     @Override
     protected void onCancel() {
         if (isPaused) {

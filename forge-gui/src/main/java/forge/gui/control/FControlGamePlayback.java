@@ -40,6 +40,8 @@ public class FControlGamePlayback extends IGameEventVisitor.Base<Void> {
     public void setGame(final Game game0) {
         game = game0;
         inputPlayback = new InputPlaybackControl(game, this);
+        // Sync the input control's speed with the preserved playback speed
+        inputPlayback.setSpeed(playbackSpeed);
     }
 
     @Subscribe
