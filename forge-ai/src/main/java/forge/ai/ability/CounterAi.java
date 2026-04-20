@@ -183,35 +183,24 @@ public class CounterAi extends SpellAbilityAi {
         if (tgtSA != null && !dontCounter
                 && (tgtSA.getHostCard() == null || !tgtSA.getHostCard().isCommander())
                 && !"Hand".equals(sa.getParam("Destination"))) {
-            int countersInHand = 0;
-            for (Card c : ai.getCardsIn(ZoneType.Hand)) {
-                for (SpellAbility ability : c.getNonManaAbilities()) {
-                    if (ability.getApi() == ApiType.Counter) {
-                        countersInHand++;
-                        break;
-                    }
-                }
+            Card tgtCard = tgtSA.getHostCard();
+            boolean isHighPriority = false;
+            if (tgtCard != null) {
+                // Enchantments are high priority (persistent value, strategy multipliers)
+                isHighPriority |= tgtCard.isEnchantment();
+                // CMC 4+ creatures are real threats
+                isHighPriority |= tgtCard.isCreature() && tgtCMC >= 4;
+                // Planeswalkers
+                isHighPriority |= tgtCard.isPlaneswalker();
+                // Pump spells when opponent has a threatening creature
+                isHighPriority |= (tgtSA.getApi() == ApiType.Pump || tgtSA.getApi() == ApiType.PumpAll);
+                // Damage/removal targeting the AI
+                isHighPriority |= tgtSA.getApi() == ApiType.DealDamage || tgtSA.getApi() == ApiType.Destroy;
+                // Other counterspells
+                isHighPriority |= tgtSA.getApi() == ApiType.Counter;
             }
-            if (countersInHand <= 3) {
-                Card tgtCard = tgtSA.getHostCard();
-                boolean isHighPriority = false;
-                if (tgtCard != null) {
-                    // Enchantments are high priority (persistent value, strategy multipliers)
-                    isHighPriority |= tgtCard.isEnchantment();
-                    // CMC 4+ creatures are real threats
-                    isHighPriority |= tgtCard.isCreature() && tgtCMC >= 4;
-                    // Planeswalkers
-                    isHighPriority |= tgtCard.isPlaneswalker();
-                    // Pump spells when opponent has a threatening creature
-                    isHighPriority |= (tgtSA.getApi() == ApiType.Pump || tgtSA.getApi() == ApiType.PumpAll);
-                    // Damage/removal targeting the AI
-                    isHighPriority |= tgtSA.getApi() == ApiType.DealDamage || tgtSA.getApi() == ApiType.Destroy;
-                    // Other counterspells
-                    isHighPriority |= tgtSA.getApi() == ApiType.Counter;
-                }
-                if (!isHighPriority) {
-                    dontCounter = true;
-                }
+            if (!isHighPriority) {
+                dontCounter = true;
             }
         }
 
