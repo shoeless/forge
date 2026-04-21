@@ -1183,21 +1183,22 @@ public class ComputerUtilMana {
         // If not, the proactive play takes priority over holding up a counter.
         // Released on opponent's turn so the counter can actually be cast.
         if (AiCardMemory.isRememberedCard(ai, sourceCard, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL)) {
-            if (ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
-                // Only bypass reservation for the AI's own commander — that's
-                // the one proactive play worth tapping out for. Everything else
-                // (Bident, Docent, equipment) should wait until there's enough
-                // mana for both the spell and the counter.
-                if (sa != null && sa.getHostCard() != null
-                        && sa.getHostCard().isCommander()
-                        && sa.getHostCard().getOwner().equals(ai)) {
-                    // AI's own commander — allow using reserved mana
-                } else {
-                    return true; // enforce reservation for non-commander spells
+            if (!ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
+                // Opponent's turn — release reservation so we can cast the counter
+                AiCardMemory.clearMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+            } else if (sa != null && sa.getHostCard() != null
+                    && sa.getHostCard().isCommander() && sa.getHostCard().getOwner().equals(ai)) {
+                // AI's own commander — always allow
+            } else if (sa != null && sa.getPayCosts() != null && sa.getPayCosts().getTotalMana() != null) {
+                // Allow if total mana covers both this spell and the counter
+                int spellCost = sa.getPayCosts().getTotalMana().getCMC();
+                Set<Card> reserved = AiCardMemory.getMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+                int reservedCount = reserved != null ? reserved.size() : 0;
+                if (getAvailableManaEstimate(ai) < spellCost + reservedCount) {
+                    return true;
                 }
             } else {
-                // It's opponent's turn — release reservation so we can actually cast the counter
-                AiCardMemory.clearMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+                return true;
             }
         }
 
