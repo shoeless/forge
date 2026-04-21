@@ -1613,9 +1613,11 @@ public class ChangeZoneAi extends SpellAbilityAi {
 
                 if (sa.hasParam("Imprint") && origin.contains(ZoneType.Hand)) {
                     // Imprinting from hand — pick the best reusable card.
-                    // Prefer counterspells (reusable interaction is extremely strong)
+                    // Prefer counterspells (reusable interaction is extremely strong).
+                    // Check all spell abilities on the card state since
+                    // getNonManaAbilities() can be unreliable before game start.
                     CardCollection counters = CardLists.filter(fetchList, card -> {
-                        for (SpellAbility ability : card.getNonManaAbilities()) {
+                        for (SpellAbility ability : card.getCurrentState().getSpellAbilities()) {
                             if (ability.getApi() == ApiType.Counter) {
                                 return true;
                             }
