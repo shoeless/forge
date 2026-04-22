@@ -182,6 +182,16 @@ public class ImageCache {
             }
         } catch (Exception ignored) {}
         getCardsLoaded().clear();
+
+        // Clear iOS-specific texture caches to prevent memory accumulation
+        // across games. Textures will be reloaded on demand when needed.
+        for (Texture t : downloadedTextureCache.values()) {
+            try { t.dispose(); } catch (Exception ignored) {}
+        }
+        downloadedTextureCache.clear();
+        pixmapCache.clear();
+        textureToPath.clear();
+
         ((Forge) Gdx.app.getApplicationListener()).needsUpdate = true;
     }
 

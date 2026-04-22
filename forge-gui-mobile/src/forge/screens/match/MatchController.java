@@ -564,8 +564,10 @@ public class MatchController extends AbstractGuiGame {
     public void afterGameEnd() {
         super.afterGameEnd();
         Forge.back(true);
-        if (Forge.disposeTextures)
-            ImageCache.getInstance().disposeTextures();
+        // Always dispose textures between games to prevent memory accumulation
+        ImageCache.getInstance().disposeTextures();
+        // Hint GC to reclaim freed texture memory before the next game starts
+        System.gc();
         //view = null;
     }
 
