@@ -1188,16 +1188,10 @@ public class ComputerUtilMana {
                 AiCardMemory.clearMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
             } else if (sa != null && sa.getHostCard() != null
                     && sa.getHostCard().isCommander() && sa.getHostCard().getOwner().equals(ai)) {
-                // AI's own commander — always allow
-            } else if (sa != null && sa.getPayCosts() != null && sa.getPayCosts().getTotalMana() != null) {
-                // Allow if total mana covers both this spell and the counter
-                int spellCost = sa.getPayCosts().getTotalMana().getCMC();
-                Set<Card> reserved = AiCardMemory.getMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
-                int reservedCount = reserved != null ? reserved.size() : 0;
-                if (getAvailableManaEstimate(ai) < spellCost + reservedCount) {
-                    return true;
-                }
+                // AI's own commander — always allow bypassing reservation
             } else {
+                // Always enforce — reserved sources cannot be used for other spells.
+                // The AI must cast spells using only unreserved mana sources.
                 return true;
             }
         }
