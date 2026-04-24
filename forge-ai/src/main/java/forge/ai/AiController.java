@@ -955,6 +955,23 @@ public class AiController {
             return canPlay;
         }
 
+        // Don't cast sorcery-speed spells if doing so would leave insufficient
+        // mana to counter the opponent's commander. This is a direct guard that
+        // doesn't rely on the mana source reservation system.
+        if (sa.isSpell() && !sa.withFlash(host, null) && host != null) {
+            Set<Card> reserved = AiCardMemory.getMemorySet(player,
+                    AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+            if (reserved != null && !reserved.isEmpty()) {
+                int spellCost = sa.getPayCosts().getTotalMana() != null
+                        ? sa.getPayCosts().getTotalMana().getCMC() : 0;
+                int totalMana = getAvailableManaEstimate(player);
+                int reservedCount = reserved.size();
+                if (totalMana - spellCost < reservedCount) {
+                    return AiPlayDecision.AnotherTime;
+                }
+            }
+        }
+
         if (!ComputerUtilCost.canPayCost(sa, player, sa.isTrigger())) {
             // for dependent costs with X, e.g. Repeal, which require a valid target to be specified before a decision can be made
             // on whether the cost can be paid, this can only be checked late after canPlaySa has been run (or the AI will misplay)
