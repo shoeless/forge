@@ -859,7 +859,9 @@ public class AiController {
                 }
                 int commanderTax = opp.getCommanderCast(commander) * 2;
                 int commanderCMC = commander.getCMC() + commanderTax;
-                int oppMana = getAvailableManaEstimate(opp);
+                // Pass false to count ALL mana sources including summoning-sick
+                // creatures — they'll untap and be available on opponent's turn
+                int oppMana = getAvailableManaEstimate(opp, false);
                 // Reserve when opponent can cast OR is one land drop away
                 if (oppMana >= commanderCMC - 1) {
                     commanderThreat = true;
