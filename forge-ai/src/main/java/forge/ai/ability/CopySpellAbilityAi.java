@@ -42,6 +42,10 @@ public class CopySpellAbilityAi extends SpellAbilityAi {
 
         if (top.getActivatingPlayer().isOpponentOf(aiPlayer)) {
             chance = 100; // currently the AI will always copy the opponent's spell if viable
+        } else if ("OnlyOpponentSpells".equals(logic)) {
+            // Cards like Narset's Reversal that return the original to hand —
+            // only worth using on opponent's spells, never own cantrips
+            return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
         }
 
         if (!MyRandom.percentTrue(chance)

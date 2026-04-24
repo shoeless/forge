@@ -860,7 +860,8 @@ public class AiController {
                 int commanderTax = opp.getCommanderCast(commander) * 2;
                 int commanderCMC = commander.getCMC() + commanderTax;
                 int oppMana = getAvailableManaEstimate(opp);
-                if (oppMana >= commanderCMC) {
+                // Reserve when opponent can cast OR is one land drop away
+                if (oppMana >= commanderCMC - 1) {
                     commanderThreat = true;
                     break;
                 }
