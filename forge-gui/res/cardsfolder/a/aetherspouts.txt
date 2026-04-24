@@ -8,6 +8,6 @@ SVar:DBChoose:DB$ GenericChoice | Defined$ RememberedOwner | ShowCurrentCard$ Re
 SVar:DBTop:DB$ ChangeZone | Defined$ RememberedCard | Origin$ Battlefield | Destination$ Library | LibraryPosition$ 0 | SpellDescription$ Top of library
 SVar:DBBottom:DB$ ChangeZone | Defined$ RememberedCard | Origin$ Battlefield | Destination$ Library | LibraryPosition$ -1 | SpellDescription$ Bottom of library
 SVar:DBCleanup:DB$ Cleanup | ClearImprinted$ True
-SVar:NeedsToPlayVar:Z GE2
+SVar:NeedsToPlayVar:Z GE1
 SVar:Z:Count$Valid Creature.attacking+OppCtrl
 Oracle:For each attacking creature, its owner puts it on the top or bottom of their library.
