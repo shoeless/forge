@@ -1186,12 +1186,10 @@ public class ComputerUtilMana {
             if (!ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
                 // Opponent's turn — release reservation so we can cast the counter
                 AiCardMemory.clearMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
-            } else if (sa != null && sa.getHostCard() != null
-                    && sa.getHostCard().isCommander() && sa.getHostCard().getOwner().equals(ai)) {
-                // AI's own commander — always allow bypassing reservation
             } else {
-                // Always enforce — reserved sources cannot be used for other spells.
-                // The AI must cast spells using only unreserved mana sources.
+                // Enforce reservation — reserved sources cannot be used for any spell
+                // including the AI's own commander. The AI must wait until it has
+                // enough total mana for both the spell and the counter.
                 return true;
             }
         }
