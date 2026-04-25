@@ -192,8 +192,12 @@ public class CounterAi extends SpellAbilityAi {
                 isHighPriority |= tgtCard.isCreature() && tgtCMC >= 4;
                 // Planeswalkers
                 isHighPriority |= tgtCard.isPlaneswalker();
-                // Pump spells when opponent has a threatening creature
-                isHighPriority |= (tgtSA.getApi() == ApiType.Pump || tgtSA.getApi() == ApiType.PumpAll);
+                // Pump spells — only if targeting a commander or CMC 4+ creature
+                if (tgtSA.getApi() == ApiType.Pump || tgtSA.getApi() == ApiType.PumpAll) {
+                    Card pumpTgt = tgtSA.getTargetCard();
+                    isHighPriority |= pumpTgt != null
+                            && (pumpTgt.isCommander() || pumpTgt.getCMC() >= 4);
+                }
                 // Damage/removal targeting the AI
                 isHighPriority |= tgtSA.getApi() == ApiType.DealDamage || tgtSA.getApi() == ApiType.Destroy;
                 // Other counterspells

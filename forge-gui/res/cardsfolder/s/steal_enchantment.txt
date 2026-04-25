@@ -3,5 +3,6 @@ ManaCost:U U
 Types:Enchantment Aura
 K:Enchant:Enchantment
 SVar:AttachAILogic:GainControl
+SVar:DoNotDiscardIfAble:TRUE
 S:Mode$ Continuous | Affected$ Card.EnchantedBy | GainControl$ You | Description$ You control enchanted enchantment.
 Oracle:Enchant enchantment\nYou control enchanted enchantment.
