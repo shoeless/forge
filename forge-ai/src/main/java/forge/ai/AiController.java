@@ -874,6 +874,7 @@ public class AiController {
         }
 
         if (!commanderThreat) {
+            System.err.println("FORGE_RESERVE: No commander threat detected");
             return;
         }
 
@@ -896,16 +897,16 @@ public class AiController {
         }
 
         if (cheapestCounter != null && cheapestCMC > 0) {
-            // Reserve exactly cheapestCMC sources. Don't use calculateManaCost
-            // which returns 0 after cost reductions (Baral, Sapphire Medallion),
-            // causing over-reservation. The AI needs to hold back enough mana
-            // for the full cost even if reductions might apply — better safe
-            // than tapping out and having the reduction not apply.
             CardCollection allSources = ComputerUtilMana.getAvailableManaSources(player, true);
             int toReserve = Math.min(allSources.size(), cheapestCMC);
             for (int i = 0; i < toReserve; i++) {
                 memory.rememberCard(allSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
             }
+            System.err.println("FORGE_RESERVE: counter=" + cheapestCounter.getHostCard().getName()
+                    + " cmc=" + cheapestCMC + " reserved=" + toReserve
+                    + " total_mana=" + getAvailableManaEstimate(player));
+        } else if (cheapestCounter == null) {
+            System.err.println("FORGE_RESERVE: No counters in hand");
         }
     }
 
@@ -1281,8 +1282,11 @@ public class AiController {
                 }
 
                 if (!discardedUnplayable) {
-                    // discard worst card
-                    Card worst = ComputerUtilCard.getWorstAI(validCards);
+                    // discard worst card, but respect DoNotDiscardIfAble
+                    CardCollection discardable = CardLists.filter(validCards,
+                            c -> !c.hasSVar("DoNotDiscardIfAble"));
+                    Card worst = ComputerUtilCard.getWorstAI(
+                            discardable.isEmpty() ? validCards : discardable);
                     if (worst == null) {
                         // there were only instants and sorceries, and maybe cards that are not good to discard, so look
                         // for more discard options
