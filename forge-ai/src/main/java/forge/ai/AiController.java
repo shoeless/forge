@@ -899,11 +899,20 @@ public class AiController {
             ManaCostBeingPaid cost = ComputerUtilMana.calculateManaCost(
                     cheapestCounter.getPayCosts(), cheapestCounter, player, true, 0, false);
             CardCollection manaSources = ComputerUtilMana.getManaSourcesToPayCost(cost, cheapestCounter, player);
+            System.err.println("FORGE_RESERVE: cheapest counter=" + cheapestCounter.getHostCard().getName()
+                    + " cmc=" + cost.getConvertedManaCost()
+                    + " sources=" + manaSources.size()
+                    + " total_mana=" + getAvailableManaEstimate(player));
             if (manaSources.size() >= cost.getConvertedManaCost()) {
                 for (Card c : manaSources) {
                     memory.rememberCard(c, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
                 }
+                System.err.println("FORGE_RESERVE: Reserved " + manaSources.size() + " sources for counter");
+            } else {
+                System.err.println("FORGE_RESERVE: NOT ENOUGH sources to reserve");
             }
+        } else {
+            System.err.println("FORGE_RESERVE: No counters found in hand");
         }
     }
 
