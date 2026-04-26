@@ -895,24 +895,17 @@ public class AiController {
             }
         }
 
-        if (cheapestCounter != null) {
-            ManaCostBeingPaid cost = ComputerUtilMana.calculateManaCost(
-                    cheapestCounter.getPayCosts(), cheapestCounter, player, true, 0, false);
-            CardCollection manaSources = ComputerUtilMana.getManaSourcesToPayCost(cost, cheapestCounter, player);
-            System.err.println("FORGE_RESERVE: cheapest counter=" + cheapestCounter.getHostCard().getName()
-                    + " cmc=" + cost.getConvertedManaCost()
-                    + " sources=" + manaSources.size()
-                    + " total_mana=" + getAvailableManaEstimate(player));
-            if (manaSources.size() >= cost.getConvertedManaCost()) {
-                for (Card c : manaSources) {
-                    memory.rememberCard(c, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
-                }
-                System.err.println("FORGE_RESERVE: Reserved " + manaSources.size() + " sources for counter");
-            } else {
-                System.err.println("FORGE_RESERVE: NOT ENOUGH sources to reserve");
+        if (cheapestCounter != null && cheapestCMC > 0) {
+            // Reserve exactly cheapestCMC sources. Don't use calculateManaCost
+            // which returns 0 after cost reductions (Baral, Sapphire Medallion),
+            // causing over-reservation. The AI needs to hold back enough mana
+            // for the full cost even if reductions might apply — better safe
+            // than tapping out and having the reduction not apply.
+            CardCollection allSources = ComputerUtilMana.getAvailableManaSources(player, true);
+            int toReserve = Math.min(allSources.size(), cheapestCMC);
+            for (int i = 0; i < toReserve; i++) {
+                memory.rememberCard(allSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
             }
-        } else {
-            System.err.println("FORGE_RESERVE: No counters found in hand");
         }
     }
 
