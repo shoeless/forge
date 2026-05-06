@@ -885,14 +885,35 @@ public class AiController {
             return;
         }
 
-        // Pick the cheapest counter to reserve mana for
+        // Pick the cheapest counter that can target creature spells
+        // (the commander). Skip narrow counters like Dispel (instants only)
+        // that can't stop the primary threat.
         SpellAbility cheapestCounter = null;
         int cheapestCMC = Integer.MAX_VALUE;
         for (SpellAbility counter : counters) {
+            // Check if this counter can target creature spells (the commander).
+            // Skip counters restricted to non-creature spell types.
+            String validTgts = counter.getParamOrDefault("ValidTgts", "Card");
+            if (validTgts.contains("nonCreature") || validTgts.contains("Noncreature")) {
+                continue; // explicitly excludes creatures
+            }
+            if (!validTgts.contains("Card") && !validTgts.contains("Creature")) {
+                continue; // doesn't include creatures (e.g. "Instant" or "Sorcery")
+            }
             int cmc = counter.getPayCosts().getTotalMana().getCMC();
             if (cmc < cheapestCMC) {
                 cheapestCMC = cmc;
                 cheapestCounter = counter;
+            }
+        }
+        // Fallback: if no creature-targeting counter found, use any counter
+        if (cheapestCounter == null) {
+            for (SpellAbility counter : counters) {
+                int cmc = counter.getPayCosts().getTotalMana().getCMC();
+                if (cmc < cheapestCMC) {
+                    cheapestCMC = cmc;
+                    cheapestCounter = counter;
+                }
             }
         }
 
