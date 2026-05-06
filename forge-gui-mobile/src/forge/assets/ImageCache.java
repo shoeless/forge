@@ -77,7 +77,20 @@ public class ImageCache {
     private static final java.util.HashMap<Texture, Pixmap> pixmapCache = new java.util.HashMap<Texture, Pixmap>();
 
     // iOS fix: Cache for downloaded image textures (bypassing AssetManager)
-    private static final java.util.HashMap<String, Texture> downloadedTextureCache = new java.util.HashMap<String, Texture>();
+    private static final java.util.LinkedHashMap<String, Texture> downloadedTextureCache =
+            new java.util.LinkedHashMap<String, Texture>(200, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(java.util.Map.Entry<String, Texture> eldest) {
+                    if (size() > 200) {
+                        Texture t = eldest.getValue();
+                        pixmapCache.remove(t);
+                        textureToPath.remove(t);
+                        try { t.dispose(); } catch (Exception ignored) {}
+                        return true;
+                    }
+                    return false;
+                }
+            };
 
     // iOS fix: Reverse mapping from Texture to its file path for ImageRecord lookups
     // Needed because texture.toString() isn't unique (returns dimensions, not path)
