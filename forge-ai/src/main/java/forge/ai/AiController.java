@@ -862,8 +862,9 @@ public class AiController {
                 // Pass false to count ALL mana sources including summoning-sick
                 // creatures — they'll untap and be available on opponent's turn
                 int oppMana = getAvailableManaEstimate(opp, false);
-                // Reserve when opponent can cast OR is one land drop away
-                if (oppMana >= commanderCMC - 1) {
+                // Reserve when opponent is within 2 mana of casting.
+                // Ramp-heavy decks can gain 2+ mana per turn with dorks/rocks.
+                if (oppMana >= commanderCMC - 2) {
                     commanderThreat = true;
                     break;
                 }
@@ -874,7 +875,6 @@ public class AiController {
         }
 
         if (!commanderThreat) {
-            System.err.println("FORGE_RESERVE: No commander threat detected");
             return;
         }
 
@@ -902,11 +902,7 @@ public class AiController {
             for (int i = 0; i < toReserve; i++) {
                 memory.rememberCard(allSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
             }
-            System.err.println("FORGE_RESERVE: counter=" + cheapestCounter.getHostCard().getName()
-                    + " cmc=" + cheapestCMC + " reserved=" + toReserve
-                    + " total_mana=" + getAvailableManaEstimate(player));
         } else if (cheapestCounter == null) {
-            System.err.println("FORGE_RESERVE: No counters in hand");
         }
     }
 
