@@ -85,8 +85,13 @@ public class Assets implements Disposable {
         }
     }
 
-    // Cache for color-fixed pixmaps to prevent disposal on iOS
-    private final Map<Texture, Pixmap> colorFixedPixmaps = new HashMap<>();
+    // Cache for color-fixed pixmaps to prevent disposal on iOS (LRU capped)
+    private final Map<Texture, Pixmap> colorFixedPixmaps = new java.util.LinkedHashMap<Texture, Pixmap>(100, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<Texture, Pixmap> eldest) {
+            return size() > 100;
+        }
+    };
 
     /**
      * Custom FileHandleResolver for iOS/Android that handles both:
@@ -136,7 +141,7 @@ public class Assets implements Disposable {
     }
     private MemoryTrackingAssetManager manager;
     private HashMap<Integer, FSkinFont> fonts;
-    private HashMap<String, FImageComplex> cardArtCache;
+    private java.util.LinkedHashMap<String, FImageComplex> cardArtCache;
     private HashMap<String, FImage> avatarImages;
     private HashMap<String, FSkinImageInterface> manaImages;
     private HashMap<String, FSkinImageInterface> symbolLookup;
@@ -259,9 +264,14 @@ public class Assets implements Disposable {
         return fonts;
     }
 
-    public HashMap<String, FImageComplex> cardArtCache() {
+    public java.util.LinkedHashMap<String, FImageComplex> cardArtCache() {
         if (cardArtCache == null)
-            cardArtCache = new HashMap<>();
+            cardArtCache = new java.util.LinkedHashMap<String, FImageComplex>(100, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(java.util.Map.Entry<String, FImageComplex> eldest) {
+                    return size() > 100;
+                }
+            };
         return cardArtCache;
     }
 
