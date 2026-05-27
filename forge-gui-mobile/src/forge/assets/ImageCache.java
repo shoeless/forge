@@ -78,10 +78,10 @@ public class ImageCache {
 
     // iOS fix: Cache for downloaded image textures (bypassing AssetManager)
     private static final java.util.LinkedHashMap<String, Texture> downloadedTextureCache =
-            new java.util.LinkedHashMap<String, Texture>(200, 0.75f, true) {
+            new java.util.LinkedHashMap<String, Texture>(120, 0.75f, true) {
                 @Override
                 protected boolean removeEldestEntry(java.util.Map.Entry<String, Texture> eldest) {
-                    if (size() > 200) {
+                    if (size() > 120) {
                         Texture t = eldest.getValue();
                         pixmapCache.remove(t);
                         textureToPath.remove(t);
@@ -204,6 +204,8 @@ public class ImageCache {
         downloadedTextureCache.clear();
         pixmapCache.clear();
         textureToPath.clear();
+        imageRecord.get().clear();
+        counter = 0;
 
         ((Forge) Gdx.app.getApplicationListener()).needsUpdate = true;
     }

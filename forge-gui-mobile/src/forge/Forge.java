@@ -889,8 +889,9 @@ public class Forge implements ApplicationListener {
         String previousScreen = currentScreen != null ? currentScreen.toString() : "";
         //update gameInProgress for preload decks
         gameInProgress = toNewScreen.toLowerCase().contains("match") || previousScreen.toLowerCase().contains("match");
-        //dispose card textures handled by assetmanager
-        boolean dispose = toNewScreen.toLowerCase().contains("homescreen") && disposeTextures;
+        //dispose card textures when leaving a match screen (always, not preference-dependent)
+        boolean dispose = previousScreen.toLowerCase().contains("match")
+                || (toNewScreen.toLowerCase().contains("homescreen") && disposeTextures);
         try {
             endKeyInput(); //end key input before switching screens
             ForgeAnimation.endAll(); //end all active animations before switching screens
@@ -914,8 +915,10 @@ public class Forge implements ApplicationListener {
             if (BugReporter.isSentryEnabled())
                 BugReporter.reportException(ex);
         } finally {
-            if (dispose)
+            if (dispose) {
                 ImageCache.getInstance().disposeTextures();
+                System.gc();
+            }
         }
     }
 
