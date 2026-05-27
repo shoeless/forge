@@ -89,7 +89,11 @@ public class Assets implements Disposable {
     private final Map<Texture, Pixmap> colorFixedPixmaps = new java.util.LinkedHashMap<Texture, Pixmap>(100, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(java.util.Map.Entry<Texture, Pixmap> eldest) {
-            return size() > 100;
+            if (size() > 100) {
+                try { eldest.getValue().dispose(); } catch (Exception ignored) {}
+                return true;
+            }
+            return false;
         }
     };
 
@@ -431,7 +435,12 @@ public class Assets implements Disposable {
     }
 
     // Cache for mapping color-fixed textures to their file paths
-    private final Map<Texture, String> colorFixedTexturePaths = new HashMap<>();
+    private final Map<Texture, String> colorFixedTexturePaths = new java.util.LinkedHashMap<Texture, String>(100, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<Texture, String> eldest) {
+            return size() > 100;
+        }
+    };
 
     public ParticleEffect getEffect(FileHandle file) {
         if (file == null || !file.exists() || !FileType.Absolute.equals(file.type())) {
