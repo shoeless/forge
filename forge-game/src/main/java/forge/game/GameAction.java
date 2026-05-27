@@ -2830,6 +2830,14 @@ public class GameAction {
         damageMap.triggerDamageDoneOnce(isCombat, game);
         damageMap.clear();
 
+        // Process damage triggers immediately so they fire while creatures
+        // are still on the battlefield. Without this, DamageDoneOnce triggers
+        // (e.g. Enrage) are queued but not processed until after state-based
+        // actions destroy the creature, causing the zone check to fail.
+        if (isCombat) {
+            game.getTriggerHandler().runWaitingTriggers();
+        }
+
         counterTable.replaceCounterEffect(game, cause, !isCombat);
         counterTable.clear();
     }
