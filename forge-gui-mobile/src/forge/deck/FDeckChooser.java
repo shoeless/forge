@@ -255,6 +255,8 @@ public class FDeckChooser extends FScreen {
     public void onActivate() {
         if (cmbDeckTypes != null && cmbDeckTypes.getDropDownisVisible())
             cmbDeckTypes.hideDropDown();
+        // Always invalidate deck caches so edits are picked up from disk
+        FModel.getDecks().invalidateDeckCaches();
         String selectedDeck = "";
         int index = 0;
         if (lstDecks.getSelectedItem() != null) {
@@ -275,8 +277,6 @@ public class FDeckChooser extends FScreen {
             }
         } else if (needRefreshOnActivate) {
             needRefreshOnActivate = false;
-            // Invalidate cached deck storage so edits are picked up from disk
-            FModel.getDecks().invalidateDeckCaches();
             refreshDecksList(selectedDeckType, true, null);
             switch (lstDecks.getGameType()) {
                 case Commander:
