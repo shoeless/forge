@@ -149,12 +149,24 @@ public class ManaAi extends SpellAbilityAi {
         CardCollection manaSources = ComputerUtilMana.getAvailableManaSources(ai, true);
         int numManaSrcs = manaSources.size();
         int manaReceived = sa.hasParam("Amount") ? AbilityUtils.calculateAmount(host, sa.getParam("Amount"), sa) : 1;
-        manaReceived *= sa.getParam("Produced").split(" ").length;
+        String produced = sa.getParam("Produced");
+        byte producedColor;
+        if (produced.startsWith("Combo")) {
+            // "Combo X Y ..." => Amount is the TOTAL mana produced; each unit can be any of the
+            // listed colors (a choice), so do NOT multiply by the number of color options
+            // (e.g. Orcish Lumberjack: "Combo R G" Amount 3 == 3 mana, not 9).
+            byte comboColors = 0;
+            String[] comboParts = produced.split(" ");
+            for (int i = 1; i < comboParts.length; i++) {
+                comboColors |= MagicColor.fromName(comboParts[i]);
+            }
+            producedColor = comboColors == 0 ? MagicColor.ALL_COLORS : comboColors;
+        } else {
+            manaReceived *= produced.split(" ").length;
+            producedColor = produced.equals("Any") ? MagicColor.ALL_COLORS : MagicColor.fromName(produced);
+        }
 
         int selfCost = sa.getRootAbility().getPayCosts().getCostMana() != null ? sa.getRootAbility().getPayCosts().getCostMana().getMana().getCMC() : 0;
-
-        String produced = sa.getParam("Produced");
-        byte producedColor = produced.equals("Any") ? MagicColor.ALL_COLORS : MagicColor.fromName(produced);
 
         int numCounters = 0;
         int manaSurplus = 0;

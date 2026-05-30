@@ -1448,6 +1448,30 @@ public class AttachAi extends SpellAbilityAi {
      *            the logic
      * @return the card
      */
+    private static Card attachAIManaRampPreference(final List<Card> list) {
+        // Mana-ramp auras (e.g. Wild Growth, Fertile Ground): enchant one of our own
+        // mana-producing lands. Prefer an untapped land that taps for mana, favoring basics
+        // (stable, predictable taps) so the extra mana is reliably available.
+        // (CardLists.filter returns a new collection; it does not mutate the input.)
+        CardCollection lands = CardLists.filter(list, CardPredicates.LANDS);
+        if (lands.isEmpty()) {
+            return null;
+        }
+        CardCollection pool = CardLists.filter(lands, CardPredicates.UNTAPPED);
+        if (pool.isEmpty()) {
+            pool = lands;
+        }
+        CardCollection manaLands = CardLists.filter(pool, c -> !c.getManaAbilities().isEmpty());
+        if (!manaLands.isEmpty()) {
+            pool = manaLands;
+        }
+        CardCollection basics = CardLists.filter(pool, CardPredicates.BASIC_LANDS);
+        if (!basics.isEmpty()) {
+            pool = basics;
+        }
+        return pool.get(0);
+    }
+
     public static Card attachGeneralAI(final Player ai, final SpellAbility sa, final List<Card> list, final boolean mandatory,
             final Card attachSource, final String logic) {
         // AI logic types that do not require a prefList and that evaluate the
@@ -1458,7 +1482,7 @@ public class AttachAi extends SpellAbilityAi {
 
         Player prefPlayer;
         if ("Pump".equals(logic) || "Animate".equals(logic) || "Curiosity".equals(logic) || "MoveTgtAura".equals(logic)
-                || "MoveAllAuras".equals(logic)) {
+                || "MoveAllAuras".equals(logic) || "ManaRamp".equals(logic)) {
             prefPlayer = ai;
         } else {
             prefPlayer = AiAttackController.choosePreferredDefenderPlayer(ai);
@@ -1488,6 +1512,8 @@ public class AttachAi extends SpellAbilityAi {
             c = attachAICursePreference(sa, prefList, mandatory, attachSource, ai);
         } else if ("Pump".equals(logic) || logic.startsWith("Move")) {
             c = attachAIPumpPreference(ai, sa, prefList, mandatory, attachSource);
+        } else if ("ManaRamp".equals(logic)) {
+            c = attachAIManaRampPreference(prefList);
         } else if ("Curiosity".equals(logic)) {
             c = attachAICuriosityPreference(sa, prefList, mandatory, attachSource);
         } else if ("ChangeType".equals(logic)) {

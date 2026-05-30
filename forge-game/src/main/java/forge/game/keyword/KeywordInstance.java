@@ -123,27 +123,13 @@ public abstract class KeywordInstance<T extends KeywordInstance<?>> implements K
             staticAbilities.clear();
         }
         try {
-            String msg = "KeywordInstance:createTraits: make Traits for Keyword";
-            
-            // Log for debugging
-                System.err.println(msg);
-
-            // add Extra for debugging
-
             PlayerFactoryUtil.addTriggerAbility(this, player);
             PlayerFactoryUtil.addReplacementEffect(this, player);
             PlayerFactoryUtil.addSpellAbility(this, player);
             PlayerFactoryUtil.addStaticAbility(this, player);
         } catch (Exception e) {
-            String msg = "KeywordInstance:createTraits: failed Traits for Keyword";
-
-            // Log for debugging
-                System.err.println(msg);
-
             //rethrow
             throw new RuntimeException("Error in Keyword " + this.original + " for player " + player.getName(), e);
-        } finally {
-            // remove added extra
         }
     }
     /*

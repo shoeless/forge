@@ -101,6 +101,20 @@ public class CardStorageReader {
         this.charset = Charset.forName(CardStorageReader.DEFAULT_CHARSET_NAME);
     } // CardReader()
 
+    /**
+     * Freshness token for the card scripts, used to invalidate the binary card cache
+     * (cardcache.bin / cardsdb.bin) when scripts change. Returns cardsfolder.zip's
+     * last-modified time when present (the runtime's actual source), else the folder's.
+     * Rebuilding cardsfolder.zip (mkzip.sh) thus auto-invalidates the cache.
+     */
+    public long getCardSourceTimestamp() {
+        final File zipFile = new File(cardsfolder, "cardsfolder.zip");
+        if (zipFile.exists()) {
+            return zipFile.lastModified();
+        }
+        return cardsfolder.lastModified();
+    }
+
     private List<CardRules> loadCardsInRange(final List<File> files, final int from, final int to) {
         final CardRules.Reader rulesReader = new CardRules.Reader();
 
