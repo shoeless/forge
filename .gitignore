@@ -98,3 +98,10 @@ forge-gui/tools/PerSetTrackingResults
 # Ignore python temporaries
 __pycache__
 *.pyc
+
+# Ignore R session history
+.Rhistory
+
+# Ignore local convenience symlinks to forge-gui/res (machine-specific absolute paths)
+/res
+/forge-gui-desktop/res
