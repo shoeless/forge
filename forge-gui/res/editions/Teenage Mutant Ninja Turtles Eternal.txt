@@ -11,6 +11,7 @@ Type=Expansion
 4 M Raphael, the Muscle @Ryan Pancoast
 5 M Michelangelo, the Heart @Néstor Ossandón Leal
 6 M Heroes in a Half Shell @Victor Maury
+12 R Irma, Part-Time Mutant @Mirko Failoni
 101 M Leonardo, Worldly Warrior @Nathaniel Himawan
 109 M Donatello, Rad Scientist @Thomas Chamberlain-Keen
 111 R Donnie & April, Adorkable Duo @Le Vuong
