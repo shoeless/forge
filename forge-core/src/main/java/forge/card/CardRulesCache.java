@@ -941,16 +941,18 @@ public class CardRulesCache {
     }
 
     /**
-     * Compute a cache version string from edition data.
-     * Changes when editions are added/removed or when cards within editions change.
+     * Compute a cache version string from edition data and the card-script source freshness.
+     * Changes when editions are added/removed, when cards within editions change, or when the
+     * card scripts themselves are edited (cardSourceTimestamp, e.g. cardsfolder.zip mtime) — so
+     * editing a card .txt and rebuilding the zip auto-invalidates the binary card cache.
      */
-    public static String computeCacheVersion(CardEdition.Collection editions) {
+    public static String computeCacheVersion(CardEdition.Collection editions, long cardSourceTimestamp) {
         int editionCount = 0;
         int totalCards = 0;
         for (CardEdition e : editions) {
             editionCount++;
             totalCards += e.getAllCardsInSet().size();
         }
-        return FORMAT_VERSION + ":" + editionCount + ":" + totalCards;
+        return FORMAT_VERSION + ":" + editionCount + ":" + totalCards + ":" + cardSourceTimestamp;
     }
 }

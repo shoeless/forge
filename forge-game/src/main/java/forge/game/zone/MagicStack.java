@@ -480,48 +480,56 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
         }
 
         // Run BecomesTarget triggers
-        // Create a new object, since the triggers aren't happening right away
-        List<TargetChoices> chosenTargets = sp.getAllTargetChoices();
-        if (!chosenTargets.isEmpty()) {
-            SpellAbility s = sp;
-            if (si != null) {
-                s = si.getSpellAbility();
-                chosenTargets = s.getAllTargetChoices();
-            }
-            Set<GameObject> distinctObjects = Sets.newHashSet();
-            for (final TargetChoices tc : chosenTargets) {
-                for (final GameObject tgt : tc) {
-                    // Track distinct objects so Becomes targets don't trigger for things like:
-                    // Seeds of Strength
-                    if (!distinctObjects.add(tgt)) {
-                        continue;
-                    }
-
-                    runParams = AbilityKey.newMap();
-                    runParams.put(AbilityKey.SourceSA, s);
-                    runParams.put(AbilityKey.Target, tgt);
-                    if (tgt instanceof Card) {
-                        Card c = (Card) tgt;
-                        if (!c.hasBecomeTargetThisTurn()) {
-                            runParams.put(AbilityKey.FirstTime, null);
-                        }
-                        if (c.isValiant(activator)) {
-                            runParams.put(AbilityKey.Valiant, null);
-                        }
-                        c.addTargetFromThisTurn(activator);
-                    }
-                    game.getTriggerHandler().runTrigger(TriggerType.BecomesTarget, runParams, false);
+        // Guard: skip if targets were already processed for this stack instance
+        // (prevents double-firing if add() is called multiple times for the same spell)
+        if (si == null || !si.isTargetsProcessed()) {
+            // Create a new object, since the triggers aren't happening right away
+            List<TargetChoices> chosenTargets = sp.getAllTargetChoices();
+            if (!chosenTargets.isEmpty()) {
+                SpellAbility s = sp;
+                if (si != null) {
+                    s = si.getSpellAbility();
+                    chosenTargets = s.getAllTargetChoices();
                 }
-            }
-            runParams = AbilityKey.newMap();
-            runParams.put(AbilityKey.SourceSA, s);
-            runParams.put(AbilityKey.Targets, distinctObjects);
-            runParams.put(AbilityKey.Cause, s.getHostCard());
-            game.getTriggerHandler().runTrigger(TriggerType.BecomesTargetOnce, runParams, false);
-        }
+                Set<GameObject> distinctObjects = Sets.newHashSet();
+                for (final TargetChoices tc : chosenTargets) {
+                    for (final GameObject tgt : tc) {
+                        // Track distinct objects so Becomes targets don't trigger for things like:
+                        // Seeds of Strength
+                        if (!distinctObjects.add(tgt)) {
+                            continue;
+                        }
 
-        if (sp.getActivatingPlayer() != null && commitCrimeCheck(sp.getActivatingPlayer(), chosenTargets)) {
-            sp.getActivatingPlayer().commitCrime();
+                        runParams = AbilityKey.newMap();
+                        runParams.put(AbilityKey.SourceSA, s);
+                        runParams.put(AbilityKey.Target, tgt);
+                        if (tgt instanceof Card) {
+                            Card c = (Card) tgt;
+                            if (!c.hasBecomeTargetThisTurn()) {
+                                runParams.put(AbilityKey.FirstTime, null);
+                            }
+                            if (c.isValiant(activator)) {
+                                runParams.put(AbilityKey.Valiant, null);
+                            }
+                            c.addTargetFromThisTurn(activator);
+                        }
+                        game.getTriggerHandler().runTrigger(TriggerType.BecomesTarget, runParams, false);
+                    }
+                }
+                runParams = AbilityKey.newMap();
+                runParams.put(AbilityKey.SourceSA, s);
+                runParams.put(AbilityKey.Targets, distinctObjects);
+                runParams.put(AbilityKey.Cause, s.getHostCard());
+                game.getTriggerHandler().runTrigger(TriggerType.BecomesTargetOnce, runParams, false);
+            }
+
+            if (sp.getActivatingPlayer() != null && commitCrimeCheck(sp.getActivatingPlayer(), chosenTargets)) {
+                sp.getActivatingPlayer().commitCrime();
+            }
+
+            if (si != null) {
+                si.setTargetsProcessed(true);
+            }
         }
 
         game.fireEvent(new GameEventZone(ZoneType.Stack, sp, EventValueChangeType.Added));

@@ -401,7 +401,7 @@ public class AiController {
         final List<SpellAbility> spellAbility = Lists.newArrayList();
         for (final Card c : all) {
             CardState state = c.isForetold() && c.getAlternateState() != null ? c.getAlternateState() : c.getCurrentState();
-            for (final SpellAbility sa : state.getNonManaAbilities()) {
+            for (final SpellAbility sa : state.getSpellAbilities()) {
                 if (sa.getApi() == ApiType.Counter) {
                     spellAbility.add(sa);
                 }
@@ -836,12 +836,10 @@ public class AiController {
      * on their next turn. This prevents the AI from tapping out when it should
      * hold up interaction against a threatening commander.
      */
-    private void reserveManaForCounterSpellIfNeeded() {
-        // Only reserve during our own main phases
-        PhaseType phase = game.getPhaseHandler().getPhase();
-        if (phase != PhaseType.MAIN1 && phase != PhaseType.MAIN2) {
-            return;
-        }
+    void reserveManaForCounterSpellIfNeeded() {
+        // Reserve on our own turn during any phase — a counter drawn mid-turn
+        // (e.g., from a cantrip) should immediately trigger reservation so the
+        // AI stops tapping out.
         if (!game.getPhaseHandler().isPlayerTurn(player)) {
             return;
         }
@@ -906,24 +904,12 @@ public class AiController {
                 cheapestCounter = counter;
             }
         }
-        // Fallback: if no creature-targeting counter found, use any counter
-        if (cheapestCounter == null) {
-            for (SpellAbility counter : counters) {
-                int cmc = counter.getPayCosts().getTotalMana().getCMC();
-                if (cmc < cheapestCMC) {
-                    cheapestCMC = cmc;
-                    cheapestCounter = counter;
-                }
-            }
-        }
-
         if (cheapestCounter != null && cheapestCMC > 0) {
             CardCollection allSources = ComputerUtilMana.getAvailableManaSources(player, true);
             int toReserve = Math.min(allSources.size(), cheapestCMC);
             for (int i = 0; i < toReserve; i++) {
                 memory.rememberCard(allSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
             }
-        } else if (cheapestCounter == null) {
         }
     }
 
@@ -1460,7 +1446,18 @@ public class AiController {
         // Reset priority mana reservation that's meant to work for one spell only
         memory.clearMemorySet(AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_NEXT_SPELL);
 
+        // Reserve mana for counterspells before any spell selection path.
+        // Both the simulation picker and the heuristic evaluator need this
+        // so the AI doesn't tap out when it should hold counter mana.
+        reserveManaForCounterSpellIfNeeded();
+
         if (useSimulation) {
+            // TODO: The simulation picker doesn't naturally account for holding mana
+            // against future opponent plays (e.g., commander recast). It only evaluates
+            // the immediate board state change. The proper fix is to teach
+            // GameStateEvaluator to penalize game states where the player taps out
+            // with a counterable commander threat, rather than relying on the
+            // reservation system as an external constraint.
             return singleSpellAbilityList(simPicker.chooseSpellAbilityToPlay(null));
         }
 
@@ -1691,7 +1688,9 @@ public class AiController {
         //update LivingEndPlayer
         useLivingEnd = IterableUtil.any(player.getZone(ZoneType.Library), CardPredicates.nameEquals("Living End"));
 
-        // Reserve mana for counterspells if opponent could cast their commander
+        // Reservation already set in chooseSpellAbilityToPlay() before entering
+        // this method. Re-run here in case hand changed (e.g., drew a counter
+        // from a cantrip resolved earlier this priority).
         reserveManaForCounterSpellIfNeeded();
 
         SpellAbility chosenSa = chooseSpellAbilityToPlayFromList(saList, true);

@@ -62,6 +62,9 @@ public class SpellAbilityStackInstance implements IIdentifiable, IHasCardView {
 
     private String stackDescription = null;
 
+    // Guard against BecomesTarget triggers firing more than once for the same spell
+    private boolean targetsProcessed = false;
+
     private final StackItemView view;
 
     public SpellAbilityStackInstance(final SpellAbility sa) {
@@ -120,6 +123,14 @@ public class SpellAbilityStackInstance implements IIdentifiable, IHasCardView {
 
     public final boolean isStateTrigger(final int id) {
         return ability.getSourceTrigger() == id;
+    }
+
+    public boolean isTargetsProcessed() {
+        return targetsProcessed;
+    }
+
+    public void setTargetsProcessed(boolean processed) {
+        targetsProcessed = processed;
     }
 
     public final boolean isOptionalTrigger() {

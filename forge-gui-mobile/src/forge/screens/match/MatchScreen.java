@@ -756,16 +756,10 @@ public class MatchScreen extends FScreen {
     public boolean stopAtPhase(final PlayerView turn, final PhaseType phase) {
         final VPlayerPanel panel = getPlayerPanel(turn);
         if (panel == null) {
-            System.err.println("STOP_AT_PHASE: panel is null for turn=" + turn + ", phase=" + phase + " -> returning true (stop)");
             return true;
         }
         final PhaseLabel label = panel.getPhaseIndicator().getLabel(phase);
-        boolean result = label == null || label.getStopAtPhase();
-        System.err.println("STOP_AT_PHASE: turn=" + turn + ", phase=" + phase +
-            ", label=" + (label == null ? "null" : "exists") +
-            ", stopAtPhase=" + (label == null ? "N/A" : label.getStopAtPhase()) +
-            " -> result=" + result);
-        return result;
+        return label == null || label.getStopAtPhase();
     }
 
     public void resetAllPhaseButtons() {

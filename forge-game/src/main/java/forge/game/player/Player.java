@@ -1245,6 +1245,9 @@ public class Player extends GameEntity implements Comparable<Player> {
             c = game.getAction().moveTo(hand, c, cause, params);
             drawn.add(c);
 
+            // Notify controller so AI can update mana reservation if a counter was drawn
+            getController().onCardDrawn(c);
+
             // CR 121.6c additional actions can't be performed when draw gets replaced
             // but "drawn this way" effects should still count them
             if (cause != null && cause.hasParam("RememberDrawn") && cause.getParam("RememberDrawn").equals("AllReplaced")) {

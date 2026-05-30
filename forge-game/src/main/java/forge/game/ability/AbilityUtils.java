@@ -400,6 +400,13 @@ public class AbilityUtils {
             return val * multiplier;
         }
 
+        // "Double" and "Triple" are special keywords handled by PumpEffect directly,
+        // not SVars. Return 0 here to avoid noisy error logs from callers that
+        // don't pre-filter these (AI combat evaluation, stack description, etc.).
+        if ("Double".equals(amount) || "Triple".equals(amount)) {
+            return 0;
+        }
+
         // Try to fetch variable, try ability first, then card.
         String svarval = null;
         if (amount.indexOf('$') > 0) { // when there is a dollar sign, it's not a reference, it's a raw value!

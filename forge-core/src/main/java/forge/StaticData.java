@@ -100,8 +100,9 @@ public class StaticData {
                 }
             }
 
-            // Cache version based on edition count + total card entries
-            String cacheVersion = CardRulesCache.computeCacheVersion(editions);
+            // Cache version based on edition count + total card entries + card-script freshness
+            // (so editing card .txt files and rebuilding cardsfolder.zip invalidates the cache)
+            String cacheVersion = CardRulesCache.computeCacheVersion(editions, cardReader.getCardSourceTimestamp());
             boolean loadedFromCache = false;
 
             // Tier 1: Try to load CardRules from binary cache
@@ -218,22 +219,28 @@ public class StaticData {
                 System.err.println("FORGE-TIMING: CardDb.initialize() = " + (System.nanoTime() - initStart) / 1_000_000 + "ms");
 
                 // Save caches for next launch (in background thread to avoid blocking)
+                // Only save if we actually loaded cards — lazy loading returns empty
+                // and saving 0 rules would corrupt the cache for subsequent launches.
                 final Map<String, CardRules> allRulesToSave = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
                 allRulesToSave.putAll(regularCards);
                 allRulesToSave.putAll(variantsCards);
-                final String saveVersion = cacheVersion;
-                final CardDb saveCommon = commonCards;
-                final CardDb saveVariant = variantCards;
-                Thread cacheWriter = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        long saveStart = System.nanoTime();
-                        CardRulesCache.saveRules(allRulesToSave, saveVersion);
-                        CardRulesCache.savePaperCards(saveCommon, saveVariant, saveVersion);
-                        System.err.println("FORGE-TIMING: Cache saved in " + (System.nanoTime() - saveStart) / 1_000_000 + "ms");
-                    }
-                }, "CacheWriter");
-                cacheWriter.start();
+                if (!allRulesToSave.isEmpty()) {
+                    final String saveVersion = cacheVersion;
+                    final CardDb saveCommon = commonCards;
+                    final CardDb saveVariant = variantCards;
+                    Thread cacheWriter = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            long saveStart = System.nanoTime();
+                            CardRulesCache.saveRules(allRulesToSave, saveVersion);
+                            CardRulesCache.savePaperCards(saveCommon, saveVariant, saveVersion);
+                            System.err.println("FORGE-TIMING: Cache saved in " + (System.nanoTime() - saveStart) / 1_000_000 + "ms");
+                        }
+                    }, "CacheWriter");
+                    cacheWriter.start();
+                } else {
+                    System.err.println("FORGE-TIMING: Skipped cache save (0 rules loaded — lazy loading active?)");
+                }
             }
 
             // Wait for token loading to complete

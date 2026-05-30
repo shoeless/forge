@@ -195,6 +195,9 @@ public abstract class PlayerController {
     /** Shows message to player to reveal chosen cardName, creatureType, number etc. AI must analyze API to understand what that is */
     public abstract void notifyOfValue(SpellAbility saSource, GameObject realtedTarget, String value);
 
+    /** Called when a card is drawn into this player's hand. Override to react (e.g., update mana reservation). */
+    public void onCardDrawn(Card drawnCard) { /* default no-op */ }
+
     public abstract ImmutablePair<CardCollection, CardCollection> arrangeForScry(CardCollection topN);
     public abstract ImmutablePair<CardCollection, CardCollection> arrangeForSurveil(CardCollection topN);
 

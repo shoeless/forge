@@ -160,7 +160,13 @@ public class HostedMatch {
 
         game = match.createGame();
         game.EXPERIMENTAL_RESTORE_SNAPSHOT = FModel.getPreferences().getPrefBoolean(FPref.MATCH_EXPERIMENTAL_RESTORE);
-        game.AI_TIMEOUT = FModel.getPreferences().getPrefInt(FPref.MATCH_AI_TIMEOUT);
+        int aiTimeout = FModel.getPreferences().getPrefInt(FPref.MATCH_AI_TIMEOUT);
+        // iPad hardware is slower than desktop — wide boards with pump/attack
+        // simulation easily exceed 5s. Use a minimum of 15s on iOS.
+        if (GuiBase.isIOS() && aiTimeout < 15) {
+            aiTimeout = 15;
+        }
+        game.AI_TIMEOUT = aiTimeout;
         // Android API 31 and above can use completeOnTimeout -> CompletableFuture:
         //https://developer.android.com/reference/java/util/concurrent/CompletableFuture#completeOnTimeout(T,%20long,%20java.util.concurrent.TimeUnit)
         game.AI_CAN_USE_TIMEOUT = !GuiBase.isAndroid() || GuiBase.getAndroidAPILevel() > 30;
@@ -287,7 +293,12 @@ public class HostedMatch {
                 } else if (isMatchOver) {
                     addNextGameDecision(null, NextGameDecision.QUIT);
                 } else {
-                    addNextGameDecision(null, NextGameDecision.CONTINUE);
+                    // Brief pause between games for GC to reclaim memory from the
+                    // previous game. Without this, rapid game chaining (e.g., Bo10
+                    // Commander at high speed) causes memory pressure and AI timeouts.
+                    FThreads.delayInEDT(1000, () -> {
+                        addNextGameDecision(null, NextGameDecision.CONTINUE);
+                    });
                 }
             }
         });
@@ -349,8 +360,14 @@ public class HostedMatch {
 
             if (humanCount > 0) //conceded
                 humanController.getGui().afterGameEnd();
-            else if (!GuiBase.getInterface().isLibgdxPort()||!isMatchOver)
+            else if (!GuiBase.getInterface().isLibgdxPort())
                 humanController.getGui().afterGameEnd();
+            else {
+                // On libGDX (iOS/Android), always clean up between games AND after
+                // the final game. Skipping cleanup on match-over caused memory leaks
+                // in multi-game matches.
+                humanController.getGui().afterGameEnd();
+            }
             humanController.getGui().updateDayTime(null);
         }
         humanControllers.clear();
