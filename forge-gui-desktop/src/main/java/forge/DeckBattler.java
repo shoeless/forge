@@ -5,6 +5,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -28,8 +29,12 @@ import forge.game.GameRules;
 import forge.game.GameStage;
 import forge.game.GameType;
 import forge.game.Match;
+import forge.game.ability.ApiType;
+import forge.game.card.Card;
 import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
+import forge.game.spellability.SpellAbility;
+import forge.game.zone.ZoneType;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -149,30 +154,116 @@ public class DeckBattler {
     static class CardPerformanceAggregator {
         private final ConcurrentHashMap<String, double[]> cumulativeStats =
                 new ConcurrentHashMap<String, double[]>();
+        // Overall player-1 record, for conditional (drawn vs not-drawn) win-rate analysis.
+        private int totalGamesCounted = 0;
+        private int totalP1Wins = 0;
 
-        synchronized void addGameResult(Map<String, CardPerformanceTracker.CardStats> gameStats) {
+        // Length-stratified dWin: game length is a confounder (longer games draw more cards AND a
+        // tempo deck loses them), biasing every card's dWin negative. We stratify games by turn-count
+        // bucket and Mantel-Haenszel-average the within-bucket risk differences to de-confound.
+        // Upper-inclusive turn boundaries; index BUCKET_BOUNDS.length is the open-ended "and up" bucket.
+        private static final int[] BUCKET_BOUNDS = {8, 11, 14, 17, 20, 24, 28};
+        private static final int NBUCKETS = BUCKET_BOUNDS.length + 1;
+        private final int[] bucketTotal = new int[NBUCKETS];   // games per length bucket
+        private final int[] bucketWins = new int[NBUCKETS];    // p1 wins per length bucket
+        private final Map<String, int[]> bucketDrawn = new HashMap<String, int[]>();     // card -> drawn count per bucket
+        private final Map<String, int[]> bucketWinsDrawn = new HashMap<String, int[]>(); // card -> wins-when-drawn per bucket
+
+        private static int bucketOf(int turns) {
+            for (int i = 0; i < BUCKET_BOUNDS.length; i++) {
+                if (turns <= BUCKET_BOUNDS[i]) {
+                    return i;
+                }
+            }
+            return BUCKET_BOUNDS.length;
+        }
+
+        synchronized void addGameResult(Map<String, CardPerformanceTracker.CardStats> gameStats,
+                boolean p1Won, int turns) {
+            totalGamesCounted++;
+            if (p1Won) {
+                totalP1Wins++;
+            }
+            // Stratify only decided games with a real length; timeouts/errors pass turns<=0 (skip).
+            final int bucket = turns > 0 ? bucketOf(turns) : -1;
+            if (bucket >= 0) {
+                bucketTotal[bucket]++;
+                if (p1Won) {
+                    bucketWins[bucket]++;
+                }
+            }
             for (Map.Entry<String, CardPerformanceTracker.CardStats> entry : gameStats.entrySet()) {
                 String cardName = entry.getKey();
                 CardPerformanceTracker.CardStats stats = entry.getValue();
 
                 double[] cumulative = cumulativeStats.get(cardName);
                 if (cumulative == null) {
-                    cumulative = new double[7];
+                    cumulative = new double[8];
                     cumulativeStats.put(cardName, cumulative);
                 }
                 cumulative[0] += stats.damageDealt;
                 cumulative[1] += stats.manaCredit;
                 cumulative[2] += stats.blockingDamage;
                 cumulative[3] += stats.buffCredit;
-                cumulative[4] += 1;
+                cumulative[4] += 1;            // games this card was DRAWN into hand
                 if (stats.played) {
                     cumulative[5] += 1;
                 }
                 cumulative[6] += stats.removalValue;
+                if (p1Won) {
+                    cumulative[7] += 1;        // games WON among those where this card was drawn
+                }
+                if (bucket >= 0) {
+                    int[] bd = bucketDrawn.get(cardName);
+                    if (bd == null) {
+                        bd = new int[NBUCKETS];
+                        bucketDrawn.put(cardName, bd);
+                    }
+                    bd[bucket]++;
+                    if (p1Won) {
+                        int[] bw = bucketWinsDrawn.get(cardName);
+                        if (bw == null) {
+                            bw = new int[NBUCKETS];
+                            bucketWinsDrawn.put(cardName, bw);
+                        }
+                        bw[bucket]++;
+                    }
+                }
             }
         }
 
-        void printReport(PrintStream out, int totalGames, String playerName) {
+        /**
+         * Length-stratified (de-confounded) dWin in percentage points, or null if no usable strata.
+         * Mantel-Haenszel weighted average of within-bucket (Win%Drawn - Win%NotDrawn); weight =
+         * drawn*notDrawn/bucketTotal. Holding game length fixed removes the long-game bias that
+         * pushes raw dWin negative for every card.
+         */
+        Double stratifiedDWin(String card) {
+            int[] bd = bucketDrawn.get(card);
+            if (bd == null) {
+                return null;
+            }
+            int[] bw = bucketWinsDrawn.get(card);
+            double num = 0.0;
+            double den = 0.0;
+            for (int b = 0; b < NBUCKETS; b++) {
+                int drawn = bd[b];
+                int notDrawn = bucketTotal[b] - drawn;
+                if (drawn <= 0 || notDrawn <= 0) {
+                    continue;
+                }
+                int winsDrawn = bw == null ? 0 : bw[b];
+                int winsNot = bucketWins[b] - winsDrawn;
+                double p1 = (double) winsDrawn / drawn;
+                double p0 = (double) winsNot / notDrawn;
+                double w = (double) drawn * notDrawn / bucketTotal[b];
+                num += w * (p1 - p0) * 100.0;
+                den += w;
+            }
+            return den > 0 ? num / den : null;
+        }
+
+        void printReport(PrintStream out, int totalGames, String playerName, String opponentName) {
             if (cumulativeStats.isEmpty()) {
                 out.println("No card performance data collected.");
                 return;
@@ -192,8 +283,12 @@ public class DeckBattler {
 
             out.println();
             out.println("=== Card Performance Report (" + totalGames + " games, player: " + playerName + ") ===");
-            out.println(String.format("%-4s  %-32s %9s %6s %6s %6s %6s %6s %7s %6s",
-                    "Rank", "Card Name", "Avg Score", "Dmg", "Mana", "Block", "Buff", "Rmvl", "Drawn", "Played"));
+            out.println("Overall player record: " + totalP1Wins + "/" + totalGamesCounted
+                    + String.format(" (%.1f%%)", totalGamesCounted > 0 ? 100.0 * totalP1Wins / totalGamesCounted : 0.0)
+                    + "  [Win%Drawn vs Win%NotDr isolates each card's effect; NotDr should ~= control]");
+            out.println(String.format("%-4s  %-32s %9s %6s %6s %6s %6s %6s %7s %6s %9s %9s %7s",
+                    "Rank", "Card Name", "Avg Score", "Dmg", "Mana", "Block", "Buff", "Rmvl", "Drawn", "Played",
+                    "Win%Drawn", "Win%NotDr", "dWin%"));
 
             int rank = 1;
             for (Map.Entry<String, double[]> entry : entries) {
@@ -211,17 +306,149 @@ public class DeckBattler {
                 double avgScr = avgScore(c);
                 int drawn = (int) c[4];
                 int played = (int) c[5];
+                int winsDrawn = (int) c[7];
+                int notDrawn = totalGamesCounted - drawn;
+                int winsNotDrawn = totalP1Wins - winsDrawn;
+                // Conditional win rates are UNDEFINED (null) when there are no games in that subset:
+                // never drawn -> win%|drawn is n/a; drawn every game -> win%|not-drawn is n/a.
+                Double wpDrawn = drawn > 0 ? 100.0 * winsDrawn / drawn : null;
+                Double wpNotDrawn = notDrawn > 0 ? 100.0 * winsNotDrawn / notDrawn : null;
+                Double dWin = (wpDrawn != null && wpNotDrawn != null) ? wpDrawn - wpNotDrawn : null;
+                String cDrawn = String.format("%9s", wpDrawn != null ? String.format("%.1f%%", wpDrawn) : "n/a");
+                String cNotDr = String.format("%9s", wpNotDrawn != null ? String.format("%.1f%%", wpNotDrawn) : "n/a");
+                String cDelta = String.format("%7s", dWin != null ? String.format("%+.1f", dWin) : "n/a");
 
                 // Truncate long card names
                 if (name.length() > 32) {
                     name = name.substring(0, 29) + "...";
                 }
 
-                out.println(String.format("%3d.  %-32s %9.1f %6.1f %6.1f %6.1f %6.1f %6.1f %4d/%-2d %4d/%-2d",
+                out.println(String.format("%3d.  %-32s %9.1f %6.1f %6.1f %6.1f %6.1f %6.1f %4d/%-2d %4d/%-2d %s %s %s",
                         rank, name, avgScr, avgDmg, avgMana, avgBlock, avgBuff, avgRmvl,
-                        drawn, totalGames, played, drawn));
+                        drawn, totalGames, played, drawn, cDrawn, cNotDr, cDelta));
                 rank++;
             }
+
+            // ---- Tier 1 cut-screening: deck-average dWin baseline (removes the negative
+            // confound that drawing ANY card lengthens games), adjusted dWin, and a 95% CI
+            // on each card's dWin so noise reads (like Spark Double) don't get cut. ----
+            double sumDWin = 0;
+            int nDWin = 0;
+            for (Map.Entry<String, double[]> entry : entries) {
+                double[] c = entry.getValue();
+                int drawn = (int) c[4];
+                int notDrawn = totalGamesCounted - drawn;
+                if (drawn > 0 && notDrawn > 0) {
+                    double dWin = 100.0 * c[7] / drawn - 100.0 * (totalP1Wins - c[7]) / notDrawn;
+                    sumDWin += dWin;
+                    nDWin++;
+                }
+            }
+            final double deckAvgDWin = nDWin > 0 ? sumDWin / nDWin : 0.0;
+
+            out.println();
+            out.println(String.format(
+                    "Deck-average dWin (confound baseline) = %+.2f%% over %d cards. "
+                    + "Drawing ANY card biases dWin negative; read each card RELATIVE to this.",
+                    deckAvgDWin, nDWin));
+            out.println("=== CUT SCREENING (AdjDWin = dWin - deck-avg; worst-first; "
+                    + "◄cut = adj-dWin upper 95% CI < 0) ===");
+            out.println(String.format("%-4s  %-32s %6s %6s %10s %10s %8s %8s %8s %8s  %s",
+                    "Rank", "Card Name", "Drawn", "Cast%", "Win%Drawn", "Win%NotDr",
+                    "dWin", "AdjDWin", "StratDW", "+-95CI", "Flag"));
+
+            List<Map.Entry<String, double[]>> screen =
+                    new ArrayList<Map.Entry<String, double[]>>(cumulativeStats.entrySet());
+            final int tWins = totalP1Wins;
+            final int tGames = totalGamesCounted;
+            Collections.sort(screen, new Comparator<Map.Entry<String, double[]>>() {
+                @Override
+                public int compare(Map.Entry<String, double[]> a, Map.Entry<String, double[]> b) {
+                    return Double.compare(dWinOrInf(a.getValue(), tWins, tGames),
+                            dWinOrInf(b.getValue(), tWins, tGames));
+                }
+            });
+            int srank = 1;
+            for (Map.Entry<String, double[]> entry : screen) {
+                double[] c = entry.getValue();
+                int drawn = (int) c[4];
+                int notDrawn = totalGamesCounted - drawn;
+                if (drawn <= 0 || notDrawn <= 0) {
+                    continue;
+                }
+                int winsDrawn = (int) c[7];
+                int winsNot = totalP1Wins - winsDrawn;
+                double pD = (double) winsDrawn / drawn;
+                double pN = (double) winsNot / notDrawn;
+                double dWin = 100.0 * (pD - pN);
+                double adj = dWin - deckAvgDWin;
+                // 1.96 * SE(difference of two proportions) * 100
+                double margin = 196.0 * Math.sqrt(pD * (1 - pD) / drawn + pN * (1 - pN) / notDrawn);
+                int played = (int) c[5];
+                double cast = 100.0 * played / drawn;
+                // Only flag when the normal approximation for a difference of proportions is
+                // valid (success-failure condition: >=5 in every cell). Otherwise tiny-n
+                // extremes (e.g. 2 wins in 10 draws) spuriously look "significant" -- exactly
+                // how a 40-game sample flagged Aether Gale, our best card.
+                boolean validApprox = winsDrawn >= 5 && (drawn - winsDrawn) >= 5
+                        && winsNot >= 5 && (notDrawn - winsNot) >= 5;
+                boolean cut = validApprox && (adj + margin) < 0;
+                Double strat = stratifiedDWin(entry.getKey());
+                String stratStr = strat != null ? String.format("%+.1f", strat) : "n/a";
+                String nm = entry.getKey();
+                if (nm.length() > 32) {
+                    nm = nm.substring(0, 29) + "...";
+                }
+                out.println(String.format(
+                        "%3d.  %-32s %6d %5.0f%% %9.1f%% %9.1f%% %+7.1f %+7.1f %8s %7.1f  %s",
+                        srank, nm, drawn, cast, 100.0 * pD, 100.0 * pN, dWin, adj, stratStr, margin,
+                        cut ? "◄cut" : ""));
+                srank++;
+            }
+
+            // ---- machine-readable rows for exact cross-matchup/run pooling (screen-cuts.py).
+            // Pooling raw counts avoids the rounding error of re-deriving from printed %s. ----
+            out.println("=== CUT SCREENING DATA (machine-readable) ===");
+            for (Map.Entry<String, double[]> entry : cumulativeStats.entrySet()) {
+                double[] c = entry.getValue();
+                int drawn = (int) c[4];
+                int winsDrawn = (int) c[7];
+                int notDrawn = totalGamesCounted - drawn;
+                int winsNot = totalP1Wins - winsDrawn;
+                int played = (int) c[5];
+                out.println(String.format("#CUTROW\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d",
+                        playerName, opponentName, entry.getKey(),
+                        drawn, winsDrawn, notDrawn, winsNot, played, totalGamesCounted));
+            }
+
+            // Per-length-bucket counts for pooled Mantel-Haenszel stratified dWin (screen-cuts.py).
+            for (int b = 0; b < NBUCKETS; b++) {
+                out.println(String.format("#BUCKETTOT\t%s\t%s\t%d\t%d\t%d",
+                        playerName, opponentName, b, bucketTotal[b], bucketWins[b]));
+            }
+            for (Map.Entry<String, int[]> be : bucketDrawn.entrySet()) {
+                int[] bd = be.getValue();
+                int[] bw = bucketWinsDrawn.get(be.getKey());
+                for (int b = 0; b < NBUCKETS; b++) {
+                    if (bd[b] > 0) {
+                        out.println(String.format("#CUTBUCKET\t%s\t%s\t%s\t%d\t%d\t%d",
+                                playerName, opponentName, be.getKey(), b, bd[b],
+                                bw == null ? 0 : bw[b]));
+                    }
+                }
+            }
+        }
+
+        /** dWin% for sorting (worst first); undefined subsets sort to the end. */
+        private static double dWinOrInf(double[] c, int tWins, int tGames) {
+            int drawn = (int) c[4];
+            int notDrawn = tGames - drawn;
+            if (drawn <= 0 || notDrawn <= 0) {
+                return Double.POSITIVE_INFINITY;
+            }
+            double pD = (double) c[7] / drawn;
+            double pN = (double) (tWins - c[7]) / notDrawn;
+            return 100.0 * (pD - pN);
         }
 
         private static double avgScore(double[] c) {
@@ -416,7 +643,7 @@ public class DeckBattler {
         taggedOut.underlying.println("  Throughput: " + String.format("%.1f", completedGames / totalTime) + " games/s");
 
         // Print card performance report for deck 1
-        aggregator.printReport(taggedOut.underlying, completedGames, name1);
+        aggregator.printReport(taggedOut.underlying, completedGames, name1, name2);
     }
 
     /**
@@ -508,34 +735,110 @@ public class DeckBattler {
             System.err.println("  Game " + gameNumber + " error: " + e.getMessage());
             timer.cancel();
             if (tracker != null) {
-                aggregator.addGameResult(tracker.getStats());
+                aggregator.addGameResult(tracker.getStats(), false, 0);
             }
             return new GameResult(gameNumber, 0, false, 0);
         }
 
         timer.cancel();
 
-        // Collect card performance data
-        if (tracker != null) {
-            aggregator.addGameResult(tracker.getStats());
-        }
-
-        // Read outcome
+        // Read outcome FIRST, so this game's win/loss can be attributed to player 1's drawn cards.
         GameOutcome outcome = game.getOutcome();
-        if (timedOut[0] || turnLimitHit[0]) {
-            return new GameResult(gameNumber, 0, true, 0);
-        } else if (outcome == null || outcome.isDraw()) {
-            return new GameResult(gameNumber, 0, false, 0);
-        } else {
+        boolean nonResult = timedOut[0] || turnLimitHit[0];
+        int winnerNum = 0;
+        int turns = 0;
+        if (!nonResult && outcome != null && !outcome.isDraw()) {
             RegisteredPlayer winner = outcome.getWinningPlayer();
-            int winnerNum = 0;
             if (winner != null && winner.getPlayer().getName().equals(name1)) {
                 winnerNum = 1;
             } else if (winner != null) {
                 winnerNum = 2;
             }
-            int turns = outcome.getLastTurnNumber() > 0 ? outcome.getLastTurnNumber() : 0;
-            return new GameResult(gameNumber, winnerNum, false, turns);
+            turns = outcome.getLastTurnNumber() > 0 ? outcome.getLastTurnNumber() : 0;
         }
+
+        // Collect card performance data, tagging the game as a player-1 win or not.
+        if (tracker != null) {
+            aggregator.addGameResult(tracker.getStats(), winnerNum == 1, turns);
+        }
+
+        // Flight recorder (Wald): emit the terminal state of every game so LOSSES can be
+        // analyzed, not just averages — counterspells stranded in hand at death (AI decision
+        // failures), the opponent threats that finished us, and land-drop consistency.
+        // Format: #GAMEEND deck opp gameNum result(W/L/T) turns ourTurns ourLandDrops
+        //         countersInHand topOppCreatures(;-joined)
+        if (tracker != null) {
+            try {
+                // getRegisteredPlayers, NOT getPlayers: an eliminated (= losing) player is
+                // removed from getPlayers(), and losses are the games this recorder is FOR.
+                Player p1 = null;
+                for (Player p : game.getRegisteredPlayers()) {
+                    if (p.getName().equals(name1)) {
+                        p1 = p;
+                        break;
+                    }
+                }
+                if (p1 != null) {
+                    int countersHeld = 0;
+                    for (Card c : p1.getCardsIn(ZoneType.Hand)) {
+                        for (SpellAbility csa : c.getBasicSpells()) {
+                            if (csa.getApi() == ApiType.Counter) {
+                                countersHeld++;
+                                break;
+                            }
+                        }
+                    }
+                    List<Card> oppCreatures = new ArrayList<Card>();
+                    for (Player opp : game.getRegisteredPlayers()) {
+                        if (opp.equals(p1)) {
+                            continue;
+                        }
+                        for (Card c : opp.getCardsIn(ZoneType.Battlefield)) {
+                            if (c.isCreature()) {
+                                oppCreatures.add(c);
+                            }
+                        }
+                    }
+                    Collections.sort(oppCreatures, new Comparator<Card>() {
+                        @Override
+                        public int compare(Card a, Card b) {
+                            return b.getNetPower() - a.getNetPower();
+                        }
+                    });
+                    StringBuilder oppThreats = new StringBuilder();
+                    for (int i = 0; i < Math.min(4, oppCreatures.size()); i++) {
+                        if (i > 0) {
+                            oppThreats.append(";");
+                        }
+                        oppThreats.append(oppCreatures.get(i).getName());
+                    }
+                    System.out.println(String.format("#GAMEEND\t%s\t%s\t%d\t%s\t%d\t%d\t%d\t%d\t%s",
+                            name1, name2, gameNumber,
+                            nonResult ? "T" : (winnerNum == 1 ? "W" : "L"),
+                            turns, tracker.getOurTurns(), tracker.getOurLandDrops(), countersHeld,
+                            oppThreats.length() > 0 ? oppThreats.toString() : "-"));
+                    // Opponent commander casts with our answer-state snapshot at cast time:
+                    // #CMDRCAST deck opp gameNum result seq name countersHeld creatureCapable untappedLands outcome
+                    String gameResult = nonResult ? "T" : (winnerNum == 1 ? "W" : "L");
+                    for (String row : tracker.getCommanderCastLog()) {
+                        System.out.println("#CMDRCAST\t" + name1 + "\t" + name2 + "\t" + gameNumber
+                                + "\t" + gameResult + "\t" + row);
+                    }
+                    // Counter-allocation: what each of our counters targeted.
+                    // #COUNTERCAST deck opp gameNum result ourCounter targetName tgtIsCmdr tgtIsCreature tgtCMC commanderLoomable
+                    for (String row : tracker.getCounterCastLog()) {
+                        System.out.println("#COUNTERCAST\t" + name1 + "\t" + name2 + "\t" + gameNumber
+                                + "\t" + gameResult + "\t" + row);
+                    }
+                }
+            } catch (Exception e) {
+                // The recorder must never break a sim.
+            }
+        }
+
+        if (nonResult) {
+            return new GameResult(gameNumber, 0, true, 0);
+        }
+        return new GameResult(gameNumber, winnerNum, false, turns);
     }
 }

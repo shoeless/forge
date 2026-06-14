@@ -12,8 +12,12 @@ import com.google.common.eventbus.Subscribe;
 
 import forge.game.Game;
 import forge.game.GameEntity;
+import forge.ai.ComputerUtilCard;
+import forge.card.CardStateName;
+import forge.game.ability.ApiType;
 import forge.game.card.Card;
 import forge.game.card.CardCollectionView;
+import forge.game.card.CardState;
 import forge.game.card.CounterEnumType;
 import forge.game.card.CounterType;
 import forge.game.event.GameEvent;
@@ -22,6 +26,7 @@ import forge.game.event.GameEventCardChangeZone;
 import forge.game.event.GameEventCardCounters;
 import forge.game.event.GameEventLandPlayed;
 import forge.game.event.GameEventPlayerCounters;
+import forge.game.event.GameEventTurnBegan;
 import forge.game.event.GameEventPlayerDamaged;
 import forge.game.event.GameEventSpellAbilityCast;
 import forge.game.mana.Mana;
@@ -64,6 +69,9 @@ public class CardPerformanceTracker {
 
     // Maps opponent creature ID -> our spell's card name that targeted it (for removal attribution)
     private final Map<Integer, String> pendingRemovalTargets = new HashMap<Integer, String>();
+    // Counter attribution: countered-creature-card-id -> our counterspell name / credited value
+    private final Map<Integer, String> pendingCounterTargets = new HashMap<Integer, String>();
+    private final Map<Integer, Integer> pendingCounterValues = new HashMap<Integer, Integer>();
 
     // Quest counter tracking: source card name -> total quest counters placed
     private final Map<String, Integer> questCounterSources = new HashMap<String, Integer>();
@@ -73,6 +81,42 @@ public class CardPerformanceTracker {
     private final Map<String, Integer> energyProducers = new HashMap<String, Integer>();
     private int totalEnergyProduced = 0;
     private final Set<String> energySpenders = new HashSet<String>();
+
+    // Flight recorder (Wald): land-drop consistency for the tracked player.
+    // ourTurns counts the tracked player's turns; ourLandDrops their land plays —
+    // missed drops = ourTurns - ourLandDrops (mostly mana screw or empty hand).
+    private int ourTurns = 0;
+    private int ourLandDrops = 0;
+
+    // Flight recorder: opponent COMMANDER casts and whether we could/did answer them.
+    // Keyed by the commander card id while on the stack; value = snapshot
+    // "seq\tname\tcountersHeld\tcreatureCapable\tuntappedLands"; on stack exit the
+    // outcome (RESOLVED/DENIED) is appended and the row moves to commanderCastLog.
+    private int oppCommanderCastSeq = 0;
+    private final Map<Integer, String> pendingCommanderCasts = new HashMap<Integer, String>();
+    private final List<String> commanderCastLog = new ArrayList<String>();
+
+    /** Completed opponent-commander-cast rows: seq, name, countersHeld, creatureCapable, untappedLands, outcome. */
+    public List<String> getCommanderCastLog() {
+        return commanderCastLog;
+    }
+
+    // Flight recorder: every counterspell WE cast and what it targeted —
+    // "ourCounter\ttargetName\ttgtIsCommander\ttgtIsCreature\ttgtCMC\tcommanderLoomable".
+    private final List<String> counterCastLog = new ArrayList<String>();
+
+    /** Rows for each counterspell we cast: target + whether a commander was loomable. */
+    public List<String> getCounterCastLog() {
+        return counterCastLog;
+    }
+
+    public int getOurTurns() {
+        return ourTurns;
+    }
+
+    public int getOurLandDrops() {
+        return ourLandDrops;
+    }
 
     public CardPerformanceTracker(Player trackedPlayer) {
         this.trackedPlayer = trackedPlayer;
@@ -85,6 +129,39 @@ public class CardPerformanceTracker {
             cardStats.put(cardName, stats);
         }
         return stats;
+    }
+
+    /**
+     * Attribution name for a permanent. A cloned/copied permanent (e.g. Aurora Shifter or
+     * Spark Double that has "become a copy of" another creature) is credited under
+     * "&lt;original card name&gt; - &lt;copied target name&gt;", so the copy-maker gets credit for
+     * what its copy actually does on the battlefield instead of that value silently landing
+     * under the copied card's name. Non-clones return their plain name. Name-preserving clones
+     * (e.g. Irma, which keeps her own name via NewName) already carry their own credit, so they
+     * fall back to the plain name unless the copied target can be recovered.
+     */
+    private static String trackName(Card c) {
+        try {
+            if (c.isCloned()) {
+                CardState orig = c.getOriginalState(CardStateName.Original);
+                String original = orig != null ? orig.getName() : null;
+                String copied = c.getName();
+                if (original != null && !original.isEmpty()) {
+                    if (!original.equals(copied)) {
+                        return original + " - " + copied;
+                    }
+                    // Name-preserving clone (NewName): recover the copied target if available.
+                    Card origin = c.getCloneOrigin();
+                    if (origin != null && origin.getName() != null
+                            && !origin.getName().equals(original)) {
+                        return original + " - " + origin.getName();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Fall through to plain name on any state-transition hiccup.
+        }
+        return c.getName();
     }
 
     /**
@@ -102,6 +179,8 @@ public class CardPerformanceTracker {
             handleCardChangeZone((GameEventCardChangeZone) ev);
         } else if (ev instanceof GameEventLandPlayed) {
             handleLandPlayed((GameEventLandPlayed) ev);
+        } else if (ev instanceof GameEventTurnBegan) {
+            handleTurnBegan((GameEventTurnBegan) ev);
         } else if (ev instanceof GameEventCardCounters) {
             handleCardCounters((GameEventCardCounters) ev);
         } else if (ev instanceof GameEventPlayerCounters) {
@@ -130,7 +209,9 @@ public class CardPerformanceTracker {
             return;
         }
 
-        String sourceName = source.getName();
+        // Credit copies (clones) under "<original> - <copied target>" so copy-makers
+        // (Aurora Shifter, Spark Double, ...) get credit for what their copies do.
+        String sourceName = trackName(source);
 
         // 1. Direct damage credit
         getOrCreateStats(sourceName).damageDealt += amount;
@@ -284,6 +365,42 @@ public class CardPerformanceTracker {
             return;
         }
         if (!sa.getActivatingPlayer().equals(trackedPlayer)) {
+            // Flight recorder: an OPPONENT casting their commander is the highest-leverage
+            // counter decision in the game. Snapshot our ability to answer it at this exact
+            // moment (counters in hand, creature-capable counters, untapped lands); the
+            // outcome (resolved vs denied) is filled in when the spell leaves the stack
+            // (handleCardChangeZone), mirroring the counter-attribution machinery.
+            try {
+                Card oppHost = sa.getHostCard();
+                if (sa.isSpell() && oppHost != null && oppHost.isCommander()) {
+                    int countersHeld = 0;
+                    int creatureCapable = 0;
+                    for (Card c : trackedPlayer.getCardsIn(ZoneType.Hand)) {
+                        for (SpellAbility csa : c.getBasicSpells()) {
+                            if (csa.getApi() == ApiType.Counter) {
+                                countersHeld++;
+                                String validTgts = csa.getParamOrDefault("ValidTgts", "Card");
+                                if (!validTgts.contains("nonCreature") && !validTgts.contains("Noncreature")
+                                        && (validTgts.contains("Card") || validTgts.contains("Creature"))) {
+                                    creatureCapable++;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    int untappedLands = 0;
+                    for (Card land : trackedPlayer.getLandsInPlay()) {
+                        if (!land.isTapped()) {
+                            untappedLands++;
+                        }
+                    }
+                    oppCommanderCastSeq++;
+                    pendingCommanderCasts.put(oppHost.getId(), oppCommanderCastSeq + "\t" + oppHost.getName()
+                            + "\t" + countersHeld + "\t" + creatureCapable + "\t" + untappedLands);
+                }
+            } catch (Exception e) {
+                // recorder must never break tracking
+            }
             return;
         }
         if (!sa.isSpell()) {
@@ -293,6 +410,43 @@ public class CardPerformanceTracker {
         Card hostCard = sa.getHostCard();
         if (hostCard == null) {
             return;
+        }
+
+        // Flight recorder: when WE cast a counterspell, what is it aimed at? Tests whether
+        // the AI burns counters on non-commander spells while an opponent commander is
+        // loomable in the command zone (i.e. counter misallocation, not reservation size).
+        try {
+            if (sa.getApi() == ApiType.Counter) {
+                Card tgt = null;
+                for (SpellAbility tgtSpell : sa.getTargets().getTargetSpells()) {
+                    if (tgtSpell != null && tgtSpell.getHostCard() != null) {
+                        tgt = tgtSpell.getHostCard();
+                        break;
+                    }
+                }
+                boolean tgtIsCommander = tgt != null && tgt.isCommander();
+                boolean tgtIsCreature = tgt != null && tgt.isCreature();
+                int tgtCMC = tgt != null ? tgt.getCMC() : -1;
+                // Is an opponent commander loomable (in the command zone) right now —
+                // i.e. could this counter have been saved for it?
+                boolean commanderLoomable = false;
+                for (Player opp : trackedPlayer.getOpponents()) {
+                    for (Card cmd : opp.getCommanders()) {
+                        if (cmd.isInZone(ZoneType.Command)) {
+                            commanderLoomable = true;
+                            break;
+                        }
+                    }
+                    if (commanderLoomable) {
+                        break;
+                    }
+                }
+                counterCastLog.add(sa.getHostCard().getName() + "\t"
+                        + (tgt != null ? tgt.getName() : "-") + "\t" + tgtIsCommander
+                        + "\t" + tgtIsCreature + "\t" + tgtCMC + "\t" + commanderLoomable);
+            }
+        } catch (Exception e) {
+            // recorder must never break tracking
         }
 
         String cardName = hostCard.getName();
@@ -360,6 +514,34 @@ public class CardPerformanceTracker {
         } catch (Exception e) {
             // Ignore - targets may not be available
         }
+
+        // Counter attribution (phase 1 of 2): if we counter an opponent CREATURE spell, only
+        // RECORD a pending note here — the actual score is added at resolution (handleCardChangeZone)
+        // and ONLY if the creature truly leaves the Stack to GY/Exile. So if our counter is itself
+        // countered (the creature then resolves to the Battlefield), nothing is credited.
+        // Value = largest of threat-level[1-6], mana value, power, toughness.
+        try {
+            if (sa.getApi() == ApiType.Counter) {
+                for (SpellAbility tgtSpell : sa.getTargets().getTargetSpells()) {
+                    Card countered = tgtSpell == null ? null : tgtSpell.getHostCard();
+                    if (countered != null && countered.isCreature()
+                            && countered.getController() != null
+                            && !countered.getController().equals(trackedPlayer)) {
+                        int eval = ComputerUtilCard.evaluateCreature(countered);
+                        int threat = Math.max(1, Math.min(6, (int) Math.round(eval / 100.0)));
+                        int value = Math.max(Math.max(threat, countered.getCMC()),
+                                Math.max(countered.getNetPower(), countered.getNetToughness()));
+                        if (value < 1) {
+                            value = 1;
+                        }
+                        pendingCounterTargets.put(countered.getId(), cardName);
+                        pendingCounterValues.put(countered.getId(), value);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Ignore - counter targets/eval may be unavailable
+        }
     }
 
     /**
@@ -404,7 +586,7 @@ public class CardPerformanceTracker {
                     double creditPerBlocker = (double) attackerPower / ourBlockerCount;
                     for (Card blocker : blockers) {
                         if (blocker.getController().equals(trackedPlayer)) {
-                            getOrCreateStats(blocker.getName()).blockingDamage += creditPerBlocker;
+                            getOrCreateStats(trackName(blocker)).blockingDamage += creditPerBlocker;
                             // Token blocking parent credit
                             if (blocker.isToken()) {
                                 try {
@@ -473,6 +655,35 @@ public class CardPerformanceTracker {
                         for (String manaSourceName : manaSources) {
                             getOrCreateStats(manaSourceName).manaCredit += creditPerSource;
                         }
+                    }
+                }
+            }
+        }
+
+        // Flight recorder: an opponent commander spell leaves the stack — record the outcome.
+        // Battlefield = RESOLVED (we failed/declined to stop it); anywhere else (command zone
+        // after being countered, graveyard, exile, hand, library) = DENIED.
+        if (from.getZoneType() == ZoneType.Stack && pendingCommanderCasts.containsKey(card.getId())) {
+            String snapshot = pendingCommanderCasts.remove(card.getId());
+            boolean resolved = to.getZoneType() == ZoneType.Battlefield;
+            commanderCastLog.add(snapshot + "\t" + (resolved ? "RESOLVED" : "DENIED"));
+        }
+
+        // Counter attribution (phase 2 of 2): an opponent CREATURE spell we countered leaves the
+        // Stack. Credit the counterspell ONLY if it actually went to GY/Exile (i.e. was countered);
+        // if it resolved to the Battlefield instead (our counter was itself countered/fizzled), the
+        // pending note is dropped with no credit.
+        if (from.getZoneType() == ZoneType.Stack && pendingCounterTargets.containsKey(card.getId())) {
+            String counterName = pendingCounterTargets.remove(card.getId());
+            Integer counterValue = pendingCounterValues.remove(card.getId());
+            boolean wasCountered = to.getZoneType() == ZoneType.Graveyard || to.getZoneType() == ZoneType.Exile;
+            if (wasCountered && counterName != null && counterValue != null) {
+                getOrCreateStats(counterName).removalValue += counterValue;
+                Set<String> manaSources = castManaSourcesMap.get(counterName);
+                if (manaSources != null && !manaSources.isEmpty()) {
+                    double creditPerSource = (double) counterValue / manaSources.size();
+                    for (String manaSourceName : manaSources) {
+                        getOrCreateStats(manaSourceName).manaCredit += creditPerSource;
                     }
                 }
             }
@@ -574,10 +785,18 @@ public class CardPerformanceTracker {
      */
     private void handleLandPlayed(GameEventLandPlayed ev) {
         if (ev.player() != null && ev.player().equals(trackedPlayer)) {
+            ourLandDrops++;
             Card land = ev.land();
             if (land != null) {
                 getOrCreateStats(land.getName()).played = true;
             }
+        }
+    }
+
+    /** Counts the tracked player's turns for missed-land-drop accounting. */
+    private void handleTurnBegan(GameEventTurnBegan ev) {
+        if (ev.turnOwner() != null && ev.turnOwner().equals(trackedPlayer)) {
+            ourTurns++;
         }
     }
 
