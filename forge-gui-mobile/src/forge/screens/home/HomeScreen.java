@@ -19,6 +19,7 @@ import forge.game.GameType;
 import forge.gui.FThreads;
 import forge.screens.FScreen;
 import forge.screens.achievements.AchievementsScreen;
+import forge.screens.gallery.CardGalleryScreen;
 import forge.screens.online.OnlineMenu.OnlineScreen;
 import forge.screens.planarconquest.ConquestMenu;
 import forge.screens.quest.QuestMenu;
@@ -63,6 +64,7 @@ public class HomeScreen extends FScreen {
     private final List<MenuButton> buttons = new ArrayList<>();
     private int activeButtonIndex, baseButtonCount;
     private FDeckChooser deckManager;
+    private CardGalleryScreen cardGallery;
     private boolean QuestCommander = false;
     private String QuestWorld = "";
 
@@ -133,6 +135,14 @@ public class HomeScreen extends FScreen {
                 e1.printStackTrace();
             }
         }));
+        //Card Gallery: fire-and-forget (no lastButtonIndex) so it stays out of the
+        //post-match openMenu() restore logic, which only tracks game-launch buttons.
+        addButton(Forge.getLocalizer().getMessage("lblCardGallery"), e -> {
+            if (cardGallery == null) {
+                cardGallery = new CardGalleryScreen();
+            }
+            Forge.openScreen(cardGallery);
+        });
         baseButtonCount = buttons.size();
     }
 

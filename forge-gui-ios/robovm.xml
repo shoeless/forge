@@ -72,6 +72,11 @@
     <!-- os_log wrapper for iOS 26+ logging -->
     <pattern>forge.ios.ForgeOSLog</pattern>
     <pattern>forge.ios.OSLogPrintStream</pattern>
+    <!-- Card Gallery: screen + artist filter are reached via menu callback / config wiring -->
+    <pattern>forge.screens.gallery.CardGalleryScreen</pattern>
+    <pattern>forge.screens.gallery.CardGalleryScreen$*</pattern>
+    <pattern>forge.itemmanager.filters.CardArtistFilter</pattern>
+    <pattern>forge.itemmanager.filters.CardArtistFilter$*</pattern>
   </forceLinkClasses>
   <frameworkPaths>
     <path>libs</path>
