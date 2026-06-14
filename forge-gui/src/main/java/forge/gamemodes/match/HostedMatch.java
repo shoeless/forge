@@ -13,6 +13,7 @@ import forge.game.event.GameEvent;
 import forge.game.event.GameEventSubgameEnd;
 import forge.game.event.GameEventSubgameStart;
 import forge.game.event.IGameEventVisitor;
+import forge.game.HumanPlayTracker;
 import forge.game.player.Player;
 import forge.game.player.PlayerView;
 import forge.game.player.RegisteredPlayer;
@@ -184,6 +185,26 @@ public class HostedMatch {
 
         game.subscribeToEvents(SoundSystem.instance);
         game.subscribeToEvents(visitor);
+
+        // Optional: track the human player's per-card conditional win-rate (drawn vs not-drawn),
+        // so human piloting can be compared apples-to-apples with the AI. Gated by -Dforge.trackHuman=true;
+        // writes a cumulative report at the end of each game. No effect on normal play when disabled.
+        // Restricted to EXACTLY ONE human: the accumulator is shared, so 2+ humans (hotseat) would
+        // double-count games and merge both players' cards into one report — skip + warn in that case.
+        if (HumanPlayTracker.isEnabled()) {
+            final List<Player> trackableHumans = new ArrayList<>();
+            for (final Player pl : game.getPlayers()) {
+                if (pl.getController() instanceof PlayerControllerHuman) {
+                    trackableHumans.add(pl);
+                }
+            }
+            if (trackableHumans.size() == 1) {
+                game.subscribeToEvents(new HumanPlayTracker(trackableHumans.get(0)));
+            } else {
+                System.out.println("[HumanPlayTracker] disabled for this game: requires exactly 1 human, found "
+                        + trackableHumans.size());
+            }
+        }
 
         final FCollectionView<Player> players = game.getPlayers();
         final String[] avatarIndices = FModel.getPreferences().getPref(FPref.UI_AVATARS).split(",");
