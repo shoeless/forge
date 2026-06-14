@@ -278,7 +278,9 @@ public class CountersPutEffect extends SpellAbilityEffect {
                 if (randomMap.containsKey(found)) {
                     int oN = randomMap.get(found);
                     int nN = oN + 1;
-                    randomMap.replace(found, oN, nN);
+                    // Map.replace(K,V,V) is a Java-8 default method RoboVM/iOS lacks; the key is
+                    // known-present and oN is its current value, so a plain put is equivalent.
+                    randomMap.put(found, nN);
                 } else {
                     randomMap.put(found, 1);
                 }
