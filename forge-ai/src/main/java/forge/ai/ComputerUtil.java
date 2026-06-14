@@ -566,9 +566,19 @@ public class ComputerUtil {
         int count = 0;
 
         while (count < amount) {
-            Card prefCard = getCardPreference(ai, source, "SacCost", typeList, ability);
-            if (prefCard == null) {
-                prefCard = ComputerUtilCard.getWorstAI(typeList);
+            Card prefCard;
+            if (ability != null && ability.getApi() == ApiType.Counter) {
+                // Sacrifice-cost counterspells (e.g. Abjure): sacrifice the argmin-value
+                // candidate. The generic SacCost preference path below is biased to sac
+                // enchantments/artifacts before creatures, which would feed a real
+                // enchantment to the cost while fungible creature tokens are available.
+                // CounterAi gates the cast on this same valuation (threat > fodder).
+                prefCard = ComputerUtilCard.getCheapestSacrificeAI(typeList);
+            } else {
+                prefCard = getCardPreference(ai, source, "SacCost", typeList, ability);
+                if (prefCard == null) {
+                    prefCard = ComputerUtilCard.getWorstAI(typeList);
+                }
             }
             if (prefCard == null) {
                 return null;
@@ -1698,6 +1708,10 @@ public class ComputerUtil {
 
         SpellAbility saviorWithSubs = saviour;
         ApiType saviorWithSubsApi = saviorWithSubs == null ? null : saviorWithSubs.getApi();
+        // Phasing a creature out makes it (temporarily) leave play, dodging the threat entirely —
+        // damage, destroy, exile, -X/-X, gain-control. Detected from a Phases (sub)ability so cards
+        // like Slip Out the Back (PutCounter root + Phases sub) are recognized as a save.
+        boolean grantPhaseOut = false;
         while (saviorWithSubs != null) {
             ApiType curApi = saviorWithSubs.getApi();
             if (curApi == ApiType.Pump || curApi == ApiType.PumpAll) {
@@ -1712,6 +1726,9 @@ public class ComputerUtil {
                     grantShroud = true;
                 }
                 break;
+            }
+            if (curApi == ApiType.Phases) {
+                grantPhaseOut = true;
             }
             // Consider pump in subabilities, e.g. Bristling Hydra hexproof subability
             saviorWithSubs = saviorWithSubs.getSubAbility();
@@ -1784,7 +1801,7 @@ public class ComputerUtil {
                         }
 
                         boolean canSave = ComputerUtilCombat.predictDamageTo(c, dmg - toughness, source, false) < ComputerUtilCombat.getDamageToKill(c, false);
-                        if (!canSave) {
+                        if (!canSave && !grantPhaseOut) {
                             continue;
                         }
                     }
@@ -1841,7 +1858,7 @@ public class ComputerUtil {
 
                     if (saviourApi == ApiType.PutCounter || saviourApi == ApiType.PutCounterAll) {
                         boolean canSave = c.getNetToughness() + toughness > dmg;
-                        if (!canSave) {
+                        if (!canSave && !grantPhaseOut) {
                             continue;
                         }
                     }
@@ -1867,7 +1884,8 @@ public class ComputerUtil {
                         && !topStack.hasParam("NoRegen")) || saviourApi == ApiType.ChangeZone
                         || saviourApi == ApiType.Pump || saviourApi == ApiType.PumpAll
                         || saviourApi == ApiType.Protection || saviourApi == null
-                        || saviorWithSubsApi == ApiType.Pump || saviorWithSubsApi == ApiType.PumpAll)) {
+                        || saviorWithSubsApi == ApiType.Pump || saviorWithSubsApi == ApiType.PumpAll
+                        || grantPhaseOut)) {
             for (final Object o : objects) {
                 if (o instanceof Card) {
                     Card c = (Card) o;
@@ -1915,7 +1933,7 @@ public class ComputerUtil {
         // Exiling => bounce/shroud
         else if ((threatApi == ApiType.ChangeZone || threatApi == ApiType.ChangeZoneAll)
                 && (saviourApi == ApiType.ChangeZone || saviourApi == ApiType.Pump || saviourApi == ApiType.PumpAll
-                || saviourApi == ApiType.Protection || saviourApi == null)
+                || saviourApi == ApiType.Protection || saviourApi == null || grantPhaseOut)
                 && topStack.hasParam("Destination")
                 && topStack.getParam("Destination").equals("Exile")) {
             for (final Object o : objects) {
@@ -1945,7 +1963,7 @@ public class ComputerUtil {
         else if ((threatApi == ApiType.GainControl
                     || (threatApi == ApiType.Attach && topStack.hasParam("AILogic") && topStack.getParam("AILogic").equals("GainControl") ))
                 && (saviourApi == ApiType.ChangeZone || saviourApi == ApiType.Pump || saviourApi == ApiType.PumpAll
-                || saviourApi == ApiType.Protection || saviourApi == null)) {
+                || saviourApi == ApiType.Protection || saviourApi == null || grantPhaseOut)) {
             for (final Object o : objects) {
                 if (o instanceof Card) {
                     Card c = (Card) o;

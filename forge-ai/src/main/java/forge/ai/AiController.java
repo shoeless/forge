@@ -848,8 +848,11 @@ public class AiController {
         memory.clearMemorySet(AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
 
         // Check if any opponent has a commander in the command zone that they
-        // could cast with their current mana sources (available next turn)
+        // could cast with their current mana sources (available next turn).
+        // Remember WHICH commander so sacrifice-cost counters can be checked
+        // against it below.
         boolean commanderThreat = false;
+        Card threateningCommander = null;
         for (Player opp : player.getOpponents()) {
             for (Card commander : opp.getCommanders()) {
                 if (!commander.isInZone(ZoneType.Command)) {
@@ -860,10 +863,21 @@ public class AiController {
                 // Pass false to count ALL mana sources including summoning-sick
                 // creatures — they'll untap and be available on opponent's turn
                 int oppMana = getAvailableManaEstimate(opp, false);
-                // Reserve when opponent is within 2 mana of casting.
-                // Ramp-heavy decks can gain 2+ mana per turn with dorks/rocks.
-                if (oppMana >= commanderCMC - 2) {
+                // Reserve when opponent is within 1 mana of casting (tightened from 2:
+                // the 2-mana buffer over-fired, making the AI sandbag mana nearly every
+                // turn against commanders it couldn't actually cast yet).
+                // NOTE: a velocity-based dynamic buffer (oppMana + observed per-turn mana
+                // growth, clamped [1,3]) was A/B-tested 2026-06-12 vs a ramp deck (Blanka)
+                // and proved BEHAVIORALLY INERT: the commander-denial funnel was unchanged
+                // in every bucket (deny-by-cast 81/40/47 -> 80/38/46; tapped-out-with-
+                // counter 20.0% -> 22.5%), and the win-rate delta was within observed
+                // run-to-run variance. Earlier arming almost never converts to a different
+                // decision — the recasts resolve because the first counter legitimately
+                // spends the held mana (same-turn recasts off mana bursts), not because
+                // the trigger fires late. Don't re-add without funnel evidence.
+                if (oppMana >= commanderCMC - 1) {
                     commanderThreat = true;
+                    threateningCommander = commander;
                     break;
                 }
             }
@@ -898,6 +912,39 @@ public class AiController {
             if (!validTgts.contains("Card") && !validTgts.contains("Creature")) {
                 continue; // doesn't include creatures (e.g. "Instant" or "Sorcery")
             }
+            // Counters with a non-self sacrifice additional cost (e.g. Abjure) are only a
+            // real reservation basis if the sacrifice can actually be paid right now AND
+            // the CounterAi value gate would approve the trade against this commander —
+            // otherwise reserving just 1 mana for Abjure is hollow (the AI taps out,
+            // the commander resolves, and the "reserved" counter can't or won't fire).
+            // Uses the same valuation as the gate so reservation and cast can't disagree.
+            Cost counterCost = counter.getPayCosts();
+            if (counterCost != null && counterCost.hasSpecificCostType(CostSacrifice.class)) {
+                CostSacrifice sacCost = counterCost.getCostPartByType(CostSacrifice.class);
+                if (sacCost != null && !sacCost.payCostFromSource() && !"OriginalHost".equals(sacCost.getType())) {
+                    int sacAmount = 1;
+                    try {
+                        sacAmount = sacCost.getAbilityAmount(counter);
+                    } catch (Exception e) {
+                        // non-numeric amount; assume 1
+                    }
+                    CardCollection wouldSac = ComputerUtil.chooseSacrificeType(player, sacCost.getType(), counter, null, false, sacAmount, null);
+                    if (wouldSac == null || wouldSac.isEmpty()) {
+                        System.out.println("MANA-RES: skipping " + counter.getHostCard() + " as reservation basis (sac cost unpayable)");
+                        continue;
+                    }
+                    int sacValue = 0;
+                    for (Card sacFodder : wouldSac) {
+                        sacValue = Math.max(sacValue, ComputerUtilCard.evaluateSacrificeCostValue(sacFodder));
+                    }
+                    if (threateningCommander != null
+                            && ComputerUtilCard.evaluateCounterExchangeValue(threateningCommander) <= sacValue) {
+                        System.out.println("MANA-RES: skipping " + counter.getHostCard() + " as reservation basis (gate would decline vs "
+                                + threateningCommander + ": fodder " + sacValue + ")");
+                        continue;
+                    }
+                }
+            }
             int cmc = counter.getPayCosts().getTotalMana().getCMC();
             if (cmc < cheapestCMC) {
                 cheapestCMC = cmc;
@@ -905,6 +952,11 @@ public class AiController {
             }
         }
         if (cheapestCounter != null && cheapestCMC > 0) {
+            // Reserve a single counter's worth. A +2 "hold two answers" bump for explosive
+            // (pump-into-lethal) commanders was A/B-tested 2026-06-13 and was inert/slightly
+            // negative — the tapped-out funnel bucket did NOT shrink. The binding constraint
+            // is counter ALLOCATION (spending the counter on a non-commander spell before the
+            // commander lands), not reservation SIZE; being investigated via #COUNTERCAST.
             CardCollection allSources = ComputerUtilMana.getAvailableManaSources(player, true);
             int toReserve = Math.min(allSources.size(), cheapestCMC);
             for (int i = 0; i < toReserve; i++) {
