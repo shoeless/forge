@@ -38,6 +38,8 @@ public class CardGalleryScreen extends FScreen {
             public void run() {
                 cardManager.setup(ItemManagerConfig.CARD_GALLERY);
                 cardManager.addFilter(new CardArtistFilter(cardManager));
+                //single tap on a card toggles its favorite (star); long-press still zooms
+                cardManager.setTapToFavorite(true);
                 cardManager.setPool(StaticData.instance().getCommonCards().getAllCards());
             }
         });

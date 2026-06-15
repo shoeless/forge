@@ -103,17 +103,31 @@ public class HomeScreen extends FScreen {
             }
             Forge.openScreen(deckManager);
         });
-        addButton(Forge.getLocalizer().getMessage("lblAchievements"), e -> {
+        //Card Gallery (list position 4): sets activeButtonIndex so the landscape highlight
+        //(buttons.get(activeButtonIndex) below) maps to the right button, but NOT
+        //Forge.lastButtonIndex, so it stays out of the post-match openMenu() restore — it
+        //never launches a match. Achievements/Settings shift to indices 5/6 to keep
+        //index == list position.
+        addButton(Forge.getLocalizer().getMessage("lblCardGallery"), e -> {
             activeButtonIndex = 4;
+            if (cardGallery == null) {
+                cardGallery = new CardGalleryScreen();
+            }
+            Forge.openScreen(cardGallery);
+        });
+        addButton(Forge.getLocalizer().getMessage("lblAchievements"), e -> {
+            activeButtonIndex = 5;
             Forge.lastButtonIndex = activeButtonIndex;
             AchievementsScreen.show();
         });
         addButton(Forge.getLocalizer().getMessage("lblSettings"), e -> {
-            activeButtonIndex = 5;
+            activeButtonIndex = 6;
             Forge.lastButtonIndex = activeButtonIndex;
             SettingsScreen.show(true);
         });
-        addButton(Forge.getLocalizer().getMessage("lblHelp"), e -> FThreads.invokeInEdtLater(() -> {
+        addButton(Forge.getLocalizer().getMessage("lblHelp"), e -> {
+            activeButtonIndex = 7; //list position 7; highlight-only (Help opens a dialog, so no lastButtonIndex restore)
+            FThreads.invokeInEdtLater(() -> {
             try {
                 if (Forge.getDeviceAdapter().isConnectedToInternet()) {
                     FOptionPane.showOptionDialog("Join Discord option will open the invite link to join Forge Discord server. Forge Support option will open the Forge Support Channel.", "Choose option", FOptionPane.INFORMATION_ICON, ImmutableList.of("Join Discord", "Forge Support"), -1, result -> {
@@ -134,14 +148,7 @@ public class HomeScreen extends FScreen {
             } catch (Exception e1) {
                 e1.printStackTrace();
             }
-        }));
-        //Card Gallery: fire-and-forget (no lastButtonIndex) so it stays out of the
-        //post-match openMenu() restore logic, which only tracks game-launch buttons.
-        addButton(Forge.getLocalizer().getMessage("lblCardGallery"), e -> {
-            if (cardGallery == null) {
-                cardGallery = new CardGalleryScreen();
-            }
-            Forge.openScreen(cardGallery);
+            });
         });
         baseButtonCount = buttons.size();
     }
@@ -163,7 +170,7 @@ public class HomeScreen extends FScreen {
             return; //menu on startup
         if (index == 2)
             OnlineScreen.Lobby.open();
-        else if (index < 6)
+        else if (index < 7) //covers New Game/Load/Deck Manager/Achievements(5)/Settings(6) - none below launch a mode menu
             NewGameMenu.getPreferredScreen().open();
         else if (index == 6)
             QuestMenu.launchQuestMode(QuestMenu.LaunchReason.StartQuestMode, HomeScreen.instance.getQuestCommanderMode());

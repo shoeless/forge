@@ -18,6 +18,7 @@ import forge.card.*;
 import forge.card.CardRenderer.CardStackPosition;
 import forge.deck.*;
 import forge.deck.io.DeckPreferences;
+import forge.gui.card.CardPreferences;
 import forge.game.card.CardView;
 import forge.gamemodes.limited.CardRanker;
 import forge.gamemodes.planarconquest.ConquestCommander;
@@ -663,6 +664,14 @@ public class ImageView<T extends InventoryItem> extends ItemView<T> {
     protected boolean tap(float x, float y, int count) {
         ItemInfo item = getItemAtPoint(x, y);
         if (count == 1) {
+            if (itemManager.isTapToFavorite() && item != null && item.getKey() instanceof PaperCard) {
+                //Card Gallery: single tap toggles the card's favorite (star) instead of selecting.
+                //The star indicator is drawn live from itemIsFavorite(), so no relayout is needed.
+                CardPreferences prefs = CardPreferences.getPrefs((PaperCard) item.getKey());
+                prefs.setStarCount(prefs.getStarCount() > 0 ? 0 : 1);
+                CardPreferences.save();
+                return true;
+            }
             selectItem(item);
             if (item != null)
                 itemManager.showMenu(true, item.getLeft(), item.getWidth());
