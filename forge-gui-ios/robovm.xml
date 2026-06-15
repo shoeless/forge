@@ -53,6 +53,10 @@
     <pattern>java.io.ObjectStreamClass</pattern>
     <pattern>java.io.ObjectStreamField</pattern>
     <!-- NOTE: java.util.function is NOT available in RoboVM - use forge.util.function backports instead -->
+    <!-- No-op Sentry stubs (sentry-stub module): real io.sentry SDK is excluded on iOS, so
+         shared Forge telemetry calls (BugReporter/PlayerControllerHuman/Forge/etc.) resolve to
+         these. Force-linked because they're reached only via precompiled bytecode references. -->
+    <pattern>io.sentry.**</pattern>
     <!-- LZ4 compression for multiplayer networking -->
     <pattern>net.jpountz.lz4.**</pattern>
     <pattern>net.jpountz.xxhash.**</pattern>
