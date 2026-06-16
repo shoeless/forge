@@ -1093,7 +1093,24 @@ public class AiBlockController {
         if (attackers.isEmpty()) {
             return;
         }
+        // Activate the combat-evaluation cache scope for blocking (it has none on its own), so the
+        // repeated canDestroy*/getSafeBlockers/getKillingBlockers scans across the up-to-3 block
+        // restarts reuse one trigger/static snapshot + the per-decision identity cache. Reuse an
+        // already-open outer scope if present (avoids clobbering it).
+        final boolean ownScope = !ComputerUtilCombat.isInCombatEvaluation();
+        if (ownScope) {
+            ComputerUtilCombat.beginCombatEvaluation(ai.getGame());
+        }
+        try {
+            assignBlockersInner(combat, possibleBlockers);
+        } finally {
+            if (ownScope) {
+                ComputerUtilCombat.endCombatEvaluation();
+            }
+        }
+    }
 
+    private void assignBlockersInner(final Combat combat, List<Card> possibleBlockers) {
         clearBlockers(combat, possibleBlockers);
 
         diff = (ai.getLife() * 2) - 5; // This is the minimal gain for an unnecessary trade

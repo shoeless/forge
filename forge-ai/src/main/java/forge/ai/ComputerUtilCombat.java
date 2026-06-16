@@ -48,6 +48,7 @@ import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -67,6 +68,14 @@ public class ComputerUtilCombat {
     // Call beginCombatEvaluation() before and endCombatEvaluation() after bulk evaluation.
     private static final ThreadLocal<List<Trigger>> cachedCombatTriggers = new ThreadLocal<List<Trigger>>();
     private static final ThreadLocal<List<StaticAbility>> cachedCombatStaticAbilities = new ThreadLocal<List<StaticAbility>>();
+    // Per-decision memo of canDestroyAttacker/canDestroyBlocker results, keyed by
+    // (attacker identity | blocker identity | flags) so identical-token combats reuse one result.
+    // Lifecycle is bound to beginCombatEvaluation()/endCombatEvaluation(); null = not in a bulk scope.
+    private static final ThreadLocal<Map<String, Boolean>> cachedDestroyResults = new ThreadLocal<Map<String, Boolean>>();
+    // Validation toggle: when -Dforge.ai.sigAudit=true, every cache HIT recomputes the real value
+    // and logs any mismatch — a deterministic proof that AiCardSignature is a complete decision key.
+    // Off (and free) in production.
+    private static final boolean SIG_AUDIT = Boolean.getBoolean("forge.ai.sigAudit");
 
     private static boolean isCombatRelevantTrigger(Trigger trigger) {
         TriggerType mode = trigger.getMode();
@@ -112,11 +121,25 @@ public class ComputerUtilCombat {
         }
         cachedCombatTriggers.set(triggers);
         cachedCombatStaticAbilities.set(statics);
+        // Only engage the per-decision identity cache when duplicate creatures are present (token
+        // swarms / constructed dupes); otherwise it would just add signature overhead on a board
+        // where nothing collapses.
+        if (AiCardSignature.boardHasDuplicateCreatures(game)) {
+            cachedDestroyResults.set(new HashMap<String, Boolean>());
+        } else {
+            cachedDestroyResults.remove();
+        }
     }
 
     public static void endCombatEvaluation() {
         cachedCombatTriggers.remove();
         cachedCombatStaticAbilities.remove();
+        cachedDestroyResults.remove();
+    }
+
+    /** True if a beginCombatEvaluation() scope is currently open on this thread. */
+    public static boolean isInCombatEvaluation() {
+        return cachedCombatTriggers.get() != null;
     }
 
     static List<Trigger> getCombatTriggers(Game game) {
@@ -1704,6 +1727,35 @@ public class ComputerUtilCombat {
     }
     public static boolean canDestroyAttacker(Player ai, Card attacker, Card blocker, final Combat combat,
             final boolean withoutAbilities, final boolean withoutAttackerStaticAbilities) {
+        // Per-decision identity cache (active only inside beginCombatEvaluation/endCombatEvaluation).
+        // Signatures are computed on the ORIGINAL cards; transformable/merged cards yield null and bypass.
+        final Map<String, Boolean> cache = cachedDestroyResults.get();
+        String key = null;
+        if (cache != null) {
+            final String aSig = AiCardSignature.of(attacker);
+            final String bSig = AiCardSignature.of(blocker);
+            if (aSig != null && bSig != null) {
+                key = "A|" + aSig + "|" + bSig + "|" + (withoutAbilities ? 1 : 0) + "|" + (withoutAttackerStaticAbilities ? 1 : 0);
+                final Boolean hit = cache.get(key);
+                if (hit != null) {
+                    if (SIG_AUDIT) {
+                        boolean real = canDestroyAttackerUncached(ai, attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+                        if (real != hit.booleanValue()) {
+                            System.err.println("[SIGAUDIT] canDestroyAttacker MISMATCH cached=" + hit + " real=" + real + " key=" + key);
+                        }
+                    }
+                    return hit.booleanValue();
+                }
+            }
+        }
+        final boolean r = canDestroyAttackerUncached(ai, attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+        if (cache != null && key != null) {
+            cache.put(key, Boolean.valueOf(r));
+        }
+        return r;
+    }
+    private static boolean canDestroyAttackerUncached(Player ai, Card attacker, Card blocker, final Combat combat,
+            final boolean withoutAbilities, final boolean withoutAttackerStaticAbilities) {
         // Can activate transform ability
         if (!withoutAbilities) {
             attacker = canTransform(attacker);
@@ -1929,6 +1981,34 @@ public class ComputerUtilCombat {
         return canDestroyBlocker(ai, blocker, attacker, combat, withoutAbilities, false);
     }
     public static boolean canDestroyBlocker(Player ai, Card blocker, Card attacker, final Combat combat,
+            final boolean withoutAbilities, final boolean withoutAttackerStaticAbilities) {
+        // Per-decision identity cache (active only inside beginCombatEvaluation/endCombatEvaluation).
+        final Map<String, Boolean> cache = cachedDestroyResults.get();
+        String key = null;
+        if (cache != null) {
+            final String bSig = AiCardSignature.of(blocker);
+            final String aSig = AiCardSignature.of(attacker);
+            if (bSig != null && aSig != null) {
+                key = "B|" + bSig + "|" + aSig + "|" + (withoutAbilities ? 1 : 0) + "|" + (withoutAttackerStaticAbilities ? 1 : 0);
+                final Boolean hit = cache.get(key);
+                if (hit != null) {
+                    if (SIG_AUDIT) {
+                        boolean real = canDestroyBlockerUncached(ai, blocker, attacker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+                        if (real != hit.booleanValue()) {
+                            System.err.println("[SIGAUDIT] canDestroyBlocker MISMATCH cached=" + hit + " real=" + real + " key=" + key);
+                        }
+                    }
+                    return hit.booleanValue();
+                }
+            }
+        }
+        final boolean r = canDestroyBlockerUncached(ai, blocker, attacker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+        if (cache != null && key != null) {
+            cache.put(key, Boolean.valueOf(r));
+        }
+        return r;
+    }
+    private static boolean canDestroyBlockerUncached(Player ai, Card blocker, Card attacker, final Combat combat,
             final boolean withoutAbilities, final boolean withoutAttackerStaticAbilities) {
         // Can activate transform ability
         if (!withoutAbilities) {
