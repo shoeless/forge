@@ -57,6 +57,8 @@
          shared Forge telemetry calls (BugReporter/PlayerControllerHuman/Forge/etc.) resolve to
          these. Force-linked because they're reached only via precompiled bytecode references. -->
     <pattern>io.sentry.**</pattern>
+    <!-- AI decision-cache identity key (referenced by AiController/ComputerUtilCombat/AiAttackController) -->
+    <pattern>forge.ai.AiCardSignature</pattern>
     <!-- LZ4 compression for multiplayer networking -->
     <pattern>net.jpountz.lz4.**</pattern>
     <pattern>net.jpountz.xxhash.**</pattern>
