@@ -10,3 +10,4 @@ ScryfallCode=MSC
 2 M Mister Fantastic @Gintas Galvanauskas
 3 M Human Torch @Vilhelmas Banys
 4 M The Thing @Darius Zablockis
+119 R Vision, Synthezoid Avenger @Mark Spears
