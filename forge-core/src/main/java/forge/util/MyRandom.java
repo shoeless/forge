@@ -33,6 +33,21 @@ public class MyRandom {
     /** Constant <code>random</code>. */
     private static Random random = new SecureRandom();
 
+    static {
+        // Deterministic-sim hook: -Dforge.rngSeed=<long> installs a seeded java.util.Random in place of
+        // SecureRandom so AI-vs-AI runs are reproducible (used to PROVE engine/JVM-flag changes are
+        // behavior-neutral: same seed + single sim thread => bit-identical games). No effect on normal
+        // play or iOS (property unset => SecureRandom).
+        final String seedProp = System.getProperty("forge.rngSeed");
+        if (seedProp != null) {
+            try {
+                random = new Random(Long.parseLong(seedProp.trim()));
+            } catch (NumberFormatException e) {
+                // malformed seed -> keep SecureRandom
+            }
+        }
+    }
+
     /**
      * <p>
      * percentTrue.<br>

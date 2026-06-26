@@ -177,7 +177,7 @@ public class AiCostDecision extends CostDecisionMakerBase {
         List<Player> res = cost.getPotentialPlayers(player, ability);
         // I should only choose one of these right?
         // TODO Choose the "worst" player.
-        Collections.shuffle(res);
+        Collections.shuffle(res, forge.util.MyRandom.getRandom());
 
         return PaymentDecision.players(res.subList(0, 1));
     }

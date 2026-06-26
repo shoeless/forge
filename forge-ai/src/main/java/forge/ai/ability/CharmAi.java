@@ -47,7 +47,7 @@ public class CharmAi extends SpellAbilityAi {
         } else {
             // only randomize if not all possible together
             if (num < choices.size()) {
-                Collections.shuffle(choices);
+                Collections.shuffle(choices, forge.util.MyRandom.getRandom());
             }
 
             /*

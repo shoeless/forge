@@ -99,9 +99,6 @@ public class Match {
 
         // will pull UI dialog, when the UI is listening
         game.fireEvent(new GameEventGameFinished());
-
-        //run GC after game is finished
-        System.gc();
     }
 
     public GameOutcome getOutcomeById(int id) {

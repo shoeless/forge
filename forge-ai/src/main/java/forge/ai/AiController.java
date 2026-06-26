@@ -42,7 +42,9 @@ import forge.game.combat.Combat;
 import forge.game.combat.CombatUtil;
 import forge.game.cost.*;
 import forge.game.keyword.Keyword;
+import forge.game.keyword.KeywordInterface;
 import forge.game.mana.ManaCostBeingPaid;
+import forge.game.phase.PhaseHandler;
 import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.player.PlayerActionConfirmMode;
@@ -95,6 +97,11 @@ public class AiController {
     private boolean useLivingEnd;
     private List<SpellAbility> skipped;
     private boolean timeoutReached;
+
+    // Deterministic-sim mode: when -Dforge.rngSeed is set, drop the per-decision wall-clock timeout
+    // so AI choices don't depend on timing (which would break seeded reproducibility). Normal play /
+    // unseeded sims keep the timeout safety net.
+    private static final boolean DETERMINISTIC_RNG = System.getProperty("forge.rngSeed") != null;
 
     public AiController(final Player computerPlayer, final Game game0) {
         player = computerPlayer;
@@ -890,9 +897,10 @@ public class AiController {
             return;
         }
 
-        // Find the cheapest counterspell in hand
-        CardCollection hand = new CardCollection(player.getCardsIn(ZoneType.Hand));
-        List<SpellAbility> counters = getPlayableCounters(hand);
+        // Find the cheapest counterspell we can hold up next turn. Includes counters already
+        // foretold into exile (castable from there for their cheaper foretell cost), so once the AI
+        // foretells a counter it keeps reserving for it instead of tapping out.
+        List<SpellAbility> counters = getPlayableCounters(counterReservationSources());
         if (counters.isEmpty()) {
             return;
         }
@@ -945,7 +953,7 @@ public class AiController {
                     }
                 }
             }
-            int cmc = counter.getPayCosts().getTotalMana().getCMC();
+            int cmc = counterReservationCMC(counter);
             if (cmc < cheapestCMC) {
                 cheapestCMC = cmc;
                 cheapestCounter = counter;
@@ -963,6 +971,118 @@ public class AiController {
                 memory.rememberCard(allSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
             }
         }
+    }
+
+    // ---- Foretell -----------------------------------------------------------------------------
+    // The foretell keyword grants a no-API AbilityStatic (cost {2}) that, left to the generic
+    // picker, returns WillPlay in any phase and so the AI foretells opportunistically (and rarely,
+    // since the counter reservation usually eats its mana). These helpers gate foretelling to our
+    // own MAIN2 when there's mana to spare beyond the cheapest counter's POST-foretell reservation.
+
+    /**
+     * Decide whether to foretell {@code foretellSa}'s host card now. Only on our own MAIN2 with an
+     * empty stack, only when foretelling is a real discount, and only if — after paying the {2}
+     * foretell cost — we still keep enough untapped sources for the cheapest counter at its
+     * post-foretell cost (a foretold instant remains castable from exile on the opponent's turn).
+     */
+    private boolean shouldForetell(final SpellAbility foretellSa) {
+        final PhaseHandler ph = game.getPhaseHandler();
+        if (!ph.isPlayerTurn(player) || !ph.is(PhaseType.MAIN2) || !game.getStack().isEmpty()) {
+            return false;
+        }
+        final Card c = foretellSa.getHostCard();
+        if (c == null) {
+            return false;
+        }
+        final Integer foretellCMC = foretellCostCMC(c);
+        if (foretellCMC == null || foretellCMC >= c.getCMC()) {
+            return false; // no foretell cost we can read, or no real discount
+        }
+        final int totalSources = ComputerUtilMana.getAvailableManaSources(player, true).size();
+        int reservationPost = 0;
+        // Only hold counter mana back when a reservation is actually active (a commander threat).
+        java.util.Set<Card> held = AiCardMemory.getMemorySet(player, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+        if (held != null && !held.isEmpty()) {
+            reservationPost = postForetellCounterReservation(c, foretellCMC);
+        }
+        return totalSources - 2 >= reservationPost;
+    }
+
+    /**
+     * Cheapest counter (in mana) we'd want to hold up next turn, computed as if {@code foretelling}
+     * were already foretold (i.e. counted at {@code foretellCMC} rather than its hand cost). Mirrors
+     * the counter set used by {@link #reserveManaForCounterSpellIfNeeded()}.
+     */
+    private int postForetellCounterReservation(final Card foretelling, final int foretellCMC) {
+        final List<SpellAbility> counters = getPlayableCounters(counterReservationSources());
+        int cheapest = Integer.MAX_VALUE;
+        for (final SpellAbility counter : counters) {
+            final int cmc = counter.getHostCard() == foretelling ? foretellCMC : counterReservationCMC(counter);
+            if (cmc < cheapest) {
+                cheapest = cmc;
+            }
+        }
+        return cheapest == Integer.MAX_VALUE ? 0 : cheapest;
+    }
+
+    /** Counters we can hold mana for: those in hand plus any already foretold into exile. */
+    private CardCollection counterReservationSources() {
+        final CardCollection sources = new CardCollection(player.getCardsIn(ZoneType.Hand));
+        for (final Card c : player.getCardsIn(ZoneType.Exile)) {
+            if (c.isForetold()) {
+                sources.add(c);
+            }
+        }
+        return sources;
+    }
+
+    /** A counter's effective reservation cost: its foretell cost if already foretold, else its mana cost. */
+    private static int counterReservationCMC(final SpellAbility counter) {
+        final Card host = counter.getHostCard();
+        if (host != null && host.isForetold()) {
+            final Integer ft = foretellCostCMC(host);
+            if (ft != null) {
+                return ft;
+            }
+        }
+        return counter.getPayCosts().getTotalMana().getCMC();
+    }
+
+    /**
+     * Converted mana cost of {@code c}'s Foretell cost (from {@code K:Foretell:<cost>}), or null if
+     * the card has no Foretell keyword, a bare {@code Foretell} (no explicit cost), or
+     * {@code Foretell:ManaCost} (foretell cost equals the card cost — no discount). Reads the
+     * original state's keywords so it also works for a face-down foretold card in exile.
+     */
+    private static Integer foretellCostCMC(final Card c) {
+        if (c == null) {
+            return null;
+        }
+        Integer cmc = foretellCMCFromKeywords(c.getKeywords());
+        if (cmc != null) {
+            return cmc;
+        }
+        final CardState orig = c.getState(CardStateName.Original);
+        return orig == null ? null : foretellCMCFromKeywords(orig.getCachedKeywords());
+    }
+
+    private static Integer foretellCMCFromKeywords(final Iterable<KeywordInterface> keywords) {
+        if (keywords == null) {
+            return null;
+        }
+        for (final KeywordInterface ki : keywords) {
+            final String kw = ki.getOriginal();
+            if (kw != null && kw.startsWith("Foretell")) {
+                final String[] k = kw.split(":");
+                if (k.length < 2 || "ManaCost".equals(k[1])) {
+                    return null; // bare Foretell or Foretell:ManaCost -> no usable discount
+                }
+                // Mirror GameActionUtil's foretold alt-cost build: new Cost(k[1], false).
+                final Cost ftCost = new Cost(k[1], false);
+                return ftCost.getCostMana() == null ? null : ftCost.getCostMana().getMana().getCMC();
+            }
+        }
+        return null;
     }
 
     private AiPlayDecision canPlayAndPayFor(final SpellAbility sa) {
@@ -1035,6 +1155,14 @@ public class AiController {
         }
         if (sa instanceof WrappedAbility) {
             return canPlaySa(((WrappedAbility) sa).getWrappedAbility());
+        }
+
+        // Foretell: decide deliberately rather than letting the no-API foretell AbilityStatic fall
+        // through to WillPlay (which makes the AI foretell in any phase whenever it has a spare {2}).
+        // Only foretell on our own MAIN2 when there's mana to spare beyond the cheapest counter's
+        // POST-foretell reservation. See shouldForetell.
+        if (sa.isForetelling()) {
+            return shouldForetell(sa) ? AiPlayDecision.WillPlay : AiPlayDecision.AnotherTime;
         }
 
         if (!sa.canCastTiming(player)) {
@@ -1887,10 +2015,18 @@ public class AiController {
         });
 
         Thread t = new Thread(future);
-        t.start();
+        if (DETERMINISTIC_RNG) {
+            // deterministic-sim: run the picker INLINE on this thread. The per-decision worker thread's
+            // scheduling/cancellation is the remaining GC-timing-sensitive source of nondeterminism, so
+            // eliminating it (under -Dforge.rngSeed) makes seeded runs bit-reproducible across GC configs.
+            future.run();
+        } else {
+            t.start();
+        }
         try {
             // instead of computing all available concurrently just add a simple timeout depending on the user prefs
-            SpellAbility result = future.get(game.getAITimeout(), TimeUnit.SECONDS);
+            // (deterministic-sim mode blocks without the wall-clock timeout so choices are timing-independent)
+            SpellAbility result = DETERMINISTIC_RNG ? future.get() : future.get(game.getAITimeout(), TimeUnit.SECONDS);
             return result;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             try {

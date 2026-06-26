@@ -22,7 +22,7 @@ public class ChooseCompanionAi extends SpellAbilityAi {
             return null;
         }
 
-        Collections.shuffle(cards);
+        Collections.shuffle(cards, forge.util.MyRandom.getRandom());
         return cards.get(0);
     }
 }

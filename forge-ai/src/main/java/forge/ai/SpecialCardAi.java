@@ -326,7 +326,7 @@ public class SpecialCardAi {
             best = ComputerUtilCard.getBestCreatureAI(cardlist);
             if (best == null) {
                 // If nothing on the battlefield has a nonmana ability choose something
-                Collections.shuffle(cardlist);
+                Collections.shuffle(cardlist, forge.util.MyRandom.getRandom());
                 best = cardlist.getFirst();
             }
 

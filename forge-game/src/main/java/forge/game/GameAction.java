@@ -2310,9 +2310,10 @@ public class GameAction {
         List<Card> lib1 = Lists.newArrayList(p1.getZone(ZoneType.Library).getCards().threadSafeIterable());
         List<Card> hand1 = lib1.subList(0,p1.getMaxHandSize());
 
-        //shuffle
+        //shuffle (route through MyRandom so -Dforge.rngSeed makes the mulligan-eval deterministic;
+        // was the JDK default RNG, the main reason a seeded run still diverged)
         List<Card> shuffledCards = Lists.newArrayList(p1.getZone(ZoneType.Library).getCards().threadSafeIterable());
-        Collections.shuffle(shuffledCards);
+        Collections.shuffle(shuffledCards, MyRandom.getRandom());
 
         //check a second hand
         List<Card> hand2 = shuffledCards.subList(0,p1.getMaxHandSize());
