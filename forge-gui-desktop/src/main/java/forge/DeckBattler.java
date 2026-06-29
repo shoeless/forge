@@ -715,6 +715,18 @@ public class DeckBattler {
         Thread turnMonitor = new Thread(new Runnable() {
             @Override
             public void run() {
+                int lastTurn = -1;
+                long lastProgressMs = System.currentTimeMillis();
+                // No-progress detector: if the turn number doesn't advance for this long, signal game-over.
+                // Determinism-safe: a stuck game freezes at the same state (same turn, same draws consumed) in
+                // every run, so this signals at the same game state run-to-run (only the wall-clock instant
+                // differs); a normal turn advances within seconds, so a slow-but-progressing game never trips the
+                // generous threshold (unlike a fixed wall-clock deadline — this is progress-based).
+                // LIMITATION (verified against the ghired/kaalia convergence hang): setAge(GameOver) only stops a
+                // game that polls isGameOver between actions. A tight non-converging checkStaticAbilities loop on
+                // the game thread does NOT check it, so this will NOT break that hang — those need a harness-level
+                // JVM-kill watchdog (the gauntlet scripts wrap each run with one) or an engine iteration cap.
+                final long noProgressAbortMs = 180000L;
                 while (!gameRef.isGameOver()) {
                     try {
                         Thread.sleep(500);
@@ -722,10 +734,21 @@ public class DeckBattler {
                         return;
                     }
                     try {
-                        if (gameRef.getPhaseHandler() != null
-                                && gameRef.getPhaseHandler().getTurn() > maxTurnLimit) {
-                            turnLimitHit[0] = true;
-                            gameRef.setAge(GameStage.GameOver);
+                        if (gameRef.getPhaseHandler() != null) {
+                            final int turn = gameRef.getPhaseHandler().getTurn();
+                            if (turn != lastTurn) {
+                                lastTurn = turn;
+                                lastProgressMs = System.currentTimeMillis();
+                            }
+                            if (turn > maxTurnLimit) {
+                                turnLimitHit[0] = true;
+                                gameRef.setAge(GameStage.GameOver);
+                            } else if (System.currentTimeMillis() - lastProgressMs > noProgressAbortMs) {
+                                System.out.println("[STUCK] game aborted: turn " + turn + " made no progress for "
+                                        + (noProgressAbortMs / 1000) + "s (likely an engine continuous-effect loop)");
+                                turnLimitHit[0] = true;
+                                gameRef.setAge(GameStage.GameOver);
+                            }
                         }
                     } catch (Exception e) {
                         // Ignore - game state may be in transition

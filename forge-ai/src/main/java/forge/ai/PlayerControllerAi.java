@@ -1089,7 +1089,20 @@ public class PlayerControllerAi extends PlayerController {
         if (options.size() <= 1) {
             return Iterables.getFirst(options, null);
         }
-        return SpellApiToAi.Converter.get(sa).chooseCounterType(options, sa, params);
+        // Deterministic tie-break: `options` is typically built from a permanent's getCounters().keySet() — a
+        // HashMap keyed by CounterType (CounterEnumType has identity Enum.hashCode), so its iteration order varies
+        // per JVM run. The SpellApi AI deciders pick first-on-tie / Iterables.getFirst, so an unsorted list makes
+        // the chosen counter type nondeterministic across seeded runs. Sort a copy by the stable counter name so
+        // the pick is reproducible (rolls no RNG; rules-neutral — only resolves ties, which were arbitrary
+        // anyway). One place fixes every CountersRemove/Put/PutOrRemove/Move consumer that routes through here.
+        final List<CounterType> sorted = new ArrayList<>(options);
+        IterableUtil.sort(sorted, new java.util.Comparator<CounterType>() {
+            @Override
+            public int compare(final CounterType a, final CounterType b) {
+                return a.getName().compareTo(b.getName());
+            }
+        });
+        return SpellApiToAi.Converter.get(sa).chooseCounterType(sorted, sa, params);
     }
 
     @Override

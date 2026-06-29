@@ -1,5 +1,10 @@
 package forge.game;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.ObjectUtils;
@@ -116,18 +121,27 @@ public class GameEntityCounterTable extends ForwardingTable<Player, GameEntity, 
      * returns the counters that can still be removed from game entity
      */
     public Map<CounterType, Integer> filterToRemove(GameEntity ge) {
-        Map<CounterType, Integer> result = Maps.newHashMap();
-        if (!containsColumn(ge) && !nullPlayerMap.containsKey(ge)) {
-            result.putAll(ge.getCounters());
-            return result;
-        }
-        // iOS compatibility: Use separate nullPlayerMap instead of column(ge).get(null)
-        Map<CounterType, Integer> alreadyRemoved = nullPlayerMap.get(ge);
-        for (Map.Entry<CounterType, Integer> e : ge.getCounters().entrySet()) {
+        // Deterministic iteration order: ge.getCounters() is a HashMap keyed by CounterType (CounterEnumType has
+        // identity Enum.hashCode -> per-JVM-run order). The cost-decision over-pay loops (AiCostDecision /
+        // HumanCostDecision) iterate this result's entrySet and stop once the removal budget is met, so an
+        // unordered map makes WHICH counter type is removed nondeterministic across seeded runs. Build the result
+        // as a LinkedHashMap with counter types inserted in stable name order. Rolls no RNG; rules-neutral.
+        final Map<CounterType, Integer> alreadyRemoved =
+                (containsColumn(ge) || nullPlayerMap.containsKey(ge)) ? nullPlayerMap.get(ge) : null;
+        final List<CounterType> types = new ArrayList<CounterType>(ge.getCounters().keySet());
+        Collections.sort(types, new Comparator<CounterType>() {
+            @Override
+            public int compare(final CounterType a, final CounterType b) {
+                return a.getName().compareTo(b.getName());
+            }
+        });
+        final Map<CounterType, Integer> result = new LinkedHashMap<CounterType, Integer>();
+        for (final CounterType ct : types) {
             // iOS compatibility: Replace getOrDefault (Java 8 Map method)
-            int rest = e.getValue() - MapUtil.getOrDefault(alreadyRemoved, e.getKey(), 0);
+            final int already = alreadyRemoved == null ? 0 : MapUtil.getOrDefault(alreadyRemoved, ct, 0);
+            final int rest = ge.getCounters().get(ct) - already;
             if (rest > 0) {
-                result.put(e.getKey(), rest);
+                result.put(ct, rest);
             }
         }
         return result;
