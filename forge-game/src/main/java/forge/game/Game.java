@@ -1459,7 +1459,12 @@ public class Game {
     public int getAITimeout() {
         return AI_TIMEOUT;
     }
+    // Deterministic-sim mode (-Dforge.rngSeed): disable the AI's wall-clock timeouts (incl. the combat
+    // evaluation timeout in AiAttackController) so AI decisions don't depend on GC/CPU speed. Without
+    // this, under heap pressure the combat search could exceed the timeout and pick a different attack,
+    // making seeded runs non-reproducible when allocation patterns changed (e.g. with the static/replacement memo).
+    private static final boolean DETERMINISTIC_RNG = System.getProperty("forge.rngSeed") != null;
     public boolean canUseTimeout() {
-        return AI_CAN_USE_TIMEOUT;
+        return AI_CAN_USE_TIMEOUT && !DETERMINISTIC_RNG;
     }
 }

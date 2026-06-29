@@ -687,19 +687,33 @@ public class DeckBattler {
             game.subscribeToEvents(tracker);
         }
 
+        // Diagnostic (temp): mark game boundaries in the RNG draw-trace (-Dforge.rngTrace).
+        if (System.getProperty("forge.rngTrace") != null) {
+            System.out.println("[RNGTRACE] ===GAME " + gameNumber + " enterDraws="
+                    + forge.util.MyRandom.DRAW_COUNT.get() + "===");
+        }
+
         // Set up timeout timer
         final Game gameRef = game;
         Timer timer = new Timer(true);
         final boolean[] timedOut = {false};
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                if (!gameRef.isGameOver()) {
-                    timedOut[0] = true;
-                    gameRef.setAge(GameStage.GameOver);
+        // Deterministic mode (-Dforge.rngSeed): the wall-clock timeout is a seed-leak. At smaller
+        // heaps, GC pauses inflate wall-time and abort borderline games past the deadline, flipping
+        // the #GAMEEND row nondeterministically (the 4g-diverges/8g-identical signature). Skip arming
+        // it; the turn-count monitor below (maxTurns) is the GC-independent stop. Sibling of
+        // Game.canUseTimeout(). Real/GUI play never sets forge.rngSeed, so it is unaffected.
+        final boolean deterministicRng = System.getProperty("forge.rngSeed") != null;
+        if (!deterministicRng) {
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    if (!gameRef.isGameOver()) {
+                        timedOut[0] = true;
+                        gameRef.setAge(GameStage.GameOver);
+                    }
                 }
-            }
-        }, timeoutSec * 1000L);
+            }, timeoutSec * 1000L);
+        }
 
         // Set up turn limit monitor
         final int maxTurnLimit = maxTurns;
@@ -755,6 +769,14 @@ public class DeckBattler {
                 winnerNum = 2;
             }
             turns = outcome.getLastTurnNumber() > 0 ? outcome.getLastTurnNumber() : 0;
+        }
+
+        // Diagnostic (temp): dump turn-by-turn game log for one game (-Dforge.dumpGameLogGame=N)
+        String dumpG = System.getProperty("forge.dumpGameLogGame");
+        if (dumpG != null && ("ALL".equalsIgnoreCase(dumpG) || dumpG.equals(String.valueOf(gameNumber)))) {
+            for (Object e : game.getGameLog().getLogEntries(null)) {
+                System.out.println("[GLOG" + gameNumber + "] " + e);
+            }
         }
 
         // Collect card performance data, tagging the game as a player-1 win or not.

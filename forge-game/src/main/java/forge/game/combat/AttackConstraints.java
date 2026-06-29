@@ -180,7 +180,13 @@ public class AttackConstraints {
 
         // Now try all others (plus empty attack) and count their violations
         final FCollection<Map<Card, GameEntity>> legalAttackers = collectLegalAttackers(reqs, myMax);
-        possible.putAll(Maps.asMap(legalAttackers.asSet(), this::countViolations));
+        // Deterministic order: iterate the FCollection's stable list view instead of its backing
+        // HashSet (legalAttackers.asSet()), whose identity-hash iteration order made
+        // MapToAmountUtil.min's first-on-tie attacker pick vary per JVM run — breaking seeded-sim
+        // reproducibility. countViolations rolls no RNG, so this only determinizes ties.
+        for (final Map<Card, GameEntity> attackMap : legalAttackers) {
+            possible.put(attackMap, countViolations(attackMap));
+        }
         int empty = countViolations(Collections.emptyMap());
         if (empty != -1) {
             possible.put(Collections.emptyMap(), empty);

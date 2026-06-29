@@ -10,7 +10,6 @@ import forge.card.CardEdition;
 import forge.card.CardRules;
 import forge.item.IPaperCard;
 import forge.item.PaperToken;
-import forge.util.Aggregates;
 
 import java.util.*;
 import forge.util.function.Predicate;
@@ -83,12 +82,25 @@ public class TokenDb implements ITokenDatabase {
         return new PaperToken(rules, edition, name, t.collectorNumber(), t.artistName());
     }
 
+    // Token art is cosmetic; pick it from a DEDICATED RNG, never the shared seeded gameplay MyRandom
+    // (which Aggregates.random draws from). Selecting token art at creation time off the gameplay
+    // stream shifted every later draw and broke bit-reproducible sims (sibling of getImageKey). Art
+    // variants are gameplay-identical, so a separate RNG keeps variety without touching gameplay.
+    private static final Random ART_RNG = new Random();
+    private static PaperToken randomArt(final Collection<PaperToken> collection) {
+        if (collection == null || collection.isEmpty()) {
+            return null;
+        }
+        final List<PaperToken> list = new ArrayList<PaperToken>(collection);
+        return list.get(ART_RNG.nextInt(list.size()));
+    }
+
     // try all editions to find token
     protected PaperToken fallbackToken(String name) {
         for (CardEdition edition : this.editions) {
             String fullName = String.format("%s_%s", name, edition.getCode().toLowerCase());
             if (loadTokenFromSet(edition, name)) {
-                return Aggregates.random(allTokenByName.get(fullName));
+                return randomArt(allTokenByName.get(fullName));
             }
         }
         return null;
@@ -114,7 +126,7 @@ public class TokenDb implements ITokenDatabase {
             Collection<PaperToken> collection = allTokenByName.get(fullName);
 
             if (artIndex < 1 || artIndex > collection.size()) {
-                return Aggregates.random(collection);
+                return randomArt(collection);
             }
 
             return Iterables.get(collection, artIndex - 1);

@@ -194,6 +194,11 @@ public class Main extends IOSApplication.Delegate {
             System.setProperty("forge.ios.userDir", documentsPath);
             System.setProperty("forge.ios.cacheDir", documentsPath + "cache/");
 
+            // Enable the static/replacement-ability memo on iOS. It's data-correct (proven 0-stale) and
+            // cuts allocations + speeds up AI evaluation — helps the constrained iPad CPU (fewer combat
+            // timeouts) and the jetsam memory ceiling. Set here, before any game/CardState class loads.
+            System.setProperty("forge.staticMemo", "on");
+
             // Clear card cache when a new build is deployed. The cache stores
             // pre-parsed card rules for fast startup, but stale caches cause bugs
             // (e.g., duplicate triggers). Compare the app's CFBundleVersion to a

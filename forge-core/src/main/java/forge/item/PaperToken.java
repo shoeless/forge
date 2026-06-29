@@ -3,7 +3,6 @@ package forge.item;
 import forge.ImageKeys;
 import forge.card.*;
 import forge.util.IterableUtil;
-import forge.util.MyRandom;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -222,6 +221,13 @@ public class PaperToken implements InventoryItemFromSet, IPaperCard {
         return getImageKey(false);
     }
 
+    // Token art is cosmetic and MUST NOT draw from the shared seeded gameplay RNG (MyRandom):
+    // doing so at view-update time (a nondeterministic moment, driven by trackable view refresh)
+    // injected a draw into the seeded stream, shifting every later draw — which drifted the AI's
+    // randomized heuristics and a later game's shuffle, breaking bit-reproducible sims. Use a
+    // dedicated RNG so art stays varied without polluting gameplay. (Real play unaffected.)
+    private static final java.util.Random ART_RANDOM = new java.util.Random();
+
     // InventoryItem
     @Override
     public String getImageKey(boolean altState) {
@@ -234,7 +240,9 @@ public class PaperToken implements InventoryItemFromSet, IPaperCard {
                 suffix = ImageKeys.BACKFACE_POSTFIX;
             }
         }
-        int idx = MyRandom.getRandom().nextInt(artIndex);
+        // Same selection as before (artIndex is always >= 1, so nextInt(1) yields 0 for single-art
+        // tokens); only the RNG source changed (dedicated ART_RANDOM instead of the gameplay MyRandom).
+        int idx = ART_RANDOM.nextInt(artIndex);
         return getImageKey(idx) + suffix;
     }
 

@@ -87,8 +87,14 @@ public class AiAttackController {
     private final boolean nextTurn; // include creature that can only attack/block next turn
     private final int timeOut;
     private final boolean canUseTimeout;
-    // iOS compatibility: Use ExecutorService + Future instead of CompletableFuture (Java 8+)
+    // iOS compatibility: Use ExecutorService + Future instead of CompletableFuture (Java 8+).
     private static final ExecutorService executor = Executors.newCachedThreadPool();
+    // Deterministic-sim mode (-Dforge.rngSeed): run combat-eval tasks INLINE (synchronously) instead of on
+    // the thread pool. The tasks are side-effect-only and recurse into combat eval, so a single-thread pool
+    // would deadlock; inline avoids that AND removes the nondeterminism — parallel tasks create throwaway
+    // game-copy SpellAbilities that interleave the process-global SA id counter, and that interleaving
+    // depends on GC/CPU timing, which broke seeded reproducibility once the memo changed the AI's speed.
+    private static final boolean INLINE_DETERMINISTIC = System.getProperty("forge.rngSeed") != null;
     private List<Future<Integer>> futures = new ArrayList<>();
 
     /**
@@ -96,6 +102,14 @@ public class AiAttackController {
      * Replaces CompletableFuture.supplyAsync() which isn't available on RoboVM.
      */
     private void submitTask(Callable<Integer> task) {
+        if (INLINE_DETERMINISTIC) {
+            try {
+                task.call();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
         futures.add(executor.submit(task));
     }
 

@@ -1394,6 +1394,10 @@ public class ComputerUtilCard {
             return false;
         }
         final float chance = MyRandom.getRandom().nextFloat();
+        if (System.getProperty("forge.dumpRemoval") != null) {
+            System.out.println("[REMOVAL] tgt=" + c.getName() + " valueTempo=" + valueTempo
+                    + " threat=" + threat + " valueNow=" + valueNow + " chance=" + chance + " cast=" + (chance < valueNow));
+        }
         return chance < valueNow;
     }
 

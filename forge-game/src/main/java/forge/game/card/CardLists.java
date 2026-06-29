@@ -163,6 +163,19 @@ public class CardLists {
     }
 
     public static void shuffle(List<Card> list) {
+        if (System.getProperty("forge.dumpShuffle") != null) {
+            final StringBuilder sb = new StringBuilder();
+            for (final Card c : list) {
+                sb.append(c.getName()).append('#').append(c.getId()).append(',');
+            }
+            System.out.println("[SHUF] n=" + list.size() + " " + sb);
+        }
+        // Determinism: sort by stable id (Card.compareTo) before shuffling, so the result is
+        // reproducible regardless of the caller's input order. Collections.shuffle permutes the
+        // input in place, so the SAME seeded draws over a different (e.g. identity-hash-ordered)
+        // input list would otherwise yield a different permutation — an invisible nondeterminism
+        // source. This stays a uniform random shuffle; real play (SecureRandom) is unaffected.
+        Collections.sort(list);
         Collections.shuffle(list, MyRandom.getRandom());
     }
 

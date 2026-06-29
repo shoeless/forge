@@ -2553,6 +2553,22 @@ public class AiController {
             return activePlayerSAs;
         }
 
+        // Deterministic tie-break for simultaneous same-controller triggers.
+        // These are collected in battlefield-iteration order, which is NOT reproducible
+        // across JVM runs; within an API category the ordering below preserves input order,
+        // so the resulting stack order (and thus the whole game) would vary run-to-run for
+        // an otherwise-seeded sim. Stable-sort by host card id (deterministic, consumes no
+        // RNG) so the order is reproducible. CR 603.3b lets the controller order its own
+        // simultaneous triggers in any order, so this is rules-faithful; same-host ties keep
+        // their deterministic parse order via the stable sort. Real play is unaffected --
+        // the within-category order was already arbitrary there.
+        IterableUtil.sort(activePlayerSAs, new java.util.Comparator<SpellAbility>() {
+            @Override
+            public int compare(final SpellAbility a, final SpellAbility b) {
+                return Integer.compare(a.getHostCard().getId(), b.getHostCard().getId());
+            }
+        });
+
         // filter list by ApiTypes
         List<SpellAbility> discard = filterListByApi(activePlayerSAs, ApiType.Discard);
         List<SpellAbility> mandatoryDiscard = filterList(discard, SpellAbility::isMandatory);

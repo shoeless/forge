@@ -298,8 +298,9 @@ public class StaticAbility extends CardTraitBase implements IIdentifiable, Clone
      *         conditions are fulfilled.
      */
     private boolean shouldApplyContinuousAbility(final StaticAbilityLayer layer, final boolean previousRun) {
+        // fresh read (bypass memo): this runs DURING layer (re)application, where membership is changing
         return layers.contains(layer) && checkConditions(StaticAbilityMode.Continuous) && ( previousRun ||
-                getHostCard().getStaticAbilities().contains(this) ||
+                getHostCard().getStaticAbilities(false).contains(this) ||
                 getHostCard().getHiddenStaticAbilities().contains(this));
     }
 

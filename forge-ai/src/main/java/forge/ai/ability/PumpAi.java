@@ -805,8 +805,19 @@ public class PumpAi extends PumpAiBase {
         }
 
         if (!data.isEmpty()) {
+            // Deterministic tie-break: `data` is keyed by Player (identity-hash order), so
+            // Collections.max's first-on-tie pick of the opponent varied per JVM run, breaking
+            // seeded-sim reproducibility. Sort entries by Player id first. Gameplay-neutral — only
+            // resolves ties among equally-valued opponent targets; rolls no RNG.
+            List<Map.Entry<Player, Map.Entry<String, Integer>>> sortedData = Lists.newArrayList(data.entrySet());
+            Collections.sort(sortedData, new Comparator<Map.Entry<Player, Map.Entry<String, Integer>>>() {
+                @Override
+                public int compare(Map.Entry<Player, Map.Entry<String, Integer>> a, Map.Entry<Player, Map.Entry<String, Integer>> b) {
+                    return Integer.compare(a.getKey().getId(), b.getKey().getId());
+                }
+            });
             // iOS compatibility: Use ComparatorUtil instead of Comparator.comparingInt()
-            Map.Entry<Player, Map.Entry<String, Integer>> max = Collections.max(data.entrySet(), ComparatorUtil.comparingInt(o -> o.getValue().getValue()));
+            Map.Entry<Player, Map.Entry<String, Integer>> max = Collections.max(sortedData, ComparatorUtil.comparingInt(o -> o.getValue().getValue()));
 
             // filter list again by the opponent and a creature of the wanted name that can be targeted
             list = CardLists.filter(CardLists.filterControlledBy(list, max.getKey()),

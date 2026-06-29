@@ -55,6 +55,7 @@ import forge.game.trigger.WrappedAbility;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
 import forge.util.Aggregates;
+import forge.util.ComparatorUtil;
 import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
@@ -539,8 +540,13 @@ public class ComputerUtil {
                     uniqueNameCards.add(card);
                 }
             }
+            // Deterministic order: uniqueNameCards is an identity-hash HashSet, so the downstream
+            // sacrifice tie-break (getWorstAI) picked a process-dependent card. Sort by stable id
+            // before repopulating so the seeded sim is reproducible (gameplay-neutral tie-break).
             typeList.clear();
-            typeList.addAll(uniqueNameCards);
+            final List<Card> uniqueSorted = new ArrayList<Card>(uniqueNameCards);
+            IterableUtil.sort(uniqueSorted, ComparatorUtil.comparingInt(Card::getId));
+            typeList.addAll(uniqueSorted);
         }
 
         if (exclude != null) {
@@ -2193,7 +2199,18 @@ public class ComputerUtil {
     // Computer mulligans if there are no cards with converted mana cost of 0 in its hand
     public static boolean wantMulligan(Player ai, int cardsToReturn) {
         final CardCollectionView handList = ai.getCardsIn(ZoneType.Hand);
-        return !handList.isEmpty() && scoreHand(handList, ai, cardsToReturn) <= 0;
+        final int score = handList.isEmpty() ? 0 : scoreHand(handList, ai, cardsToReturn);
+        final boolean mull = !handList.isEmpty() && score <= 0;
+        if (System.getProperty("forge.dumpMull") != null) {
+            final List<String> names = new ArrayList<>();
+            for (final Card c : handList) {
+                names.add(c.getName());
+            }
+            Collections.sort(names);
+            System.out.println("[MULL] " + ai.getName() + " keep=" + (!mull) + " score=" + score
+                    + " return=" + cardsToReturn + " hand=" + names);
+        }
+        return mull;
     }
 
     public static CardCollection getPartialParisCandidates(Player ai) {

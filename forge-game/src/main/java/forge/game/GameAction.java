@@ -1317,7 +1317,10 @@ public class GameAction {
                 continue;
             }
 
-            boolean exists = stAb.getHostCard().getStaticAbilities().contains(stAb);
+            // CR 613.8 dependency detection compares membership before/after applying another static,
+            // so it MUST read fresh (bypass the static-ability memo) — a memo would return the same
+            // object both times and silently report "no dependency".
+            boolean exists = stAb.getHostCard().getStaticAbilities(false).contains(stAb);
             boolean compareAffected = false;
             CardCollectionView affectedHere = affectedPerAbility.get(stAb);
             if (affectedHere == null) {
@@ -1347,7 +1350,7 @@ public class GameAction {
                 // CR 613.8a An effect is said to "depend on" another if
                 // * (a) + (c) already handled *
                 // (b) applying the other would change the text or the existence of the first effect...
-                boolean dependency = exists != stAb.getHostCard().getStaticAbilities().contains(stAb);
+                boolean dependency = exists != stAb.getHostCard().getStaticAbilities(false).contains(stAb);
                 // ...what it applies to...
                 if (!dependency && compareAffected) {
                     CardCollectionView affectedAfterOther = StaticAbilityContinuous.getAffectedCards(stAb, preList);
@@ -2569,9 +2572,15 @@ public class GameAction {
         return newFirst;
     }
 
+    private static final boolean DETERMINISTIC_RNG = System.getProperty("forge.rngSeed") != null;
+
     // Invokes given runnable in Game thread pool - used to start game and perform actions from UI (when game-0 waits for input)
     public void invoke(final Runnable proc) {
-        if (ThreadUtil.isGameThread()) {
+        // Deterministic-sim mode (-Dforge.rngSeed): run inline. The headless DeckBattler runs games on
+        // generic pool worker threads (not "Game"-named), so otherwise this dispatches async to a Game
+        // thread — a race that's nondeterministic across runs. (On iOS/desktop GUI the game already runs
+        // on a Game thread, so isGameThread() is true and this path is unchanged.)
+        if (DETERMINISTIC_RNG || ThreadUtil.isGameThread()) {
             proc.run();
         } else {
             ThreadUtil.invokeInGameThread(proc);
