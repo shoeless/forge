@@ -201,13 +201,9 @@ public abstract class SpellAbility extends CardTraitBase implements ISpellAbilit
     protected SpellAbility(final Card iSourceCard, final Cost toPay, SpellAbilityView view0) {
         this(iSourceCard, toPay, view0, null);
     }
-    private static final boolean SA_CREATE_LOG = System.getProperty("forge.saCreateLog") != null;
     protected SpellAbility(final Card iSourceCard, final Cost toPay, SpellAbilityView view0, CardState cs) {
         id = nextId();
         hostCard = iSourceCard;
-        if (SA_CREATE_LOG && forge.game.card.CardState.IN_MEMO_BUILD > 0) {
-            System.out.println("[SAINBUILD] #" + id + " " + (iSourceCard == null ? "null" : iSourceCard.getName()));
-        }
         payCosts = toPay;
         if (cs != null) {
             cardState = cs;

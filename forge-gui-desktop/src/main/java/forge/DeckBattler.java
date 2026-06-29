@@ -687,12 +687,6 @@ public class DeckBattler {
             game.subscribeToEvents(tracker);
         }
 
-        // Diagnostic (temp): mark game boundaries in the RNG draw-trace (-Dforge.rngTrace).
-        if (System.getProperty("forge.rngTrace") != null) {
-            System.out.println("[RNGTRACE] ===GAME " + gameNumber + " enterDraws="
-                    + forge.util.MyRandom.DRAW_COUNT.get() + "===");
-        }
-
         // Set up timeout timer
         final Game gameRef = game;
         Timer timer = new Timer(true);

@@ -1264,25 +1264,7 @@ public class PlayerControllerAi extends PlayerController {
 
     @Override
     public void orderAndPlaySimultaneousSa(List<SpellAbility> activePlayerSAs) {
-        // NOTE: orderPlaySa is DESTRUCTIVE (filterList does input.removeAll) — call it exactly once.
-        final boolean trigLog = System.getProperty("forge.trigOrderLog") != null && activePlayerSAs.size() > 1;
-        StringBuilder sb = null;
-        if (trigLog) {
-            sb = new StringBuilder("[TRIGORDER] in:");
-            for (SpellAbility s : activePlayerSAs) {
-                sb.append(' ').append(s.getHostCard().getName()).append('(').append(s.getHostCard().getId())
-                        .append(",sa").append(s.getId()).append(',').append(s.getApi()).append(')');
-            }
-        }
-        final List<SpellAbility> orderedSa = getAi().orderPlaySa(activePlayerSAs);
-        if (trigLog) {
-            sb.append("  =>out:");
-            for (SpellAbility s : orderedSa) {
-                sb.append(' ').append(s.getHostCard().getName()).append('(').append(s.getHostCard().getId()).append(')');
-            }
-            System.out.println(sb.toString());
-        }
-        for (final SpellAbility sa : orderedSa) {
+        for (final SpellAbility sa : getAi().orderPlaySa(activePlayerSAs)) {
             if (sa.isTrigger() && !sa.isCopied()) {
                 if (prepareSingleSa(sa.getHostCard(), sa, true)) {
                     ComputerUtil.playStack(sa, player, getGame());

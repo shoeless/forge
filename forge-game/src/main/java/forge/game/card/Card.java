@@ -144,22 +144,6 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     // up as a stale-memo assert or a divergent game. See plan fluffy-skipping-snail.
     private long contEffVersion = 0L;
 
-    // TEMP diagnostic: trace lazy-rep / basic-land-ability creations (which consume process-global ids)
-    // to find a residual side effect skipped by the memo. Enable with -Dforge.repCreateLog. Per-game
-    // reset via repCreateNewGame() so the sequence is comparable game-by-game across memo-off vs on.
-    private static final boolean REP_CREATE_LOG = System.getProperty("forge.repCreateLog") != null;
-    private static long repCreateSeq = 0L;
-    private static int repCreateGame = 0;
-    public static void repCreateNewGame() {
-        if (REP_CREATE_LOG) { repCreateGame++; repCreateSeq = 0L; }
-    }
-    static void logRepCreate(final String what, final Card c) {
-        if (REP_CREATE_LOG) {
-            System.out.println("[REPCREATE] g" + repCreateGame + " #" + (++repCreateSeq) + " " + what
-                    + " " + c.getName() + "(" + c.getId() + ")");
-        }
-    }
-
     // stores the card traits created by static abilities
     private final Table<StaticAbility, String, SpellAbility> storedSpellAbility = TreeBasedTable.create();
     private final Table<StaticAbility, String, Trigger> storedTrigger = TreeBasedTable.create();
@@ -3695,7 +3679,6 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 if (sa == null) {
                     sa = CardFactory.buildBasicLandAbility(state, c);
                     basicLandAbilities[i] = sa;
-                    logRepCreate("basicLandAbility[" + i + "]", this);
                 }
 
                 list.add(sa);
@@ -7504,14 +7487,12 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             + "| Description$ If damage would be dealt to this permanent, prevent that damage and remove a shield counter from it.";
                 shieldCounterReplaceDamage = ReplacementHandler.parseReplacement(reStr, this, false, null);
                 shieldCounterReplaceDamage.setOverridingAbility(AbilityFactory.getAbility(sa, this));
-                logRepCreate("shieldDamage", this);
             }
             if (shieldCounterReplaceDestroy == null) {
                 String reStr = "Event$ Destroy | ActiveZones$ Battlefield | ValidCard$ Card.Self | ValidCause$ SpellAbility | Secondary$ True | ShieldCounter$ True "
             + "| Description$ If this permanent would be destroyed as the result of an effect, instead remove a shield counter from it.";
                 shieldCounterReplaceDestroy = ReplacementHandler.parseReplacement(reStr, this, false, null);
                 shieldCounterReplaceDestroy.setOverridingAbility(AbilityFactory.getAbility(sa, this));
-                logRepCreate("shieldDestroy", this);
             }
         }
         if (getCounters(CounterEnumType.STUN) > 0) {
@@ -7521,7 +7502,6 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             + "| Description$ If this permanent would become untapped, instead remove a stun counter from it.";
                 stunCounterReplaceUntap = ReplacementHandler.parseReplacement(reStr, this, false, null);
                 stunCounterReplaceUntap.setOverridingAbility(AbilityFactory.getAbility(sa, this));
-                logRepCreate("stun", this);
             }
         }
         if (getCounters(CounterEnumType.FINALITY) > 0) {
@@ -7531,7 +7511,6 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 String sa = "DB$ ChangeZone | Origin$ Battlefield | Destination$ Exile | Defined$ ReplacedCard";
                 finalityCounterReplaceDying = ReplacementHandler.parseReplacement(reStr, this, false, null);
                 finalityCounterReplaceDying.setOverridingAbility(AbilityFactory.getAbility(sa, this));
-                logRepCreate("finality", this);
             }
         }
     }

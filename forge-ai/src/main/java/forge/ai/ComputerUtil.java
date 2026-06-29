@@ -2199,18 +2199,7 @@ public class ComputerUtil {
     // Computer mulligans if there are no cards with converted mana cost of 0 in its hand
     public static boolean wantMulligan(Player ai, int cardsToReturn) {
         final CardCollectionView handList = ai.getCardsIn(ZoneType.Hand);
-        final int score = handList.isEmpty() ? 0 : scoreHand(handList, ai, cardsToReturn);
-        final boolean mull = !handList.isEmpty() && score <= 0;
-        if (System.getProperty("forge.dumpMull") != null) {
-            final List<String> names = new ArrayList<>();
-            for (final Card c : handList) {
-                names.add(c.getName());
-            }
-            Collections.sort(names);
-            System.out.println("[MULL] " + ai.getName() + " keep=" + (!mull) + " score=" + score
-                    + " return=" + cardsToReturn + " hand=" + names);
-        }
-        return mull;
+        return !handList.isEmpty() && scoreHand(handList, ai, cardsToReturn) <= 0;
     }
 
     public static CardCollection getPartialParisCandidates(Player ai) {

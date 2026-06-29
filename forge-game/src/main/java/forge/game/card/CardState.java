@@ -54,7 +54,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class CardState implements GameObject, IHasSVars, ITranslatable {
     private String name = "";
@@ -622,24 +621,6 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     private static final boolean REP_MEMO = "on".equals(System.getProperty("forge.repMemo",
             System.getProperty("forge.staticMemo", "off")));
     private static final boolean ASSERT_MEMO = System.getProperty("forge.assertStaticMemo") != null;
-    private static final AtomicLong MEMO_HITS = new AtomicLong();
-    private static final AtomicLong MEMO_MISSES = new AtomicLong();
-    private static final AtomicLong MEMO_REP_HITS = new AtomicLong();
-    private static final AtomicLong MEMO_REP_MISSES = new AtomicLong();
-    static {
-        if (System.getProperty("forge.staticMemoStats") != null) {
-            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-                @Override public void run() {
-                    long h = MEMO_HITS.get(), m = MEMO_MISSES.get(), t = h + m;
-                    long rh = MEMO_REP_HITS.get(), rm = MEMO_REP_MISSES.get(), rt = rh + rm;
-                    System.out.println("[STATICMEMO] hits=" + h + " misses=" + m
-                            + " hitRate=" + (t == 0 ? "n/a" : String.format("%.1f%%", 100.0 * h / t)));
-                    System.out.println("[REPMEMO] hits=" + rh + " misses=" + rm
-                            + " hitRate=" + (rt == 0 ? "n/a" : String.format("%.1f%%", 100.0 * rh / rt)));
-                }
-            }));
-        }
-    }
     private FCollection<StaticAbility> cachedStaticAbilities;
     private long cachedStaticAbilitiesVersion = -1L;
     private FCollection<ReplacementEffect> cachedReplacementEffects;
@@ -661,21 +642,14 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
                             + " ver=" + ver + " cached=" + cachedStaticAbilities + " fresh=" + fresh);
                 }
             }
-            MEMO_HITS.incrementAndGet();
             return cachedStaticAbilities;
         }
         FCollection<StaticAbility> result = buildStaticAbilities();
         cachedStaticAbilities = result;
         cachedStaticAbilitiesVersion = ver;
-        MEMO_MISSES.incrementAndGet();
         return result;
     }
-    // TEMP diagnostic: >0 while inside the memoized build (the work the memo skips on hits); SpellAbility
-    // creation logs only when this is >0, so we can find any SA created during build without masking.
-    public static int IN_MEMO_BUILD = 0;
     private FCollection<StaticAbility> buildStaticAbilities() {
-        IN_MEMO_BUILD++;
-        try {
         FCollection<StaticAbility> result = new FCollection<>(staticAbilities);
         if (getStateName().equals(CardStateName.Original)) {
             if (getCard().hasState(CardStateName.LeftSplit))
@@ -685,7 +659,6 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         }
         card.updateStaticAbilities(result, this);
         return result;
-        } finally { IN_MEMO_BUILD--; }
     }
     // identity + order equality (the memo returns the same objects in the same order)
     private static boolean sameStaticAbilities(FCollection<StaticAbility> a, FCollection<StaticAbility> b) {
@@ -736,25 +709,20 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         CardTypeView type = getTypeWithChanges();
         if (type.isPlaneswalker() && loyaltyRep == null) {
             loyaltyRep = CardFactoryUtil.makeEtbCounter("etbCounter:LOYALTY:" + this.baseLoyalty, this, true);
-            Card.logRepCreate("loyalty/" + getStateName(), card);
         }
         if (type.isBattle() && defenseRep == null) {
             defenseRep = CardFactoryUtil.makeEtbCounter("etbCounter:DEFENSE:" + this.baseDefense, this, true);
-            Card.logRepCreate("defense/" + getStateName(), card);
         }
         // counter reps are created here in buildReplacementEffects order (between defense and saga)
         card.materializeCounterReps();
         if (type.hasSubtype("Saga") && !hasKeyword(Keyword.READ_AHEAD) && sagaRep == null) {
             sagaRep = CardFactoryUtil.makeEtbCounter("etbCounter:LORE:1", this, false);
-            Card.logRepCreate("saga/" + getStateName(), card);
         }
         if (type.hasSubtype("Adventure") && this.adventureRep == null) {
             adventureRep = CardFactoryUtil.setupAdventureAbility(this);
-            Card.logRepCreate("adventure/" + getStateName(), card);
         }
         if (type.hasSubtype("Omen") && this.omenRep == null) {
             omenRep = CardFactoryUtil.setupOmenAbility(this);
-            Card.logRepCreate("omen/" + getStateName(), card);
         }
     }
     public FCollectionView<ReplacementEffect> getReplacementEffects(boolean useMemo) {
@@ -767,31 +735,18 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
             if (ASSERT_MEMO) {
                 FCollection<ReplacementEffect> fresh = buildReplacementEffects();
                 if (!sameReplacementEffects(cachedReplacementEffects, fresh)) {
-                    StringBuilder cb = new StringBuilder();
-                    for (ReplacementEffect re : cachedReplacementEffects) cb.append(re.getId()).append(':').append(re.getClass().getSimpleName()).append(',');
-                    StringBuilder fb = new StringBuilder();
-                    for (ReplacementEffect re : fresh) fb.append(re.getId()).append(':').append(re.getClass().getSimpleName()).append(',');
                     System.out.println("[REPMEMO][STALE] " + card + " state=" + getStateName() + " ver=" + ver
-                            + " zone=" + (card.getZone() != null ? card.getZone().getZoneType() : "null")
-                            + " cachedN=" + cachedReplacementEffects.size() + " freshN=" + fresh.size()
-                            + " stun=" + card.getCounters(CounterEnumType.STUN)
-                            + " shield=" + card.getCounters(CounterEnumType.SHIELD)
-                            + " fin=" + card.getCounters(CounterEnumType.FINALITY)
-                            + " cached=[" + cb + "] fresh=[" + fb + "]");
+                            + " cachedN=" + cachedReplacementEffects.size() + " freshN=" + fresh.size());
                 }
             }
-            MEMO_REP_HITS.incrementAndGet();
             return cachedReplacementEffects;
         }
         FCollection<ReplacementEffect> result = buildReplacementEffects();
         cachedReplacementEffects = result;
         cachedReplacementEffectsVersion = ver;
-        MEMO_REP_MISSES.incrementAndGet();
         return result;
     }
     private FCollection<ReplacementEffect> buildReplacementEffects() {
-        IN_MEMO_BUILD++;
-        try {
         FCollection<ReplacementEffect> result = new FCollection<>(replacementEffects);
         // add Split to Original
         if (getStateName().equals(CardStateName.Original)) {
@@ -837,7 +792,6 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         }
 
         return result;
-        } finally { IN_MEMO_BUILD--; }
     }
     public boolean addReplacementEffect(final ReplacementEffect replacementEffect) {
         card.invalidateContinuousEffectsMemo();
