@@ -168,6 +168,14 @@ public class HostedMatch {
             aiTimeout = 15;
         }
         game.AI_TIMEOUT = aiTimeout;
+        // Combat evaluation on wide boards is the heaviest AI search; give it extra wall-clock headroom
+        // beyond the general per-decision timeout (esp. on the slower iPad). Still auto-disabled in
+        // deterministic-sim mode via Game.canUseTimeout().
+        int aiCombatTimeout = Math.max(aiTimeout, 10);
+        if (GuiBase.isIOS() && aiCombatTimeout < 20) {
+            aiCombatTimeout = 20;
+        }
+        game.AI_COMBAT_TIMEOUT = aiCombatTimeout;
         // Android API 31 and above can use completeOnTimeout -> CompletableFuture:
         //https://developer.android.com/reference/java/util/concurrent/CompletableFuture#completeOnTimeout(T,%20long,%20java.util.concurrent.TimeUnit)
         game.AI_CAN_USE_TIMEOUT = !GuiBase.isAndroid() || GuiBase.getAndroidAPILevel() > 30;

@@ -1211,7 +1211,10 @@ public class ChangeZoneAi extends SpellAbilityAi {
                     }
 
                     //option to hold removal instead only applies for single targeted removal
-                    if (!immediately && sa.getMaxTargets() == 1) {
+                    // choice can be null here (e.g. getBestCreatureToBounceAI found nothing); useRemovalNow
+                    // dereferences it (c.getCMC()), so guard first — a null choice falls through to the
+                    // choice==null handler below, matching how DestroyAi guards this same call.
+                    if (choice != null && !immediately && sa.getMaxTargets() == 1) {
                         if (!ComputerUtilCard.useRemovalNow(sa, choice, 0, destination)) {
                             return false;
                         }

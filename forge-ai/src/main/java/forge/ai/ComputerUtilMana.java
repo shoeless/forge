@@ -63,6 +63,44 @@ public class ComputerUtilMana {
         return payManaCost(cost, sa, ai, true, extraMana, true, effect);
     }
 
+    /**
+     * Re-validate that the AI can actually pay {@code sa}'s mana cost right before committing to cast it,
+     * WITHOUT disturbing the AiCardMemory (PAYS_TAP_COST / PAYS_SAC_COST) that the subsequent real payment
+     * (CostPayment.payComputerCosts) will consume. A mana source counted when the AI decided to cast may have
+     * become unavailable since (tapped/sacrificed/restricted by an intervening trigger or ability); catching
+     * that here lets the caller quietly abandon the cast instead of announcing the spell and hitting the noisy
+     * "AI failed to play X" rollback. Uses the same test planner as the decision-time gate (it copies the cost
+     * internally) and restores the two memory sets that payManaCost clears on entry.
+     */
+    public static boolean revalidateManaPayment(final SpellAbility sa, final Player ai) {
+        if (!ai.getController().isAI()) {
+            return true;
+        }
+        // Snapshot the memory sets before the test run (payManaCost clears both at its start).
+        final Set<Card> tapSnapshot = new HashSet<>();
+        final Set<Card> sacSnapshot = new HashSet<>();
+        final Set<Card> tapLive = AiCardMemory.getMemorySet(ai, MemorySet.PAYS_TAP_COST);
+        final Set<Card> sacLive = AiCardMemory.getMemorySet(ai, MemorySet.PAYS_SAC_COST);
+        if (tapLive != null) {
+            tapSnapshot.addAll(tapLive);
+        }
+        if (sacLive != null) {
+            sacSnapshot.addAll(sacLive);
+        }
+        try {
+            return canPayManaCost(sa.getPayCosts(), sa, ai, 0, false);
+        } finally {
+            AiCardMemory.clearMemorySet(ai, MemorySet.PAYS_TAP_COST);
+            AiCardMemory.clearMemorySet(ai, MemorySet.PAYS_SAC_COST);
+            for (final Card c : tapSnapshot) {
+                AiCardMemory.rememberCard(ai, c, MemorySet.PAYS_TAP_COST);
+            }
+            for (final Card c : sacSnapshot) {
+                AiCardMemory.rememberCard(ai, c, MemorySet.PAYS_SAC_COST);
+            }
+        }
+    }
+
     public static boolean payManaCost(ManaCostBeingPaid cost, final SpellAbility sa, final Player ai, final boolean effect) {
         return payManaCost(cost, sa, ai, false, true, effect);
     }

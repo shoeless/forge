@@ -103,6 +103,11 @@ public class AiController {
     // unseeded sims keep the timeout safety net.
     private static final boolean DETERMINISTIC_RNG = System.getProperty("forge.rngSeed") != null;
 
+    // Counts real exceptions (NOT timeouts) thrown during AI ability evaluation and swallowed by the
+    // picker below. These used to be silently turned into a "pass", hiding bugs (e.g. an NPE in some
+    // card's SpellAbilityAi). We now surface + count them so the throwing handler is findable in logs.
+    public static final java.util.concurrent.atomic.AtomicLong AI_EVAL_FAILS = new java.util.concurrent.atomic.AtomicLong();
+
     public AiController(final Player computerPlayer, final Game game0) {
         player = computerPlayer;
         game = game0;
@@ -902,6 +907,17 @@ public class AiController {
         // foretells a counter it keeps reserving for it instead of tapping out.
         List<SpellAbility> counters = getPlayableCounters(counterReservationSources());
         if (counters.isEmpty()) {
+            // EXPERIMENTAL (AiProps default OFF): with a commander threat and cantrips but no counter yet in
+            // hand, speculatively hold ~2 mana so a cantrip can dig into a counter without the AI having
+            // tapped out first. Ships dark — prior speculative reservation tweaks (velocity buffer, hold-two;
+            // see the notes above) proved BEHAVIORALLY INERT, so do NOT enable without funnel evidence.
+            if (getBoolProperty(AiProps.RESERVE_MANA_FOR_SPECULATIVE_COUNTER) && handHasCantrip()) {
+                CardCollection specSources = ComputerUtilMana.getAvailableManaSources(player, true);
+                int specReserve = Math.min(specSources.size(), 2);
+                for (int i = 0; i < specReserve; i++) {
+                    memory.rememberCard(specSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+                }
+            }
             return;
         }
 
@@ -971,6 +987,20 @@ public class AiController {
                 memory.rememberCard(allSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
             }
         }
+    }
+
+    // True if the hand holds a cantrip/dig spell that could find a counter (used only by the experimental
+    // speculative reservation above). Draw/Dig put cards into hand; Scry alone can't, so it's excluded.
+    private boolean handHasCantrip() {
+        for (Card c : player.getCardsIn(ZoneType.Hand)) {
+            for (SpellAbility sa : c.getSpellAbilities()) {
+                ApiType api = sa.getApi();
+                if (api == ApiType.Draw || api == ApiType.Dig) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // ---- Foretell -----------------------------------------------------------------------------
@@ -2029,8 +2059,17 @@ public class AiController {
             SpellAbility result = DETERMINISTIC_RNG ? future.get() : future.get(game.getAITimeout(), TimeUnit.SECONDS);
             return result;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            if (e instanceof ExecutionException) {
+                // A real exception thrown deep in AI evaluation (e.g. a getCMC()-on-null NPE in some card's
+                // SpellAbilityAi) — previously swallowed silently, which just made the AI pass and hid the
+                // bug. Surface the unwrapped cause loudly and count it so the throwing handler can be found
+                // in sim logs. (Timeouts/interrupts are expected under load and are NOT counted.)
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                System.err.println("[AI-EVAL-FAIL] chooseSpellAbilityToPlay swallowed exception (#"
+                        + AI_EVAL_FAILS.incrementAndGet() + "): " + cause);
+                cause.printStackTrace();
+            }
             try {
-                e.printStackTrace();
                 t.stop();
             } catch (UnsupportedOperationException ex) {
                 // Android and Java 20 dropped support to stop so sadly thread will keep running

@@ -121,6 +121,26 @@ public class ComputerUtil {
         // Spell Permanents inherit their cost from Mana Cost
         final Cost cost = sa.getPayCosts();
 
+        // A mana source counted when the AI DECIDED to cast this spell may have been tapped/sacrificed/
+        // restricted since (by an intervening trigger or ability). Re-validate the actual payment now; if it
+        // can no longer be paid, quietly return the card to its origin zone instead of announcing the spell
+        // and hitting the noisy "AI failed to play X" rollback below. Conservative: real spell casts only,
+        // no copies, no X spells (X isn't finalized here and the documented failures are non-X spells), and
+        // only when there's a mana cost to re-check.
+        if (sa.isSpell() && !source.isCopiedSpell() && !sa.costHasManaX()
+                && cost != null && cost.hasManaCost()
+                && !ComputerUtilMana.revalidateManaPayment(sa, ai)) {
+            sa.setSkip(true);
+            final Card back = sa.getHostCard();
+            if (hz != null && back != null && back.getZone() != null && back.getZone().is(ZoneType.Stack)) {
+                Card c = game.getAction().moveTo(hz.getZoneType(), back, null, null);
+                for (SpellAbility csa : c.getSpellAbilities()) {
+                    csa.setSkip(true);
+                }
+            }
+            return false;
+        }
+
         game.getStack().freezeStack(sa);
 
         final CostPayment pay = new CostPayment(cost, sa);

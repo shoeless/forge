@@ -71,6 +71,10 @@ public enum AiProps { /** */
     ALWAYS_COUNTER_PUMP_SPELLS ("true"), /** */
     ALWAYS_COUNTER_AURAS ("true"), /** */
     ALWAYS_COUNTER_SPELLS_FROM_NAMED_CARDS (""), /** */
+    // EXPERIMENTAL, default OFF: speculatively hold ~2 mana when a commander threat exists and the hand has
+    // cantrips but no counter yet, so a cantrip can dig into a counter without the AI having tapped out first.
+    // Ship dark — prior speculative reservation tweaks proved behaviorally inert; needs funnel evidence to enable.
+    RESERVE_MANA_FOR_SPECULATIVE_COUNTER ("false"), /** */
     CHANCE_TO_COPY_OWN_SPELL_WHILE_ON_STACK ("30"), /** */
     ALWAYS_COPY_SPELL_IF_CMC_DIFF ("2"), /** */
     ACTIVELY_DESTROY_ARTS_AND_NONAURA_ENCHS ("true"), /** */

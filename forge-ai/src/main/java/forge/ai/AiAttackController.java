@@ -52,10 +52,12 @@ import java.util.*;
 import forge.util.function.Predicate;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -95,6 +97,9 @@ public class AiAttackController {
     // game-copy SpellAbilities that interleave the process-global SA id counter, and that interleaving
     // depends on GC/CPU timing, which broke seeded reproducibility once the memo changed the AI's speed.
     private static final boolean INLINE_DETERMINISTIC = System.getProperty("forge.rngSeed") != null;
+    // Counts real exceptions (NOT timeouts) thrown during combat evaluation and swallowed below. These used
+    // to be silently dropped (an attacker just vanished from the eval), hiding bugs; now surfaced + counted.
+    public static final java.util.concurrent.atomic.AtomicLong COMBAT_EVAL_FAILS = new java.util.concurrent.atomic.AtomicLong();
     private List<Future<Integer>> futures = new ArrayList<>();
 
     /**
@@ -106,6 +111,9 @@ public class AiAttackController {
             try {
                 task.call();
             } catch (Exception e) {
+                // Real failure in inline combat eval — surface loudly + count instead of hiding it.
+                System.err.println("[AI-COMBAT-EVAL-FAIL] inline combat-eval task threw (#"
+                        + COMBAT_EVAL_FAILS.incrementAndGet() + "): " + e);
                 e.printStackTrace();
             }
             return;
@@ -125,9 +133,17 @@ public class AiAttackController {
                 } else {
                     future.get();
                 }
-            } catch (Exception e) {
-                // Log but continue - mirrors .exceptionally() behavior
+            } catch (TimeoutException e) {
+                // Expected under load (wide-board combat eval exceeded the wall-clock budget) — continue,
+                // don't count it as a bug.
                 e.printStackTrace();
+            } catch (Exception e) {
+                // A real exception (e.g. NPE) thrown in combat eval — used to be silently dropped so the
+                // attacker just vanished from evaluation. Surface the unwrapped cause loudly + count it.
+                Throwable cause = (e instanceof ExecutionException && e.getCause() != null) ? e.getCause() : e;
+                System.err.println("[AI-COMBAT-EVAL-FAIL] combat-eval future threw (#"
+                        + COMBAT_EVAL_FAILS.incrementAndGet() + "): " + cause);
+                cause.printStackTrace();
             }
         }
         futures.clear();
@@ -149,7 +165,7 @@ public class AiAttackController {
         myList = ai.getCreaturesInPlay();
         this.nextTurn = nextTurn;
         refreshCombatants(defendingOpponent);
-        this.timeOut = ai.getGame().getAITimeout();
+        this.timeOut = ai.getGame().getAICombatTimeout();
         this.canUseTimeout = ai.getGame().canUseTimeout();
     } // overloaded constructor to evaluate attackers that should attack next turn
 
@@ -164,7 +180,7 @@ public class AiAttackController {
             attackers.add(attacker);
         }
         this.blockers = getPossibleBlockers(oppList, this.attackers, this.nextTurn);
-        this.timeOut = ai.getGame().getAITimeout();
+        this.timeOut = ai.getGame().getAICombatTimeout();
         this.canUseTimeout = ai.getGame().canUseTimeout();
     } // overloaded constructor to evaluate single specified attacker
 
