@@ -1,8 +1,9 @@
 package forge.game.card;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ForwardingTable;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import com.google.common.collect.Tables;
 import forge.game.CardTraitBase;
 import forge.game.GameObject;
 import forge.game.GameObjectPredicates;
@@ -10,13 +11,28 @@ import forge.game.player.Player;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import forge.util.function.Predicate;
 
 public class TokenCreateTable extends ForwardingTable<Player, Card, Integer> {
 
-    Table<Player, Card, Integer> dataMap = HashBasedTable.create();
+    // Insertion-ordered (not HashBasedTable) so cellSet()/rowKeySet()/columnKeySet() iterate deterministically.
+    // The iteration order drives TokenEffectBase.makeTokenTable's token-creation order -> nextCardId() ->
+    // battlefield insertion order, which AI selection (e.g. CopyPermanentAi's positional first/last-max tie-break)
+    // reads. Hash order made multi-token effects (Gruff Triplets, multi-controller copies) create tokens — hence
+    // allocate ids — in per-JVM-run order, giving nondeterministic AI copy-target picks on wide token boards (and
+    // memo-off != memo-on). Insertion order is deterministic (players x tokenScripts order in createTokenTable)
+    // and memo-independent (content-driven, not id-driven).
+    Table<Player, Card, Integer> dataMap = Tables.newCustomTable(
+            new LinkedHashMap<Player, Map<Card, Integer>>(),
+            new Supplier<Map<Card, Integer>>() {
+                @Override
+                public Map<Card, Integer> get() {
+                    return new LinkedHashMap<Card, Integer>();
+                }
+            });
     
     public TokenCreateTable() {
     }

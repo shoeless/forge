@@ -743,7 +743,15 @@ public class DeckBattler {
                             if (turn > maxTurnLimit) {
                                 turnLimitHit[0] = true;
                                 gameRef.setAge(GameStage.GameOver);
-                            } else if (System.currentTimeMillis() - lastProgressMs > noProgressAbortMs) {
+                            } else if (!deterministicRng
+                                    && System.currentTimeMillis() - lastProgressMs > noProgressAbortMs) {
+                                // The WALL-CLOCK no-progress abort is a seed-leak: a slow-but-PROGRESSING turn
+                                // (e.g. a token-copy storm + wide-board AI eval taking >180s for one turn) trips it
+                                // at a real-time-variable instant, and setAge(GameOver) from this monitor thread is
+                                // seen by the game thread after a run-to-run-VARIABLE number of trailing stack
+                                // resolutions -> nondeterministic ids downstream. Skip it under -Dforge.rngSeed
+                                // (sibling of the wall-clock Timer above); the turn-count limit + the gauntlet's
+                                // JVM-kill watchdog are the deterministic / GC-independent stops there.
                                 System.out.println("[STUCK] game aborted: turn " + turn + " made no progress for "
                                         + (noProgressAbortMs / 1000) + "s (likely an engine continuous-effect loop)");
                                 turnLimitHit[0] = true;

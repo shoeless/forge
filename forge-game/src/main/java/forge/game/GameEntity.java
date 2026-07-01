@@ -88,6 +88,15 @@ public abstract class GameEntity implements GameObject, IIdentifiable {
             return 0;
         }
 
+        // Combat-eval scope short-circuit: if no DamageDone replacement effect exists anywhere, the loop
+        // below can find no prevention/replacement, so skip the per-call STATIC_ABILITIES_SOURCE_ZONES scan
+        // (this method is hit once per (source,target) deep in AiBlockController.makeChumpBlocks). null = not
+        // in a populated combat-eval scope (or cache disabled) -> fall through to the full scan. Behavior-neutral.
+        final Boolean scopeHasRep = getGame().getReplacementHandler().scopeReplacementTypePresent(ReplacementType.DamageDone);
+        if (scopeHasRep != null && !scopeHasRep) {
+            return Math.max(0, damage - possiblePrevention);
+        }
+
         for (final Card ca : getGame().getCardsIn(ZoneType.STATIC_ABILITIES_SOURCE_ZONES)) {
             for (final ReplacementEffect re : ca.getReplacementEffects()) {
                 if (!re.getMode().equals(ReplacementType.DamageDone) ||

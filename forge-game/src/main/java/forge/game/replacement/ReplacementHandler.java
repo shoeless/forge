@@ -159,6 +159,14 @@ public class ReplacementHandler {
     }
 
     public boolean cantHappenCheck(final ReplacementType event, final Map<AbilityKey, Object> runParams) {
+        // Combat-eval scope short-circuit: if no replacement effect of this type exists anywhere, the
+        // CantHappen-layer list is necessarily empty, so return false without the all-zones getReplacementList
+        // scan. Kills the CreatureEvaluator.canUntap -> cantHappenCheck(Untap) -> forEachCardInGame blowup during
+        // AI spell evaluation on wide boards. null = not in a populated combat-eval scope -> full scan. Neutral.
+        final Boolean present = scopeReplacementTypePresent(event);
+        if (present != null && !present) {
+            return false;
+        }
         return !getReplacementList(event, runParams, ReplacementLayer.CantHappen).isEmpty();
     }
 
@@ -920,29 +928,99 @@ public class ReplacementHandler {
         return totalAmount;
     }
 
+    // Per-thread cache for the AI combat-evaluation scope. isPreventCombatDamageThisTurn() scans EVERY card
+    // in EVERY zone (forEachCardInGame, incl. both ~99-card libraries) and is called once per (source,target)
+    // inside the AI's predictDamageTo, which AiBlockController.makeChumpBlocks invokes once per attacker per
+    // recursion level -> an O(attackers^2 x allCards) blowup on a big token board that effectively hangs in
+    // deterministic-sim mode (where the wall-clock combat timeout is disabled). The Fog set is invariant during
+    // block assignment (no spells resolve), so ComputerUtilCombat.beginCombatEvaluation()/endCombatEvaluation()
+    // populate/clear this cache for the scope. ThreadLocal because non-deterministic combat eval runs on a pool.
+    // Behavior-neutral (same value as the scan) and deterministic.
+    private final ThreadLocal<Boolean> preventCombatDamageCache = new ThreadLocal<Boolean>();
+    // Companion scope cache: the SET of ReplacementType values that have any effect in the game right now,
+    // computed in the SAME forEachCardInGame pass as the Fog flag. It is the precondition for the other
+    // all-zones getReplacementList scans on the AI-eval hot paths, each of which calls forEachCardInGame once
+    // per (source,target)/per-creature deep inside O(N^2) loops: AiBlockController.makeChumpBlocks via
+    // isCombatDamagePrevented / GameEntity.staticDamagePrevention (DamageDone), and CreatureEvaluator.canUntap
+    // via cantHappenCheck (Untap). When the requested type is absent, getReplacementList would return empty, so
+    // callers short-circuit without scanning -> removes the O(N^2 x allCards) blowup that hangs wide token boards
+    // in deterministic-sim mode (where the AI wall-clock timeouts are disabled). Scope is invariant (no spells
+    // resolve during attack/block/play evaluation), so the cached set equals a fresh scan for the whole scope.
+    private final ThreadLocal<java.util.EnumSet<ReplacementType>> presentRepTypesCache =
+            new ThreadLocal<java.util.EnumSet<ReplacementType>>();
+    // Kill-switch + validation toggles for the combat-eval scan cache (Fog flag + present-types set).
+    // -Dforge.fogCache=off forces fresh scans on every call (the pre-fix behavior) so a cache-on-vs-off
+    // action-log diff proves behavior-neutrality. -Dforge.assertFogCache=true recomputes the fresh Fog value on
+    // every cache HIT and logs any mismatch — proof the scope state is invariant (mirrors forge.ai.sigAudit).
+    private static final boolean FOG_CACHE_ENABLED = !"off".equalsIgnoreCase(System.getProperty("forge.fogCache", "on"));
+    private static final boolean ASSERT_FOG_CACHE = Boolean.getBoolean("forge.assertFogCache");
+    public void cachePreventCombatDamageThisTurn() {
+        computeScopeCaches(true);
+    }
+    public void clearPreventCombatDamageCache() {
+        preventCombatDamageCache.remove();
+        presentRepTypesCache.remove();
+    }
+    // Cached scope precondition for the combat-eval all-zones getReplacementList scans. Returns Boolean.FALSE
+    // when NO replacement effect of the given type exists anywhere (callers may skip their scan: an empty result
+    // is guaranteed), Boolean.TRUE when one does (callers must fall through to the full per-(source,target) scan),
+    // or null when not in a populated scope or the cache is disabled (callers must fall through). Behavior-neutral:
+    // FALSE only when a full scan would also find nothing of that type.
+    public final Boolean scopeReplacementTypePresent(final ReplacementType type) {
+        if (!FOG_CACHE_ENABLED) {
+            return null;
+        }
+        final java.util.EnumSet<ReplacementType> types = presentRepTypesCache.get();
+        return types == null ? null : Boolean.valueOf(types.contains(type));
+    }
+
     /**
      * Helper function to check if combat damage is prevented this turn (fog effect)
      * @return true if there is some resolved fog effect
      */
     public final boolean isPreventCombatDamageThisTurn() {
-        final List<ReplacementEffect> list = Lists.newArrayList();
+        if (FOG_CACHE_ENABLED) {
+            final Boolean cached = preventCombatDamageCache.get();
+            if (cached != null) {
+                if (ASSERT_FOG_CACHE) {
+                    final boolean fresh = computeScopeCaches(false);
+                    if (fresh != cached.booleanValue()) {
+                        System.err.println("[FOGCACHE-STALE] cached=" + cached + " fresh=" + fresh
+                                + " turn=" + game.getPhaseHandler().getTurn());
+                    }
+                }
+                return cached.booleanValue();
+            }
+        }
+        return computeScopeCaches(false);
+    }
+    // One forEachCardInGame pass. Returns whether a prevent-ALL-combat-damage (Fog) rep is present, and when
+    // populate=true also stores the Fog flag + the set of all present ReplacementTypes into the scope caches.
+    private boolean computeScopeCaches(final boolean populate) {
+        final java.util.EnumSet<ReplacementType> types = java.util.EnumSet.noneOf(ReplacementType.class);
+        final boolean[] fog = new boolean[1];
         game.forEachCardInGame(new Visitor<Card>() {
             @Override
             public boolean visit(Card c) {
                 for (final ReplacementEffect re : c.getReplacementEffects()) {
+                    types.add(re.getMode());
                     if (re.getMode() == ReplacementType.DamageDone
                             && re.getLayer() == ReplacementLayer.Other
                             && re.hasParam("Prevent") && re.getParam("Prevent").equals("True")
                             && re.hasParam("IsCombat") && re.getParam("IsCombat").equals("True")
                             && !re.hasParam("ValidSource") && !re.hasParam("ValidTarget")
                             && re.zonesCheck(game.getZoneOf(c))) {
-                        list.add(re);
+                        fog[0] = true;
                     }
                 }
                 return true;
             }
         });
-        return !list.isEmpty();
+        if (populate) {
+            preventCombatDamageCache.set(fog[0]);
+            presentRepTypesCache.set(types);
+        }
+        return fog[0];
     }
 
     public boolean isReplacing() {

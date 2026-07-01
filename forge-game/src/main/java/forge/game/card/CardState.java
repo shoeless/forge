@@ -621,6 +621,22 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     private static final boolean REP_MEMO = "on".equals(System.getProperty("forge.repMemo",
             System.getProperty("forge.staticMemo", "off")));
     private static final boolean ASSERT_MEMO = System.getProperty("forge.assertStaticMemo") != null;
+    // Combat-eval STABLE-scope cache: inside ComputerUtilCombat.beginCombatEvaluation/endCombatEvaluation the
+    // board is invariant (no checkStaticAbilities re-application, no spell resolution), so grant-target cards
+    // (hasCardTraitChanges) — which otherwise bypass the version memo and rebuild on every read — can cache
+    // their built static-ability list for the scope. That rebuild storm dominates wide token-storm AI eval
+    // (makeChumpBlocks/getWorstCreatureAI/canDamagePrevented). Scope-local (cleared at endStableScope) so it
+    // never carries a build across a checkStaticAbilities churn. Static build is pure (no id alloc/RNG), so this
+    // is behavior-neutral; getReplacementEffects is deliberately NOT scope-cached (its materializeLazyReps id
+    // allocation must run every call). Enabled only when ComputerUtilCombat enters the scope (-Dforge.combatEvalCache).
+    private static final ThreadLocal<java.util.Map<CardState, FCollectionView<StaticAbility>>> scopeStaticCache =
+            new ThreadLocal<java.util.Map<CardState, FCollectionView<StaticAbility>>>();
+    public static void beginStableScope() {
+        scopeStaticCache.set(new java.util.HashMap<CardState, FCollectionView<StaticAbility>>());
+    }
+    public static void endStableScope() {
+        scopeStaticCache.remove();
+    }
     private FCollection<StaticAbility> cachedStaticAbilities;
     private long cachedStaticAbilitiesVersion = -1L;
     private FCollection<ReplacementEffect> cachedReplacementEffects;
@@ -630,7 +646,24 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         return getStaticAbilities(STATIC_MEMO);
     }
     public final FCollectionView<StaticAbility> getStaticAbilities(boolean useMemo) {
-        if (!useMemo) {
+        // Combat-eval stable-scope cache (fires for ANY in-scope call, static memo ON or OFF): the board is
+        // invariant inside ComputerUtilCombat.begin/endCombatEvaluation (no checkStaticAbilities re-application,
+        // no spell resolution), so repeated builds are redundant. This is what makes wide-token-storm AI eval
+        // tractable even with the memo OFF (the determinism gate's memo-off arm rebuilds otherwise). The CR 613.8
+        // fresh-read carve-outs (getStaticAbilities(false) in GameAction.checkStaticAbilities) never run inside a
+        // combat-eval scope, so they are never intercepted. Behavior-neutral (pure build); cache-on/off A/B proves it.
+        final java.util.Map<CardState, FCollectionView<StaticAbility>> scope = scopeStaticCache.get();
+        if (scope != null) {
+            FCollectionView<StaticAbility> hit = scope.get(this);
+            if (hit == null) {
+                hit = buildStaticAbilities();
+                scope.put(this, hit);
+            }
+            return hit;
+        }
+        // Grant-target cards are re-applied (updateView=false, no contEffVersion bump) every checkStaticAbilities
+        // pass, so the version-keyed memo is unsafe for them -> rebuild live (== memo-off ground truth).
+        if (!useMemo || card.hasCardTraitChanges()) {
             return buildStaticAbilities();
         }
         final long ver = card.getContEffVersion();
@@ -727,7 +760,9 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     }
     public FCollectionView<ReplacementEffect> getReplacementEffects(boolean useMemo) {
         materializeLazyReps();
-        if (!useMemo) {
+        // Same grant-target bypass as getStaticAbilities: AddReplacementEffect/keyword grants take the
+        // updateView=false path and don't bump contEffVersion, so the memo would go stale. See Card.hasCardTraitChanges().
+        if (!useMemo || card.hasCardTraitChanges()) {
             return buildReplacementEffects();
         }
         final long ver = card.getContEffVersion();

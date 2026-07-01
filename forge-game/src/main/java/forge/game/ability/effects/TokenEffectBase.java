@@ -32,6 +32,12 @@ import forge.util.IterableUtil;
 
 public abstract class TokenEffectBase extends SpellAbilityEffect {
 
+    // Kept determinism-debug toolkit (gated, off by default, read once): -Dforge.tokTrace dumps the
+    // makeTokenTable cellSet() iteration = token-creation order, so two same-seed runs can be diffed to verify
+    // token order is deterministic (it drives nextCardId()). Sibling of -Dforge.rngTrace / -Dforge.dumpGameLogGame
+    // / -Dforge.assertStaticMemo. No effect in normal play / iOS (property unset).
+    private static final boolean TOK_TRACE = System.getProperty("forge.tokTrace") != null;
+
     protected TokenCreateTable createTokenTable(Iterable<Player> players, String[] tokenScripts, final int finalAmount, final SpellAbility sa) {
         TokenCreateTable tokenTable = new TokenCreateTable();
         for (final Player owner : players) {
@@ -114,6 +120,12 @@ public abstract class TokenEffectBase extends SpellAbilityEffect {
             Player creator = c.getRowKey();
             Player controller = prototype.getController();
             int cellAmount = c.getValue();
+
+            if (TOK_TRACE) {
+                System.out.println("[TOKTRACE] cell creator=" + creator.getId()
+                        + " proto=" + prototype.getName() + " amt=" + cellAmount
+                        + " by=" + (sa.getHostCard() != null ? sa.getHostCard().getName() : "?"));
+            }
 
             for (int i = 0; i < cellAmount; i++) {
                 Card tok = new CardCopyService(prototype).copyCard(true);

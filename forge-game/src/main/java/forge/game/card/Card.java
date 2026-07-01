@@ -2049,6 +2049,15 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     @Override
     public final void clearCounters() {
         if (counters.isEmpty()) { return; }
+        // Mirror setCounters(Map): if any rep-affecting counter (shield/stun/finality) is being cleared,
+        // the getReplacementEffects memo must be invalidated so the counter rep is dropped. The keyword
+        // path below only bumps (via updateKeywords) for keyword/manabond counters, missing these.
+        for (CounterType ct : counters.keySet()) {
+            if (counterAffectsReplacements(ct)) {
+                invalidateContinuousEffectsMemo();
+                break;
+            }
+        }
         // iOS compatibility: Replace Stream API with traditional loop
         boolean allAreKeyword = true;
         for (CounterType ct : counters.keySet()) {
@@ -5169,6 +5178,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
     public final void addChangedCardTraitsByText(Collection<SpellAbility> spells,
             Collection<Trigger> trigger, Collection<ReplacementEffect> replacements, Collection<StaticAbility> statics, long timestamp, long staticId) {
+        // getStaticAbilities()/getReplacementEffects() merge changedCardTraitsByText (Layer 3), so a
+        // text-change that grants traits must invalidate the memo. removeChangedCardTraitsByText bumps.
+        invalidateContinuousEffectsMemo();
         changedCardTraitsByText.put(timestamp, staticId, new CardTraitChanges(
             spells, null, trigger, replacements, statics, true, false
         ));
@@ -5190,6 +5202,12 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         CardTraitChanges result = new CardTraitChanges(
             spells, removedAbilities, trigger, replacements, statics, removeAll, removeNonMana
         );
+        // Must invalidate even when updateView=false: the static-application path
+        // (StaticAbilityContinuous AddStaticAbility/AddTrigger/AddReplacementEffect) passes
+        // updateView=false, so without this bump getStaticAbilities()/getReplacementEffects() could
+        // return a memoized list that lacks the just-added trait (e.g. a level-gated Class anthem),
+        // and the static would never be discovered/applied. removeChangedCardTraits already bumps.
+        invalidateContinuousEffectsMemo();
         changedCardTraits.put(timestamp, staticId, result);
         if (updateView) {
             updateAbilityTextForView();
@@ -5224,6 +5242,21 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
     public final Table<Long, Long, CardTraitChanges> getChangedCardTraits() {
         return changedCardTraits;
+    }
+
+    // True if this card currently carries continuous-grant changes (granted spell abilities, triggers,
+    // static abilities, replacement effects, or keywords — directly or via text change). These tables are
+    // cleared and RE-APPLIED on every GameAction.checkStaticAbilities pass with updateView=false, which does
+    // NOT bump contEffVersion (only the updateView=true path bumps, via updateKeywords()/updateAbilityTextForView()).
+    // So buildStaticAbilities()/buildReplacementEffects() is NOT stable at a fixed contEffVersion for such cards,
+    // and the version-keyed memo (CardState.getStaticAbilities/getReplacementEffects) would serve a stale snapshot
+    // (e.g. a level-gated Class anthem like Caretaker's Talent that never effectively applies). The memo bypasses
+    // these cards (live rebuild == memo-off, the validated ground truth); the vast majority of cards carry no such
+    // changes and keep the full memo. This is a superset of every changed*-sourced staleness in buildStaticAbilities
+    // (own staticAbilities/keywords bump via addStaticAbility/updateKeywordsCache; land abilities are lands-only).
+    public final boolean hasCardTraitChanges() {
+        return !changedCardTraits.isEmpty() || !changedCardTraitsByText.isEmpty()
+                || !changedCardKeywords.isEmpty() || !changedCardKeywordsByText.isEmpty();
     }
 
     public final void setChangedCardTraits(Table<Long, Long, CardTraitChanges> changes) {
@@ -7027,6 +7060,10 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public void setClassLevel(int level) {
         classLevel = level;
         view.updateClassLevel(this);
+        // Class-level statics are level-gated live in StaticAbility.checkConditions (ClassLevel param),
+        // so a level change alters which of this card's static abilities are active. updateAbilityTextForView
+        // already bumps the continuous-effects memo, but bump explicitly too in case that ever stops doing so.
+        invalidateContinuousEffectsMemo();
         updateAbilityTextForView();
     }
     public boolean isClassCard() {

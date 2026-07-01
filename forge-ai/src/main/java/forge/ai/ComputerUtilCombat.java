@@ -72,6 +72,17 @@ public class ComputerUtilCombat {
     // (attacker identity | blocker identity | flags) so identical-token combats reuse one result.
     // Lifecycle is bound to beginCombatEvaluation()/endCombatEvaluation(); null = not in a bulk scope.
     private static final ThreadLocal<Map<String, Boolean>> cachedDestroyResults = new ThreadLocal<Map<String, Boolean>>();
+    // Game whose ReplacementHandler Fog-cache we populated at beginCombatEvaluation, so endCombatEvaluation()
+    // (which takes no args) can clear it on the same thread.
+    private static final ThreadLocal<Game> evalGame = new ThreadLocal<Game>();
+    // Per-scope memo of damageIfUnblocked(attacker, attacked, combat==null, withoutAbilities==false): the full
+    // unblocked damage of an attacker to a target is invariant for the scope (block assignment mutates only
+    // blocker lists), yet AiBlockController.makeChumpBlocks recomputes it O(attackers^2) times via lifeInDanger
+    // -> sumDamageIfUnblocked, each call doing two canDamagePrevented STATIC_ABILITIES_SOURCE_ZONES scans that
+    // rebuild grant-target tokens' static abilities (the memo bypass) -> O(attackers^2 x board). Keyed by
+    // (attacker.id, attacked.id). Behavior-neutral (pure forecast). -Dforge.combatEvalCache=off disables it.
+    private static final ThreadLocal<Map<Long, Integer>> cachedUnblockedDamage = new ThreadLocal<Map<Long, Integer>>();
+    private static final boolean COMBAT_EVAL_CACHE = !"off".equalsIgnoreCase(System.getProperty("forge.combatEvalCache", "on"));
     // Validation toggle: when -Dforge.ai.sigAudit=true, every cache HIT recomputes the real value
     // and logs any mismatch — a deterministic proof that AiCardSignature is a complete decision key.
     // Off (and free) in production.
@@ -121,6 +132,14 @@ public class ComputerUtilCombat {
         }
         cachedCombatTriggers.set(triggers);
         cachedCombatStaticAbilities.set(statics);
+        // Cache the global Fog check (isPreventCombatDamageThisTurn) for this frozen eval scope — it scans every
+        // card in every zone and is otherwise recomputed O(attackers^2) times inside makeChumpBlocks' lifeInDanger.
+        evalGame.set(game);
+        game.getReplacementHandler().cachePreventCombatDamageThisTurn();
+        if (COMBAT_EVAL_CACHE) {
+            cachedUnblockedDamage.set(new HashMap<Long, Integer>());
+            forge.game.card.CardState.beginStableScope();
+        }
         // Only engage the per-decision identity cache when duplicate creatures are present (token
         // swarms / constructed dupes); otherwise it would just add signature overhead on a board
         // where nothing collapses.
@@ -135,6 +154,13 @@ public class ComputerUtilCombat {
         cachedCombatTriggers.remove();
         cachedCombatStaticAbilities.remove();
         cachedDestroyResults.remove();
+        cachedUnblockedDamage.remove();
+        forge.game.card.CardState.endStableScope();
+        final Game g = evalGame.get();
+        if (g != null) {
+            g.getReplacementHandler().clearPreventCombatDamageCache();
+            evalGame.remove();
+        }
     }
 
     /** True if a beginCombatEvaluation() scope is currently open on this thread. */
@@ -296,26 +322,44 @@ public class ComputerUtilCombat {
      * @return a int.
      */
     public static int damageIfUnblocked(final Card attacker, final GameEntity attacked, final Combat combat, boolean withoutAbilities) {
-        int damage = attacker.getNetCombatDamage();
-        int sum = 0;
-        if (attacked instanceof Player) {
-            Player p = (Player) attacked;
-            if (!p.canLoseLife()) {
-                return 0;
+        // Combat-eval scope cache (combat==null && !withoutAbilities only — the lifeInDanger/sumDamageIfUnblocked
+        // path). The pumped-creature callers pass withoutAbilities=true and use id-retaining LKI copies, so they
+        // never key into this cache; combat!=null callers also bypass it. See cachedUnblockedDamage.
+        final Map<Long, Integer> cache = (combat == null && !withoutAbilities) ? cachedUnblockedDamage.get() : null;
+        long key = 0L;
+        if (cache != null) {
+            key = (((long) attacker.getId()) << 32) | (attacked.getId() & 0xffffffffL);
+            final Integer hit = cache.get(key);
+            if (hit != null) {
+                return hit.intValue();
             }
         }
 
-        if (!attacker.hasKeyword(Keyword.INFECT)) {
+        int damage = attacker.getNetCombatDamage();
+        int sum = 0;
+        boolean compute = true;
+        if (attacked instanceof Player) {
+            Player p = (Player) attacked;
+            if (!p.canLoseLife()) {
+                compute = false; // sum stays 0
+            }
+        }
+
+        if (compute && !attacker.hasKeyword(Keyword.INFECT)) {
             // ask ReplacementDamage directly
             if (isCombatDamagePrevented(attacker, attacked, damage)) {
-                return 0;
+                sum = 0;
+            } else {
+                damage += predictPowerBonusOfAttacker(attacker, null, combat, withoutAbilities);
+                sum = predictDamageTo(attacked, damage, attacker, true);
+                if (attacker.hasDoubleStrike()) {
+                    sum *= 2;
+                }
             }
+        }
 
-            damage += predictPowerBonusOfAttacker(attacker, null, combat, withoutAbilities);
-            sum = predictDamageTo(attacked, damage, attacker, true);
-            if (attacker.hasDoubleStrike()) {
-                sum *= 2;
-            }
+        if (cache != null) {
+            cache.put(key, Integer.valueOf(sum));
         }
         return sum;
     }
@@ -2466,6 +2510,15 @@ public class ComputerUtilCombat {
         }
 
         final Game game = attacker.getGame();
+
+        // Combat-eval scope short-circuit: getReplacementList below does a full forEachCardInGame (all zones,
+        // incl. both ~99-card libraries) per (attacker,target); makeChumpBlocks calls this O(attackers^2) times.
+        // If no DamageDone replacement effect exists anywhere, the list is empty and this returns false, so skip
+        // the scan. null = not in a populated combat-eval scope (or cache disabled) -> full scan. Behavior-neutral.
+        final Boolean scopeHasRep = game.getReplacementHandler().scopeReplacementTypePresent(ReplacementType.DamageDone);
+        if (scopeHasRep != null && !scopeHasRep) {
+            return false;
+        }
 
         // first try to replace the damage
         final Map<AbilityKey, Object> repParams = AbilityKey.mapFromAffected(target);

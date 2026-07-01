@@ -609,6 +609,16 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
     }
 
     public final void resolveStack() {
+        // CR 104.3a: once the game is over, do not resolve further stack objects. Without this, a game that is
+        // already decided (e.g. a player at lethal with several simultaneous triggers still queued) resolves a
+        // run-to-run-VARIABLE number of trailing triggers before the loss state-based action breaks the main
+        // loop — and each extra resolution allocates a token/nextCardId, shifting every later object id and making
+        // seeded AI sims nondeterministic (the ghired-vs-kaalia seed-7 G9 fork). Rules-neutral (the game has
+        // ended) and rolls no RNG. isGameOver() is true only when the WHOLE game ends (not on a single player's
+        // loss in multiplayer), so normal mid-game resolution after one player leaves is unaffected.
+        if (game.isGameOver()) {
+            return;
+        }
         // freeze the stack while we're in the middle of resolving
         freezeStack(null);
         setResolving(true);
