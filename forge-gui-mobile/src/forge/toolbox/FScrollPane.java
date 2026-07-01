@@ -15,6 +15,9 @@ import forge.util.Utils;
 
 public abstract class FScrollPane extends FContainer {
     private static final float FLING_DECEL = 750f;
+    // Damp the flick velocity so a single flick doesn't coast across the whole list. Distance scales with the
+    // square of this, so 0.65 makes a flick travel ~42% as far (and feel ~35% slower). Tune here if needed.
+    private static final float FLING_VELOCITY_SCALE = 0.65f;
     public static FSkinColor getIndicatorColor() {
         if (Forge.isMobileAdventureMode)
             return FSkinColor.get(FSkinColor.Colors.ADV_CLR_TEXT).alphaColor(0.7f);
@@ -25,6 +28,11 @@ public abstract class FScrollPane extends FContainer {
 
     private float scrollLeft, scrollTop;
     private ScrollBounds scrollBounds;
+    // Cap the per-frame step fed to the fling physics. A long frame (e.g. a GC pause when the device is low
+    // on memory) otherwise yields a huge dt that makes the decelerating fling compute a backward/oversized
+    // step, so the scroll suddenly stops and jumps to a different position. Clamping dt makes the fling
+    // simply pause and resume smoothly across a stall. 0.1s never affects normal frames (<=~0.033s at 30fps).
+    private static final float MAX_FLING_STEP = 0.1f;
 
     public FScrollPane() {
         scrollBounds = new ScrollBounds();
@@ -280,7 +288,11 @@ public abstract class FScrollPane extends FContainer {
         @Override
         protected boolean advance(float dt) {
             if (physicsObj.isMoving()) { //avoid storing last fling stop time if scroll manually stopped
-                physicsObj.advance(dt);
+                //Clamp the step: a long frame (GC pause under memory pressure) produces a large dt that makes
+                //the decelerating fling physics take a backward/oversized step, which surfaced as the scroll
+                //abruptly stopping and reverting to an earlier position. Capping it lets the fling pause and
+                //resume smoothly instead of jumping. Normal frames (<=~0.033s) are never affected.
+                physicsObj.advance(Math.min(dt, MAX_FLING_STEP));
                 Vector2 pos = physicsObj.getPosition();
                 return setScrollPositions(pos.x, pos.y) && physicsObj.isMoving();
             }
@@ -306,8 +318,10 @@ public abstract class FScrollPane extends FContainer {
             return false; //if fling is more horizontal and can't scroll horizontally, don't scroll at all
         }
 
-        velocityX = -velocityX; //reverse velocities to account for scroll moving in opposite direction
-        velocityY = -velocityY;
+        //reverse velocities to account for scroll moving in opposite direction, and damp them so a flick
+        //doesn't shoot all the way to the start/end of the list
+        velocityX = -velocityX * FLING_VELOCITY_SCALE;
+        velocityY = -velocityY * FLING_VELOCITY_SCALE;
 
         if (activeFlingAnimation == null) {
             activeFlingAnimation = new FlingAnimation(velocityX, velocityY);
