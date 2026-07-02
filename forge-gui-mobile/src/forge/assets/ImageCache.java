@@ -30,7 +30,6 @@ import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
 import forge.deck.DeckProxy;
-import forge.gui.GuiBase;
 import forge.item.PaperToken;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -72,16 +71,24 @@ public class ImageCache {
     private static ImageCache imageCache;
     private Supplier<HashSet<String>> missingIconKeys = Suppliers.memoize(HashSet::new);
 
+    // Max resident downloaded card textures (LRU-evicted). Each is a decoded card image kept in native memory,
+    // so on a RAM-constrained device this is the single biggest native ceiling and the per-turn ratchet over a
+    // long game. Lowered from 120 on <=4GB devices in initCache() (from Forge.totalDeviceRAM).
+    private static int downloadedTextureCacheMax = 120;
+    // Longest-side cap (px) applied to downloaded card images before GPU upload; battlefield draws thumbnails and
+    // this keeps zoom acceptable while cutting the decoded RGBA/565 footprint. See downscaleCardPixmap().
+    private static final int MAX_CARD_TEX_DIM = 512;
+
     // iOS fix: Keep Pixmaps alive - iOS Texture requires Pixmap to stay in memory
     // Don't dispose Pixmaps - let GC handle them when memory is low
     private static final java.util.HashMap<Texture, Pixmap> pixmapCache = new java.util.HashMap<Texture, Pixmap>();
 
     // iOS fix: Cache for downloaded image textures (bypassing AssetManager)
     private static final java.util.LinkedHashMap<String, Texture> downloadedTextureCache =
-            new java.util.LinkedHashMap<String, Texture>(120, 0.75f, true) {
+            new java.util.LinkedHashMap<String, Texture>(16, 0.75f, true) {
                 @Override
                 protected boolean removeEldestEntry(java.util.Map.Entry<String, Texture> eldest) {
-                    if (size() > 120) {
+                    if (size() > downloadedTextureCacheMax) {
                         Texture t = eldest.getValue();
                         pixmapCache.remove(t);
                         textureToPath.remove(t);
@@ -114,8 +121,12 @@ public class ImageCache {
         q = EvictingQueue.create(capacity);
         //init syncQ for threadsafe use
         syncQ = Queues.synchronizedQueue(q);
-        //cap
-        int cl = GuiBase.isAndroid() ? maxCardCapacity + (capacity / 3) : 400;
+        // Bound the resident downloaded-texture cache tighter on RAM-constrained devices (<=~4GB). 120 full-res
+        // card textures is hundreds of MB of native memory and is the main per-turn ratchet over a long game.
+        boolean lowRam = Forge.totalDeviceRAM > 0 && Forge.totalDeviceRAM <= 4500;
+        downloadedTextureCacheMax = lowRam ? 48 : 120;
+        //cap: scale the bundled-texture set with the (already RAM-adjusted) cacheSize instead of a flat 400
+        int cl = maxCardCapacity + (capacity / 3);
         cardsLoaded = new HashSet<>(cl);
     }
 
@@ -384,6 +395,57 @@ public class ImageCache {
         return Forge.getAssets().manager().get(path, Texture.class, false);
     }
 
+    // Downscale a decoded card image to at most MAX_CARD_TEX_DIM on its longest side and convert to RGB565
+    // (card art is opaque). Cuts the resident Pixmap+Texture footprint ~4-8x vs full-res RGBA8888 while keeping
+    // zoom acceptable. Returns src unchanged if already small enough and RGB565; otherwise a new Pixmap (and
+    // disposes src). Any failure falls back to the original so the card still renders.
+    private static Pixmap downscaleCardPixmap(Pixmap src) {
+        try {
+            int w = src.getWidth();
+            int h = src.getHeight();
+            int maxSide = Math.max(w, h);
+            boolean needScale = maxSide > MAX_CARD_TEX_DIM;
+            boolean needFormat = src.getFormat() != Pixmap.Format.RGB565;
+            if (!needScale && !needFormat) {
+                return src;
+            }
+            int nw = w;
+            int nh = h;
+            if (needScale) {
+                float s = (float) MAX_CARD_TEX_DIM / (float) maxSide;
+                nw = Math.max(1, Math.round(w * s));
+                nh = Math.max(1, Math.round(h * s));
+            }
+            Pixmap dst = new Pixmap(nw, nh, Pixmap.Format.RGB565);
+            dst.setFilter(Pixmap.Filter.BiLinear);
+            dst.drawPixmap(src, 0, 0, w, h, 0, 0, nw, nh);
+            src.dispose();
+            return dst;
+        } catch (Exception e) {
+            return src;
+        }
+    }
+
+    // --- memory measurement accessors (Phase 0) ---
+    public int getDownloadedTextureCount() {
+        return downloadedTextureCache.size();
+    }
+    public long getDownloadedPixmapBytes() {
+        long sum = 0;
+        for (Pixmap p : pixmapCache.values()) {
+            if (p != null) {
+                sum += (long) p.getWidth() * (long) p.getHeight() * (p.getFormat() == Pixmap.Format.RGB565 ? 2L : 4L);
+            }
+        }
+        return sum;
+    }
+    public int getCardsLoadedCount() {
+        return getCardsLoaded().size();
+    }
+    public static int getDownloadedTextureCacheMax() {
+        return downloadedTextureCacheMax;
+    }
+
     private Texture loadAsset(String imageKey, File file, boolean others) {
         if (file == null)
             return null;
@@ -410,8 +472,11 @@ public class ImageCache {
                     fis.read(imageBytes);
                     fis.close();
 
-                    // Create Pixmap from bytes - use RGBA8888 to preserve color channels correctly
-                    Pixmap pixmap = new Pixmap(imageBytes, 0, imageBytes.length);
+                    // Decode the downloaded JPEG, then downscale + convert to RGB565 (card art is opaque) to
+                    // bound native memory: battlefield cards render as thumbnails, so keeping a full-res
+                    // RGBA8888 Pixmap+Texture pair (~5MB/card) is the main per-turn memory ratchet on iOS.
+                    Pixmap raw = new Pixmap(imageBytes, 0, imageBytes.length);
+                    Pixmap pixmap = downscaleCardPixmap(raw);
 
                     // Create Texture from Pixmap (no mipmaps for faster upload)
                     directTexture = new Texture(pixmap, false);
@@ -439,10 +504,11 @@ public class ImageCache {
 
         // Only use AssetManager for bundled assets (not downloaded images)
         if (!isDownloadedImage) {
-            //load to assetmanager
+            //load to assetmanager - card images are opaque, so use the RGB565 card parameter (half the RGBA8888
+            //footprint) to bound the bundled-texture memory that grows over a long game (cardsLoaded climb)
             try {
                 if (Forge.getAssets().manager().get(fileName, Texture.class, false) == null) {
-                    Forge.getAssets().manager().load(fileName, Texture.class, Forge.getAssets().getTextureFilter());
+                    Forge.getAssets().manager().load(fileName, Texture.class, Forge.getAssets().getCardTextureFilter());
                     Forge.getAssets().manager().finishLoadingAsset(fileName);
                     counter += 1;
                 }

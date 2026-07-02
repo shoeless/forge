@@ -161,6 +161,7 @@ public class Assets implements Disposable {
     private ObjectMap<String, Texture> tmxMap;
     private Texture defaultImage, dummy;
     private TextureParameter textureParameter;
+    private TextureParameter cardTextureParameter;
     private ObjectMap<String, Font> textrafonts;
     private int cFB = 0, cFBVal = 0, cTM = 0, cTMVal = 0, cSF = 0, cSFVal = 0, cCF = 0, cCFVal = 0;
     private Texture holofoil;
@@ -378,6 +379,25 @@ public class Assets implements Disposable {
             textureParameter.magFilter = Texture.TextureFilter.Nearest;
         }
         return textureParameter;
+    }
+
+    // Card images are opaque, so load the bundled (AssetManager) card path as RGB565 (half the RGBA8888
+    // footprint) with no mipmaps (cards are drawn ~1:1). Separate from getTextureFilter() so UI textures that
+    // need alpha/mipmaps are unaffected. Mirrors the RGB565 downscale already applied to the downloaded path.
+    public TextureParameter getCardTextureFilter() {
+        if (cardTextureParameter == null) {
+            cardTextureParameter = new TextureParameter();
+            cardTextureParameter.format = Pixmap.Format.RGB565;
+            cardTextureParameter.genMipMaps = false;
+        }
+        if (Forge.isTextureFilteringEnabled()) {
+            cardTextureParameter.minFilter = Texture.TextureFilter.Linear;
+            cardTextureParameter.magFilter = Texture.TextureFilter.Linear;
+        } else {
+            cardTextureParameter.minFilter = Texture.TextureFilter.Nearest;
+            cardTextureParameter.magFilter = Texture.TextureFilter.Nearest;
+        }
+        return cardTextureParameter;
     }
 
     public Texture getTexture(FileHandle file) {

@@ -83,6 +83,8 @@
     <pattern>forge.screens.gallery.CardGalleryScreen$*</pattern>
     <pattern>forge.itemmanager.filters.CardArtistFilter</pattern>
     <pattern>forge.itemmanager.filters.CardArtistFilter$*</pattern>
+    <!-- reflectively accessed by MemProbe for on-device RSS/heap measurement -->
+    <pattern>org.robovm.rt.GC</pattern>
   </forceLinkClasses>
   <frameworkPaths>
     <path>libs</path>

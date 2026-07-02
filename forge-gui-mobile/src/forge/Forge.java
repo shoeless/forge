@@ -271,6 +271,12 @@ public class Forge implements ApplicationListener {
             if (totalDeviceRAM > 5000) //devices with more than 10GB RAM will have 600 Cache size, 400 Cache size for morethan 5GB RAM
                 cacheSize = totalDeviceRAM > 10000 ? 600 : 400;
         }
+        // Shrink the card-texture cache on RAM-constrained devices (<=~4GB, e.g. the base iPad) regardless of the
+        // auto-cache pref: 300 full card textures is hundreds of MB of native memory, and long games ratchet toward
+        // the jetsam ceiling. Runs after the auto-cache bump so it only ever lowers, never raises.
+        if (totalDeviceRAM > 0 && totalDeviceRAM <= 4500 && cacheSize > 200) {
+            cacheSize = 200;
+        }
         if (!initialized) {
             initialized = true;
 
@@ -482,6 +488,17 @@ public class Forge implements ApplicationListener {
                             @Override
                             public void run() {
                                 FSkin.loadDeferred();
+                                // POST-LOAD memory reclaim. Booting parses ~32k card rules + builds
+                                // ~103k PaperCards + loads skin assets -- a large transient allocation
+                                // spike that leaves ~200MB of freed-but-unmapped bytes in the bdwgc
+                                // heap (gcHeap ~690 vs live ~480 at idle home). Two full GCs at idle
+                                // home unmap them back to iOS -- bdwgc needs the 2nd pass to munmap the
+                                // pages the 1st freed (same mechanism proven at match-end:
+                                // MatchController drops gcHeap 710->414). Reclaims far more than any
+                                // card-pool deferral, zero correctness risk (only unreachable garbage).
+                                System.gc();
+                                System.gc();
+                                MemProbe.tick();
                             }
                         });
                         clearTransitionScreen();
@@ -596,6 +613,10 @@ public class Forge implements ApplicationListener {
             //only set continuous rendering to false if all continuous rendering requests have been ended
             Gdx.graphics.setContinuousRendering(false);
         }
+    }
+
+    public static int getContinuousRenderingCount() {
+        return continuousRenderingCount;
     }
 
     public static void setHeightModifier(float height) {
@@ -929,6 +950,7 @@ public class Forge implements ApplicationListener {
     @Override
     public void render() {
         long frameStart = System.currentTimeMillis();
+        forge.assets.MemProbe.tick(); //Phase 0 memory probe (throttled, no-op unless enabled)
         if (showFPS)
             frameRate.update(ImageCache.getInstance().counter, getAssets().manager().getMemoryInMegabytes());
 

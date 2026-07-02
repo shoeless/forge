@@ -12,6 +12,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.robovm.apple.foundation.NSAutoreleasePool;
 import org.robovm.apple.foundation.NSTimeZone;
 import org.robovm.apple.foundation.NSBundle;
+import org.robovm.apple.foundation.NSProcessInfo;
 import org.robovm.apple.uikit.UIApplication;
 import org.robovm.apple.uikit.UIPasteboard;
 import java.io.File;
@@ -25,6 +26,7 @@ import com.badlogic.gdx.backends.iosrobovm.IOSApplicationConfiguration;
 import com.badlogic.gdx.backends.iosrobovm.IOSFiles;
 
 import forge.Forge;
+import forge.assets.ImageCache;
 import forge.gui.GuiBase;
 import forge.interfaces.IDeviceAdapter;
 
@@ -247,7 +249,17 @@ public class Main extends IOSApplication.Delegate {
             // Set iOS platform flag before initializing Forge
             GuiBase.setIsIOS(true);
 
-            final ApplicationListener app = Forge.getApp(null, new IOSClipboard(), new IOSAdapter(), assetsDir, false, false, 0, isTablet, 0);
+            // Report physical device RAM (MB) so Forge can size the card-texture caches for the device — on a
+            // <=4GB iPad this shrinks the caches to keep long games off the jetsam ceiling. Was hardcoded to 0.
+            int deviceRamMB = 0;
+            try {
+                deviceRamMB = (int) (NSProcessInfo.getSharedProcessInfo().getPhysicalMemory() / (1024L * 1024L));
+                log("Physical device RAM: " + deviceRamMB + " MB");
+            } catch (Throwable t) {
+                log("Could not read physical memory: " + t.getMessage());
+            }
+
+            final ApplicationListener app = Forge.getApp(null, new IOSClipboard(), new IOSAdapter(), assetsDir, false, false, deviceRamMB, isTablet, 0);
             IOSApplication iosApp = new IOSApplication(app, config);
 
             // Re-apply System.out/err redirection - IOSApplication replaces them with FoundationLogPrintStream
@@ -265,6 +277,30 @@ public class Main extends IOSApplication.Delegate {
             log("Exception in createApplication(): " + e.getMessage());
             e.printStackTrace();
             throw e;
+        }
+    }
+
+    @Override
+    public void didReceiveMemoryWarning(UIApplication application) {
+        // iOS memory-pressure relief valve. Forge previously ignored every memory warning and never reclaimed
+        // card textures mid-game, so a long game ratcheted native texture RSS toward the jetsam kill with no
+        // relief. Drop the whole texture cache (on-screen cards reload via needsUpdate) and force a GC — on the
+        // GL render thread, since textures are GL objects. Turns a hard jetsam kill into a recoverable flush.
+        log("didReceiveMemoryWarning -> flushing texture caches");
+        try {
+            Gdx.app.postRunnable(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ImageCache.getInstance().disposeTextures();
+                        System.gc();
+                    } catch (Throwable t) {
+                        log("memory-warning flush failed: " + t.getMessage());
+                    }
+                }
+            });
+        } catch (Throwable t) {
+            log("could not post memory-warning flush: " + t.getMessage());
         }
     }
 

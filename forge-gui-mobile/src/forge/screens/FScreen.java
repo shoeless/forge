@@ -64,7 +64,12 @@ public abstract class FScreen extends FContainer {
     }
 
     public void onActivate() {
-        Forge.startContinuousRendering();
+        // Continuous rendering is now OPT-IN. This used to unconditionally call Forge.startContinuousRendering()
+        // for EVERY screen, and nothing ever balanced it, so the refcount leaked upward and pinned the render
+        // loop at ~60fps redrawing even idle/static menus (and, via the leaked count, the match board every frame).
+        // Most screens already render on-demand (input/requestRendering + ForgeAnimation for animations); screens
+        // that genuinely need a steady loop request it explicitly (e.g. AdventureScreen). Leaving this empty lets
+        // static menus and the match settle to on-demand. Verified across menus/editor/gallery/match in the sim.
     }
 
     public void onSwitchAway(Consumer<Boolean> canSwitchCallback) {
