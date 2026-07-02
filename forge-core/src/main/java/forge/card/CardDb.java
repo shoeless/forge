@@ -458,6 +458,18 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         // @leriomaggio: This method is called when lazy-loading is set
         // OR if a card is trying to load from an edition its not from
         //System.out.println("[LOG]: (Lazy) Loading Card: " + cardName);
+        // Idempotency guard: loadCard is not idempotent -- a redundant call for a (name, set)
+        // printing already present re-runs addFromSetByName and DUPLICATES the PaperCard. Skip only
+        // when THIS exact (name, set) printing already exists. Do NOT guard on contains(cardName)
+        // alone: loadCard is also the "add a printing from a not-yet-loaded set" path
+        // (StaticData.getOrLoadCommonCard), where the card can already exist under other sets while
+        // the requested set's printing is still missing. When setCode is null guardEd is null and we
+        // fall through to the all-editions add (only reached on a genuine first-load miss).
+        CardEdition guardEd = editions.get(setCode);
+        if (guardEd != null && !guardEd.equals(CardEdition.UNKNOWN)
+                && getCardFromSet(cardName, guardEd, false) != null) {
+            return;
+        }
         rulesByName.put(cardName, cr);
         boolean reIndexNecessary = false;
         CardEdition ed = editions.get(setCode);
