@@ -129,10 +129,25 @@ public class CardImageRenderer {
                 ? card.getLeftSplitState()
                 : card.getCurrentState();
         final boolean isFaceDown = card.isFaceDown();
-        final boolean canShow = MatchController.instance.mayView(card);
+        boolean canShow = MatchController.instance.mayView(card);
         //override
         if (isFaceDown && altState && card.isSplitCard())
             state = card.getLeftSplitState();
+        // DEFENSIVE (multiplayer): an unresolved ID-only CardView stub has a null state -> render the back.
+        if (state == null) {
+            drawFaceDownCard(card, g, x, y, w, h);
+            return;
+        }
+        // BUG 1 (multiplayer reveal): a card the local player is permitted to see (it is in a
+        // choice/reveal list) can render as a back if the PlayerMayLook flush lagged. If the client
+        // already holds the card's real, non-hidden face key, honor it. Scoped to choice lists +
+        // non-facedown so no genuinely-hidden information can leak.
+        if (!canShow && isChoiceList && !isFaceDown) {
+            String rawKey = state.getTrackableImageKey();
+            if (rawKey != null && !rawKey.equals(ImageKeys.getTokenKey(ImageKeys.HIDDEN_CARD))) {
+                canShow = true;
+            }
+        }
         boolean isSaga = state.getType().hasSubtype("Saga");
         boolean isClass = state.getType().hasSubtype("Class") || state.getType().hasSubtype("Case");
         boolean isDungeon = state.getType().isDungeon();

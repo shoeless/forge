@@ -524,6 +524,13 @@ public class MatchController extends AbstractGuiGame {
     @Override
     public void updateCards(final Iterable<CardView> cards) {
         for (final CardView card : cards) {
+            // DEFENSIVE (multiplayer): a coalesced updateCards batch mixes resolvable views with
+            // ID-only stubs whose CurrentState was never synced (a mass bounce like River's Rebuke
+            // sends both). Skip the un-renderable stubs PER-CARD (never abort the batch) -- the card
+            // is removed/refreshed by the accompanying zone/GameView update, not by updateSingleCard.
+            if (card == null || card.getCurrentState() == null) {
+                continue;
+            }
             view.updateSingleCard(card);
         }
     }
@@ -566,9 +573,22 @@ public class MatchController extends AbstractGuiGame {
         Forge.back(true);
         // Always dispose textures between games to prevent memory accumulation
         ImageCache.getInstance().disposeTextures();
-        // Hint GC to reclaim freed texture memory before the next game starts
+        // On match-over (returning to the menu) release the finished match's whole Java object graph. Nothing
+        // else nulls these singletons until the NEXT match starts, so without this the last game's Cards / AI
+        // memory / completed-game logs / match-UI stay pinned the entire time the user sits on the post-match
+        // menu — ~100-140MB on top of the static card DB, keeping the 4GB iPad near its jetsam ceiling.
+        boolean matchOver = getHostedMatch() == null || getHostedMatch().isMatchOver();
+        if (matchOver) {
+            setGameView(null);
+            view = null;
+            hostedMatch = null;
+        }
+        // Hint GC to reclaim freed memory. On match-over collect twice: the 1st frees the released graph, the
+        // 2nd lets bdwgc unmap the now-cycle-old free blocks back to iOS (GC_force_unmap_on_gcollect is on).
         System.gc();
-        //view = null;
+        if (matchOver) {
+            System.gc();
+        }
     }
 
     public void resetPlayerPanels() {

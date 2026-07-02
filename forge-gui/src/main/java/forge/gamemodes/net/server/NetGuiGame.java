@@ -73,6 +73,15 @@ public class NetGuiGame extends AbstractGuiGame {
     }
 
     private <T> T sendAndWait(final ProtocolMethod method, final Object... args) {
+        // BUG 1 (multiplayer reveal): tempShow()/setPlayerMayLook() grant per-card look permission
+        // (the PlayerMayLook CardView property) but never mark the GameView dirty, and the coalesced
+        // updateCards path ships ID-only stubs that don't carry that property. Only a full setGameView
+        // conveys it. Force the GameView dirty before every interactive blocking send so the client's
+        // visibility gate (mayView -> canBeShownTo -> mayPlayerLook) sees current reveal/look grants
+        // before it renders the choice/reveal list. Exclude the warm-up ping loop, which must not resend state.
+        if (method != ProtocolMethod.ping) {
+            gameViewDirty = true;
+        }
         // Always flush all pending state before blocking for client response
         flushPendingUpdates();
 
