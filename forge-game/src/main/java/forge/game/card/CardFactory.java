@@ -208,6 +208,9 @@ public class CardFactory {
             } else if (c.hasState(CardStateName.Secondary)) {
                 c.setState(CardStateName.Secondary, false);
                 c.setImageKey(originalPicture);
+            } else if (c.hasState(CardStateName.PreparedSpell)) {
+                c.setState(CardStateName.PreparedSpell, false);
+                c.setImageKey(originalPicture);
             } else if (c.canSpecialize()) {
                 c.setState(CardStateName.SpecializeW, false);
                 c.setImageKey(cp.getImageKey(false) + ImageKeys.SPECFACE_W);
@@ -530,6 +533,9 @@ public class CardFactory {
         } else if (in.hasState(CardStateName.Secondary)) {
             result.add(in.getState(CardStateName.Original).copy(out, cause));
             result.add(in.getState(CardStateName.Secondary).copy(out, cause));
+        } else if (in.hasState(CardStateName.PreparedSpell)) {
+            result.add(in.getState(CardStateName.Original).copy(out, cause));
+            result.add(in.getState(CardStateName.PreparedSpell).copy(out, cause));
         } else if (in.isTransformable() && cause instanceof SpellAbility && (
                 ApiType.CopyPermanent.equals(((SpellAbility) cause).getApi()) ||
                 ApiType.CopySpellAbility.equals(((SpellAbility) cause).getApi()) ||

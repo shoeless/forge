@@ -239,7 +239,7 @@ public class GameAction {
                         }
                     }
                 }
-            } else {
+            } else if (copied.getCurrentStateName() != CardStateName.PreparedSpell) {
                 // when a card leaves the battlefield, ensure it's in its original state
                 copied.setState(CardStateName.Original, false);
                 copied.setBackSide(false);
@@ -1933,6 +1933,10 @@ public class GameAction {
 
             // card copies are allowed on the stack
             if (zoneFrom.is(ZoneType.Stack) && c.getCopiedPermanent() != null) {
+                return false;
+            }
+
+            if (zoneFrom.is(ZoneType.Exile) && c.getCurrentStateName() == CardStateName.PreparedSpell) {
                 return false;
             }
 

@@ -2,8 +2,11 @@ package forge.game.ability.effects;
 
 import java.util.Map;
 
+import forge.card.CardStateName;
+import forge.game.Game;
 import forge.game.GameLogEntryType;
 import forge.game.GameType;
+import forge.game.ability.AbilityFactory;
 import forge.game.ability.AbilityKey;
 import forge.game.ability.SpellAbilityEffect;
 import forge.game.card.Card;
@@ -11,13 +14,18 @@ import forge.game.card.CardCollection;
 import forge.game.event.GameEventCardPlotted;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
+import forge.game.trigger.Trigger;
+import forge.game.trigger.TriggerHandler;
 import forge.game.trigger.TriggerType;
+import forge.game.zone.ZoneType;
 import forge.util.Lang;
 import forge.util.TextUtil;
 
 public class AlterAttributeEffect extends SpellAbilityEffect {
     @Override
     public void resolve(SpellAbility sa) {
+        Player activator = sa.getActivatingPlayer();
+        Game game = activator.getGame();
         boolean activate = Boolean.parseBoolean(sa.getParamOrDefault("Activate", "true"));
         String[] attributes = sa.getParam("Attributes").split(",");
         CardCollection defined = getDefinedCardsOrTargeted(sa);
@@ -53,6 +61,33 @@ public class AlterAttributeEffect extends SpellAbilityEffect {
                         altered = gameCard.setPlotted(activate);
 
                         c.getGame().fireEvent(new GameEventCardPlotted(c, sa.getActivatingPlayer()));
+                        break;
+                    case "Prepared":
+                        Card eff = null;
+                        if (activate) {
+                            if (gameCard.isPrepared() || !gameCard.hasState(CardStateName.PreparedSpell)) {
+                                continue;
+                            }
+                            Card prepared = CopyPermanentEffect.getProtoType(sa, gameCard, activator);
+                            prepared.setState(CardStateName.PreparedSpell, true);
+                            prepared.getOwner().getZone(ZoneType.Exile).add(prepared);
+                            eff = createEffect(null, gameCard, activator, gameCard + "'s Prepared Spell", prepared.getImageKey(), game.getNextTimestamp());
+                            eff.addRemembered(prepared);
+                            eff.setRenderForUI(false);
+                            String castTrig = "Mode$ SpellCast | TriggerZones$ Command | Static$ True | ValidSA$ Spell.IsRemembered";
+                            String unprepare = "DB$ AlterAttribute | Defined$ EffectSource | Attributes$ Prepared | Activate$ False";
+                            final Trigger parsedTrigger = TriggerHandler.parseTrigger(castTrig, eff, true);
+                            eff.addTrigger(parsedTrigger);
+                            final SpellAbility unprepareSA = AbilityFactory.getAbility(unprepare, eff);
+                            parsedTrigger.setOverridingAbility(unprepareSA);
+                            String mayPlay = "Mode$ Continuous | MayPlay$ True | MayPlayPlayer$ EffectSourceController | EffectZone$ Command | " +
+                                    "AffectedDefined$ Remembered | AffectedZone$ Exile";
+                            eff.addStaticAbility(mayPlay);
+                            final Card finalEff = eff;
+                            game.getAction().moveToCommand(finalEff, sa);
+                            gameCard.addLeavesPlayCommand(() -> gameCard.setPrepared(null));
+                        }
+                        gameCard.setPrepared(eff);
                         break;
                     case "Solve":
                     case "Solved":

@@ -216,6 +216,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     private boolean renowned;
     private boolean solved;
     private boolean tributed;
+    private Card preparedEffect;
     private StaticAbility suspectedStatic = null;
 
     private SpellAbility manifestedSA;
@@ -3081,6 +3082,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (isCloaked()) {
             sb.append("Cloaked\r\n");
         }
+        if (isPrepared()) {
+            sb.append("Prepared\r\n");
+        }
         String keywordText = keywordsToText(getUnhiddenKeywords(state));
         sb.append(keywordText).append(keywordText.length() > 0 ? linebreak : "");
 
@@ -3296,6 +3300,18 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (isGoaded()) {
             sb.append("is goaded by: ").append(Lang.joinHomogenous(getGoaded()));
             sb.append("\r\n");
+        }
+
+        if (hasState(CardStateName.PreparedSpell) && state.getStateName().equals(CardStateName.Original)) {
+            CardState prepState = getState(CardStateName.PreparedSpell);
+            SpellAbility prepSA = prepState.getFirstSpellAbility();
+            if (prepSA != null) {
+                sb.append(Localizer.getInstance().getMessage("lblPrepared"));
+                sb.append(" — ").append(CardTranslation.getTranslatedName(prepState));
+                sb.append(" ").append(prepSA.getPayCosts().toSimpleString());
+                sb.append(": ");
+                sb.append(prepSA);
+            }
         }
 
         // replace triple line feeds with double line feeds
@@ -6921,6 +6937,27 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             suspectedStatic = null;
         }
         return true;
+    }
+
+    public boolean isPrepared() {
+        return preparedEffect != null;
+    }
+    public Card getPrepared() {
+        return preparedEffect;
+    }
+    public Card getPreparedSpell() {
+        return preparedEffect == null ? null : (Card) preparedEffect.getFirstRemembered();
+    }
+    public void setPrepared(final Card eff) {
+        if (eff == null && preparedEffect != null) {
+            Card prepared = (Card) preparedEffect.getFirstRemembered();
+            if (prepared.isInZone(ZoneType.Exile)) {
+                game.getAction().ceaseToExist(prepared, true);
+            }
+            game.getAction().exileEffect(preparedEffect);
+        }
+        preparedEffect = eff;
+        updateAbilityTextForView();
     }
 
     public final boolean isManifested() {
