@@ -121,7 +121,13 @@ public class CardStorageReader {
         final List<CardRules> result = new ArrayList<>();
         for(int i = from; i < to; i++) {
             final File cardTxtFile = files.get(i);
-            result.add(this.loadCard(rulesReader, cardTxtFile));
+            try {
+                result.add(this.loadCard(rulesReader, cardTxtFile));
+            } catch (final Throwable t) {
+                // Robustness: a single unparseable card (e.g. a new mechanic our reader lacks) must not
+                // throw the whole range and deadlock the loader's CountDownLatch. Log + skip it.
+                System.err.println("[CARD-SKIP] " + cardTxtFile.getName() + ": " + t.getMessage());
+            }
         }
         return result;
     }
@@ -133,7 +139,12 @@ public class CardStorageReader {
         for (int i = from; i < to; i++) {
             final ZipEntry ze = files.get(i);
             // if (ze.getName().endsWith(CardStorageReader.CARD_FILE_DOT_EXTENSION))  // already filtered!
-            result.add(this.loadCard(rulesReader, ze));
+            try {
+                result.add(this.loadCard(rulesReader, ze));
+            } catch (final Throwable t) {
+                // Robustness: skip an unparseable card instead of failing the whole range / deadlocking.
+                System.err.println("[CARD-SKIP] " + ze.getName() + ": " + t.getMessage());
+            }
         }
         return result;
     }
