@@ -262,6 +262,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
     private int exertThisTurn = 0;
     private PlayerCollection exertedByPlayer = new PlayerCollection();
+    private PlayerCollection detainedByPlayer = new PlayerCollection();
 
     private PlayerCollection targetedFromThisTurn = new PlayerCollection();
 
@@ -6430,6 +6431,12 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         this.hasBeenDealtDeathtouchDamage = hasBeenDealtDeatchtouchDamage;
     }
 
+    public final void healDamage() {
+        setDamage(0);
+        setHasBeenDealtDeathtouchDamage(false);
+        clearAssignedDamage();
+    }
+
     public final boolean hasBeenDealtExcessDamageThisTurn() {
         return hasBeenDealtExcessDamageThisTurn;
     }
@@ -6791,6 +6798,16 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     protected void resetExertedThisTurn() {
         exertThisTurn = 0;
         view.updateExertedThisTurn(this, false);
+    }
+
+    public boolean isDetained() { return !detainedByPlayer.isEmpty(); }
+    public void detain(final Player player) {
+        detainedByPlayer.add(player);
+        view.updateDetained(this);
+    }
+    public void removeDetainedBy(final Player player) {
+        detainedByPlayer.remove(player);
+        view.updateDetained(this);
     }
 
     public boolean isMadness() {

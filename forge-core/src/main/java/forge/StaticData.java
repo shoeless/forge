@@ -115,7 +115,7 @@ public class StaticData {
                 // Separate into regular and variant maps
                 for (Map.Entry<String, CardRules> entry : cachedRules.entrySet()) {
                     CardRules card = entry.getValue();
-                    String cardName = card.getName();
+                    String cardName = card.getPreInitName();
 
                     if (!loadNonLegalCards && funnyCards.contains(cardName) && !card.getType().isBasicLand())
                         filtered.add(cardName);
@@ -132,7 +132,7 @@ public class StaticData {
                 for (CardRules card : cardReader.loadCards()) {
                     if (null == card) continue;
 
-                    final String cardName = card.getName();
+                    final String cardName = card.getPreInitName();
 
                     if (!loadNonLegalCards && funnyCards.contains(cardName) && !card.getType().isBasicLand())
                         filtered.add(cardName);
@@ -149,7 +149,7 @@ public class StaticData {
                 for (CardRules card : customCardReader.loadCards()) {
                     if (null == card) continue;
 
-                    final String cardName = card.getName();
+                    final String cardName = card.getPreInitName();
                     card.setCustom();
                     if(card.isVariant()) { //Append loaded custom cards to the respective list.
                         variantsCards.put(cardName, card);

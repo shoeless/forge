@@ -86,9 +86,6 @@ public enum StaticAbilityMode {
     // StaticAbilityAdapt
     CanAdapt,
 
-    // StaticAbilityExhaust
-    CanExhaust,
-
     // StaticAbilityCantBeCopied
     CantBeCopied,
 
@@ -168,6 +165,9 @@ public enum StaticAbilityMode {
 
     // StaticAbilityNumLoyaltyAct
     NumLoyaltyAct,
+
+    // StaticAbilityAdditionalActivations
+    Activations,
 
     // StaticAbilityDevotion
     Devotion,

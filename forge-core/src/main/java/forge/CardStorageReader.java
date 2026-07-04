@@ -265,7 +265,9 @@ public class CardStorageReader {
             result = new TreeSet<>(new Comparator<CardRules>() {
                 @Override
                 public int compare(CardRules c1, CardRules c2) {
-                    return String.CASE_INSENSITIVE_ORDER.compare(c1.getName(), c2.getName());
+                    // getPreInitName instead of getName: a CopyFaceFrom card's mainPart is null until
+                    // CardDb resolves it, so getName() would NPE here. Identical to getName otherwise.
+                    return String.CASE_INSENSITIVE_ORDER.compare(c1.getPreInitName(), c2.getPreInitName());
                 }
             });
         }

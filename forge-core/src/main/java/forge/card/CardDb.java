@@ -331,16 +331,31 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         //Collects additional mappings used for flavor names
         //Need an extra map for these to avoid ConcurrentModificationException
         Map<String, CardRules> extraRuleMappings = new HashMap<>();
+        List<CardRules> needsPlaceholderFaces = new ArrayList<>();
 
         // create faces list from rules
         for (final CardRules rule : rules.values()) {
-            if (filteredCards.contains(rule.getName()))
+            // Collect placeholder-face rules unconditionally so they get supplied
+            // even when filtered out (getPreInitName avoids an NPE while faces are unresolved).
+            if (rule.hasPlaceholderFaces()) {
+                needsPlaceholderFaces.add(rule);
+            }
+            if (filteredCards.contains(rule.getPreInitName()))
                 continue;
             for (ICardFace face : rule.getAllFaces()) {
                 addFaceToDbNames(face);
             }
             if (rule.hasFunctionalVariants()){
                 cacheFlavorNames(rule, extraRuleMappings);
+            }
+        }
+
+        //Fill in the missing faces for cards that use other cards as one of their faces (CopyFaceFrom).
+        for (final CardRules rule : needsPlaceholderFaces) {
+            try {
+                rule.supplyPlaceholderFaces(this.facesByName);
+            } catch (NoSuchElementException e) {
+                e.printStackTrace();
             }
         }
 
@@ -469,6 +484,15 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         if (guardEd != null && !guardEd.equals(CardEdition.UNKNOWN)
                 && getCardFromSet(cardName, guardEd, false) != null) {
             return;
+        }
+        // Resolve any CopyFaceFrom placeholder faces against the now-populated face table.
+        if (cr.hasPlaceholderFaces()) {
+            try {
+                cr.supplyPlaceholderFaces(facesByName);
+            } catch (NoSuchElementException e) {
+                e.printStackTrace();
+                return;
+            }
         }
         rulesByName.put(cardName, cr);
         boolean reIndexNecessary = false;

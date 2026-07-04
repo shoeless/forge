@@ -1983,6 +1983,9 @@ public class ComputerUtilCard {
         if (!c.isCreature()) {
             return false;
         }
+        if (c.isDetained()) {
+            return true;
+        }
         if (c.hasKeyword("CARDNAME can't attack or block.") || (c.isTapped() && !c.canUntap(ai, true)) || (c.getOwner() == ai && ai.getOpponents().contains(c.getController()))) {
             return true;
         }

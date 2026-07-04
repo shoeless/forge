@@ -772,6 +772,17 @@ public class DeckBattler {
             match.startGame(game);
         } catch (Exception e) {
             System.err.println("  Game " + gameNumber + " error: " + e.getMessage());
+            Throwable cause = e.getCause();
+            while (cause != null) {
+                System.err.println("  Game " + gameNumber + " cause: " + cause);
+                if (cause.getCause() == null) {
+                    StackTraceElement[] trace = cause.getStackTrace();
+                    for (int i = 0; i < trace.length && i < 16; i++) {
+                        System.err.println("    at " + trace[i]);
+                    }
+                }
+                cause = cause.getCause();
+            }
             timer.cancel();
             if (tracker != null) {
                 aggregator.addGameResult(tracker.getStats(), false, 0);

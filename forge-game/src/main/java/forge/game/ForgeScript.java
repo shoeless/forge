@@ -237,6 +237,8 @@ public class ForgeScript {
             return sa.isBoast();
         } else if (property.equals("Exhaust")) {
             return sa.isExhaust();
+        } else if (property.equals("PowerUp")) {
+            return sa.isPowerUp();
         } else if (property.equals("Mayhem")) {
             return sa.isMayhem();
         } else if (property.equals("Mutate")) {

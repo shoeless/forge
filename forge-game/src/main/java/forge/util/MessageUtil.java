@@ -56,7 +56,7 @@ public class MessageUtil {
                 return sa.hasParam("AtRandom")
                         ? Localizer.getInstance().getMessage("lblRandomTypeChosen", value)
                         : Localizer.getInstance().getMessage("lblPlayerPickedChosen", choser, value);
-            case FlipACoin:
+            case FlipCoin:
                 String flipper = TextUtil.capitalize(mayBeYou(player, target));
                 return sa.hasParam("NoCall")
                         ? Localizer.getInstance().getMessage("lblPlayerFlipComesUpValue", Lang.getInstance().getPossesive(flipper), value)

@@ -214,6 +214,29 @@ public class ComputerUtilMana {
             colorsMostCommon = null;
         }
 
+        // Per-CARD common-color production bits. The comparator below must order abilities of
+        // different cards by host-card properties only — deciding by per-ability canProduce()
+        // lets two abilities of the same card order inconsistently against a third card, which
+        // violates the comparator contract (TimSort IllegalArgumentException).
+        final Map<Card, boolean[]> commonColorSources = Maps.newHashMap();
+        if (colorsMostCommon != null) {
+            for (final ManaCostShard shard : manaAbilityMap.keySet()) {
+                for (final SpellAbility ability : manaAbilityMap.get(shard)) {
+                    final Card host = ability.getHostCard();
+                    boolean[] bits = commonColorSources.get(host);
+                    if (bits == null) {
+                        bits = new boolean[colorsMostCommon.length];
+                        commonColorSources.put(host, bits);
+                    }
+                    for (int i = 0; i < colorsMostCommon.length; i++) {
+                        if (!bits[i] && ability.canProduce(colorsMostCommon[i])) {
+                            bits[i] = true;
+                        }
+                    }
+                }
+            }
+        }
+
         for (final ManaCostShard shard : manaAbilityMap.keySet()) {
             final List<SpellAbility> abilities = manaAbilityMap.get(shard);
             final List<SpellAbility> newAbilities = new ArrayList<>(abilities);
@@ -228,19 +251,24 @@ public class ComputerUtilMana {
 
                 if (preOrder != 0) {
                     // if the score is identical (most likely basics) try keep access to more colors longer
-                    if (shard.isGeneric() && manaCardMap.get(ability1.getHostCard()) == manaCardMap.get(ability2.getHostCard())) {
-                        for (String col : colorsMostCommon) {
-                            if (ability1.canProduce(col) && !ability2.canProduce(col)) {
-                                return 1;
-                            }
-                            if (!ability1.canProduce(col) && ability2.canProduce(col)) {
-                                return -1;
+                    if (shard.isGeneric() && manaCardMap.get(ability1.getHostCard()).equals(manaCardMap.get(ability2.getHostCard()))) {
+                        boolean[] bits1 = commonColorSources.get(ability1.getHostCard());
+                        boolean[] bits2 = commonColorSources.get(ability2.getHostCard());
+                        if (bits1 != null && bits2 != null) {
+                            for (int i = 0; i < bits1.length; i++) {
+                                if (bits1[i] && !bits2[i]) {
+                                    return 1;
+                                }
+                                if (!bits1[i] && bits2[i]) {
+                                    return -1;
+                                }
                             }
                         }
                     }
 
                     // sources were previously sorted, so add their index to connect those values to some degree
-                    preOrder += abilities.indexOf(ability1) - abilities.indexOf(ability2);
+                    // This has been disabled because it makes the AI more likely to sacrifice lands than use creatures for mana
+                    // preOrder += abilities.indexOf(ability1) - abilities.indexOf(ability2);
 
                     return preOrder;
                 }

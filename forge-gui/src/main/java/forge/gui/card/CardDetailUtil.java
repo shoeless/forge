@@ -652,6 +652,11 @@ public class CardDetailUtil {
             area.append("\n");
             area.append("^Exerted^");
         }
+        // detained
+        if (card.isDetained()) {
+            area.append("\n");
+            area.append("^Detained^");
+        }
 
         //show current card colors if enabled
         String curCardColors = formatCurrentCardColors(state);

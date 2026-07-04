@@ -56,6 +56,7 @@ public final class CardRules implements ICardCharacteristics {
     int setColorID;
     private boolean custom;
     private boolean unsupported;
+    private Map<Integer, String> placeholderFaces;
     private String path;
 
     public CardRules(ICardFace[] faces, CardSplitType altMode, CardAiHints cah) {
@@ -115,6 +116,9 @@ public final class CardRules implements ICardCharacteristics {
     }
 
     private static byte calculateColorIdentity(final ICardFace face) {
+        if (face == null) {
+            return 0; // Still initializing; filled in during supplyPlaceholderFaces
+        }
         byte res = face.getColor().getColor();
         boolean isReminder = false;
         boolean isSymbol = false;
@@ -154,6 +158,11 @@ public final class CardRules implements ICardCharacteristics {
     }
 
     public boolean isVariant() {
+        if (placeholderFaces != null && (mainPart == null
+                || splitType.getAggregationMethod() == CardSplitType.FaceSelectionMethod.COMBINE)) {
+            // Type line isn't fully generated yet, and we need it to determine if this is a variant type
+            return false;
+        }
         CardType t = getType();
         return t.isVanguard() || t.isScheme() || t.isPlane() || t.isPhenomenon()
                 || t.isConspiracy() || t.isDungeon() || t.isAttraction() || t.isContraption();
@@ -208,6 +217,22 @@ public final class CardRules implements ICardCharacteristics {
         }
     }
 
+    /**
+     * Similar to {@code getName}, but goes through extra steps to figure out the card's name when one or more
+     * faces isn't fully initialized yet. Only needed during CardDb/cache initialization.
+     */
+    public String getPreInitName() {
+        if (this.placeholderFaces == null) {
+            return getName();
+        }
+        String mainName = mainPart == null ? placeholderFaces.get(0) : mainPart.getName();
+        if (splitType.getAggregationMethod() == CardSplitType.FaceSelectionMethod.COMBINE) {
+            String otherName = otherPart == null ? placeholderFaces.get(1) : otherPart.getName();
+            return mainName + " // " + otherName;
+        }
+        return mainName;
+    }
+
     public String getNormalizedName() { return normalizedName; }
     public void setNormalizedName(String filename) { normalizedName = filename; }
 
@@ -225,8 +250,14 @@ public final class CardRules implements ICardCharacteristics {
 
     @Override
     public CardType getType() {
+        if (mainPart == null) {
+            return new CardType(false); // Still initializing; filled in during supplyPlaceholderFaces
+        }
         switch (splitType.getAggregationMethod()) {
             case COMBINE: // no cards currently have different types
+                if (otherPart == null) {
+                    return mainPart.getType();
+                }
                 return CardType.combine(mainPart.getType(), otherPart.getType());
             default:
                 return mainPart.getType();
@@ -528,6 +559,45 @@ public final class CardRules implements ICardCharacteristics {
         return variantName;
     }
 
+    /**
+     * A card has placeholder faces if its script uses {@code CopyFaceFrom} to reference another card.
+     * These are filled in via {@code supplyPlaceholderFaces} after all scripts have been processed.
+     */
+    /* package */ boolean hasPlaceholderFaces() {
+        return this.placeholderFaces != null;
+    }
+
+    /* package */ void supplyPlaceholderFaces(Map<String, ICardFace> facesByName) {
+        if (this.placeholderFaces == null) {
+            return;
+        }
+        List<ICardFace> newFaceList = new ArrayList<>(this.allFaces);
+        for (Map.Entry<Integer, String> neededFace : this.placeholderFaces.entrySet()) {
+            int index = neededFace.getKey();
+            ICardFace face = facesByName.get(neededFace.getValue());
+            if (face == null) {
+                throw new NoSuchElementException("Missing placeholder face for '" + this.normalizedName
+                        + "'; Cannot find '" + neededFace.getValue() + "'!");
+            }
+            newFaceList.add(index, face);
+            if (index == 0) {
+                this.mainPart = face;
+            } else if (index == 1) {
+                this.otherPart = face;
+            }
+        }
+        this.allFaces = Collections.unmodifiableList(newFaceList);
+
+        //Recalculate color identity now that we have all the faces.
+        byte colMask = calculateColorIdentity(mainPart);
+        if (otherPart != null) {
+            colMask |= calculateColorIdentity(otherPart);
+        }
+        this.colorIdentity = ColorSet.fromMask(colMask);
+
+        this.placeholderFaces = null;
+    }
+
     public ColorSet getColorIdentity() {
         return colorIdentity;
     }
@@ -555,6 +625,7 @@ public final class CardRules implements ICardCharacteristics {
         private String handLife = null;
         private String normalizedName = "";
         private Set<String> supportedFunctionalVariants = null;
+        private Map<Integer, String> placeholderFaces = null;
 
         private List<String> tokens = Lists.newArrayList();
 
@@ -595,6 +666,7 @@ public final class CardRules implements ICardCharacteristics {
             this.addsWildCardColor = false;
             this.normalizedName = "";
             this.supportedFunctionalVariants = null;
+            this.placeholderFaces = null;
             this.tokens = Lists.newArrayList();
         }
 
@@ -605,7 +677,8 @@ public final class CardRules implements ICardCharacteristics {
          */
         public final CardRules getCard() {
             CardAiHints cah = new CardAiHints(removedFromAIDecks, removedFromRandomDecks, removedFromNonCommanderDecks, hints, needs, has);
-            faces[0].assignMissingFields();
+            if (null != faces[0]) faces[0].assignMissingFields();
+            else assert(placeholderFaces != null);
             if (null != faces[1]) faces[1].assignMissingFields();
             if (null != faces[2]) faces[2].assignMissingFields();
             if (null != faces[3]) faces[3].assignMissingFields();
@@ -626,6 +699,7 @@ public final class CardRules implements ICardCharacteristics {
             if (StringUtils.isNotBlank(handLife))
                 result.setVanguardProperties(handLife);
             result.supportedFunctionalVariants = this.supportedFunctionalVariants;
+            result.placeholderFaces = this.placeholderFaces;
             return result;
         }
 
@@ -696,6 +770,12 @@ public final class CardRules implements ICardCharacteristics {
                     if ("Colors".equals(key)) {
                         ColorSet newCol = ColorSet.fromNames(value.split(","));
                         face.setColor(newCol);
+                    } else if ("CopyFaceFrom".equals(key)) {
+                        if (placeholderFaces == null) {
+                            placeholderFaces = new HashMap<>(2);
+                        }
+                        assert(this.faces[this.curFace] == null);
+                        placeholderFaces.put(this.curFace, value);
                     }
                     break;
 
@@ -756,6 +836,7 @@ public final class CardRules implements ICardCharacteristics {
 
                 case 'N':
                     if ("Name".equals(key)) {
+                        assert(this.placeholderFaces == null || !this.placeholderFaces.containsKey(this.curFace));
                         this.faces[this.curFace] = new CardFace(value);
                     }
                     break;
