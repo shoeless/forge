@@ -232,8 +232,16 @@ public class CardRenderer {
     }
 
     public static FImageComplex getCardArt(CardView card) {
-        CardTypeView type = card.getCurrentState().getType();
-        return getCardArt(card.getCurrentState().getImageKey(), card.isSplitCard(), type.isPlane() || type.isPhenomenon(),
+        final CardStateView state = card.getCurrentState();
+        if (state == null) {
+            // Multiplayer: an ID-only CardView stub whose CurrentState hasn't synced from the
+            // server yet. Dereferencing it would NPE inside the render loop (drawCardListItem),
+            // which throws every frame and wedges the game behind the bug reporter. Callers
+            // treat a null return as "no art yet".
+            return null;
+        }
+        CardTypeView type = state.getType();
+        return getCardArt(state.getImageKey(), card.isSplitCard(), type.isPlane() || type.isPhenomenon(),
                 card.getText().contains("Aftermath"), type.hasSubtype("Saga"), type.hasSubtype("Class") || type.hasSubtype("Case"), type.isDungeon(),
                 card.isFlipCard(), type.isPlaneswalker(), isModernFrame(card), type.isBattle());
     }
@@ -458,6 +466,25 @@ public class CardRenderer {
 
     public static void drawCardListItem(Graphics g, FSkinFont font, FSkinColor foreColor, CardView card, int count, String suffix, float x, float y, float w, float h, boolean compactMode) {
         final CardStateView state = card.getCurrentState();
+        if (state == null) {
+            // Multiplayer: an ID-only CardView stub whose CurrentState hasn't synced yet (seen
+            // in choice/order lists like Ajani Unyielding's +2 during an online game). The
+            // id > 0 branch below assumes a non-null state; without this guard every state.getXxx()
+            // NPEs on the render thread, throwing each frame and freezing the game behind the bug
+            // reporter. getName() reads the trackable Name property (no state needed), so fall back
+            // to it until the state arrives.
+            String name = card.getName();
+            if (name != null && !name.isEmpty()) {
+                if (count > 0) {
+                    name = count + " " + name;
+                }
+                if (suffix != null) {
+                    name += suffix;
+                }
+                g.drawText(name, font, foreColor, x, y, w, h, false, Align.center, true);
+            }
+            return;
+        }
         if (card.getId() > 0) {
             drawCardListItem(g, font, foreColor, getCardArt(card), card, state.getSetCode(),
                     state.getRarity(), state.getPower(), state.getToughness(),
