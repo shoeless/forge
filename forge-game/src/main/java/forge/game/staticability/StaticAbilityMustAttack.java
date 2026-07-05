@@ -7,6 +7,8 @@ import forge.game.card.Card;
 import forge.game.player.Player;
 import forge.game.zone.ZoneType;
 import forge.util.collect.FCollectionView;
+import forge.util.maps.LinkedHashMapToAmount;
+import forge.util.maps.MapToAmount;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -75,5 +77,31 @@ public class StaticAbilityMustAttack {
             }
         }
         return defToAtt;
+    }
+
+    // AttackRequirement static mode: "If <ValidCard> attacks, <ValidAttacker> also attacks if able."
+    // Returns, for the given trigger creature (card, matched against ValidCard$), the set of other
+    // creatures (matched against ValidAttacker$) that must also attack, with a count equal to the
+    // number of matching static abilities (so the same creature forced by two sources counts twice).
+    // This mirrors our engine's keyword-based causesToAttack model (MapToAmount<Card>) rather than
+    // upstream's Multimap<Card, StaticAbility>, so it plugs straight into AttackRequirement.
+    public static MapToAmount<Card> getAttackRequirements(final Card card, final Iterable<Card> other) {
+        final MapToAmount<Card> result = new LinkedHashMapToAmount<>();
+        for (final Card ca : card.getGame().getCardsIn(ZoneType.STATIC_ABILITIES_SOURCE_ZONES)) {
+            for (final StaticAbility stAb : ca.getStaticAbilities()) {
+                if (!stAb.checkConditions(StaticAbilityMode.AttackRequirement)) {
+                    continue;
+                }
+                if (!stAb.matchesValidParam("ValidCard", card)) {
+                    continue;
+                }
+                for (final Card co : other) {
+                    if (stAb.matchesValidParam("ValidAttacker", co)) {
+                        result.add(co, 1);
+                    }
+                }
+            }
+        }
+        return result;
     }
 }

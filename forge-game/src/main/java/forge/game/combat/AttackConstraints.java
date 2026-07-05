@@ -87,6 +87,16 @@ public class AttackConstraints {
                 }
             }
 
+            // AttackRequirement static mode: "If <ValidCard> attacks, <ValidAttacker> also attacks if able."
+            // possibleAttacker is the trigger creature (ValidCard$); every other possible attacker
+            // matching ValidAttacker$ is forced to also attack. Merge into the keyword-derived map.
+            final MapToAmount<Card> staticCausesToAttack = StaticAbilityMustAttack.getAttackRequirements(possibleAttacker, possibleAttackers);
+            for (final Entry<Card, Integer> entry : staticCausesToAttack.entrySet()) {
+                if (entry.getKey() != possibleAttacker) {
+                    causesToAttack.add(entry.getKey(), entry.getValue());
+                }
+            }
+
             final AttackRequirement r = new AttackRequirement(possibleAttacker, causesToAttack, possibleDefenders);
             requirements.put(possibleAttacker, r);
         }

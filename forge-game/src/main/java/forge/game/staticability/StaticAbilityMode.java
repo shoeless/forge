@@ -159,6 +159,7 @@ public enum StaticAbilityMode {
 
     // StaticAbilityFlipCoinMod
     FlipCoinMod,
+    FlipCoinDoubler,
 
     // StaticAbilityPlotZone
     PlotZone,
@@ -187,9 +188,18 @@ public enum StaticAbilityMode {
     // StaticAbilityManaConvert
     ManaConvert,
 
+    // StaticAbilityUntapOtherPlayer
+    UntapOtherPlayer,
+
     // StaticAbilityTurnPhaseReversed
     TurnReversed,
     PhaseReversed,
+
+    // StaticAbilityCountersRemain
+    CountersRemain,
+
+    // StaticAbilityMustAttack
+    AttackRequirement,
 
     ;
 

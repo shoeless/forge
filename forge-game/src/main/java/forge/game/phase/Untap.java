@@ -38,6 +38,7 @@ import forge.game.player.Player;
 import forge.game.player.PlayerController.BinaryChoiceType;
 import forge.game.spellability.SpellAbility;
 import forge.game.staticability.StaticAbilityCantPhase;
+import forge.game.staticability.StaticAbilityUntapOtherPlayer;
 import forge.game.trigger.TriggerType;
 import forge.game.zone.ZoneType;
 
@@ -153,21 +154,16 @@ public class Untap extends Phase {
             }
         }
 
-        // other players untapping during your untap phase
-        List<Card> cardsWithKW = CardLists.getKeyword(active.getAllOtherPlayers().getCardsIn(ZoneType.Battlefield),
-                "CARDNAME untaps during each other player's untap step.");
-        List<Card> cardsWithKW2 = CardLists.getKeyword(active.getOpponents().getCardsIn(ZoneType.Battlefield),
-                "CARDNAME untaps during each opponent's untap step.");
-        cardsWithKW.addAll(cardsWithKW2);
-        for (final Card cardWithKW : cardsWithKW) {
-            if (cardWithKW.untap(active)) {
+        // other players untapping during your untap phase (via UntapOtherPlayer static ability)
+        for (final Card c : active.getAllOtherPlayers().getCardsIn(ZoneType.Battlefield)) {
+            if (c.isTapped() && StaticAbilityUntapOtherPlayer.untap(c, active) && c.untap(active)) {
                 // iOS compatibility: Replace computeIfAbsent (requires java.util.function.Function)
-                CardCollection cards = untapMap.get(cardWithKW.getController());
+                CardCollection cards = untapMap.get(c.getController());
                 if (cards == null) {
                     cards = new CardCollection();
-                    untapMap.put(cardWithKW.getController(), cards);
+                    untapMap.put(c.getController(), cards);
                 }
-                cards.add(cardWithKW);
+                cards.add(c);
             }
         }
 
