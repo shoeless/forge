@@ -14,7 +14,11 @@ public abstract class CachedCardImage implements ImageFetcher.Callback {
     static final ImageFetcher fetcher = GuiBase.getInterface().getImageFetcher();
 
     public CachedCardImage(final CardView card) {
-        key = card.getCurrentState().getImageKey(MatchController.instance.getLocalPlayers());
+        if (card.getCurrentState() != null) {
+            key = card.getCurrentState().getImageKey(MatchController.instance.getLocalPlayers());
+        } else {
+            key = "cardback";
+        }
         fetch();
     }
 
