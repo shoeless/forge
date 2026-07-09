@@ -13,6 +13,7 @@ import forge.game.ability.AbilityUtils;
 import forge.game.ability.ApiType;
 import forge.game.ability.effects.CounterEffect;
 import forge.game.card.Card;
+import forge.game.card.CardCollection;
 import forge.game.card.CardCollectionView;
 import forge.game.card.CardPredicates;
 import forge.game.cost.Cost;
@@ -27,6 +28,28 @@ import forge.util.MyRandom;
 import forge.util.collect.FCollectionView;
 
 public class CounterAi extends SpellAbilityAi {
+
+    /**
+     * Threat value of a spell on the stack, scored SYMMETRICALLY with the sacrifice
+     * fodder it is compared against (ComputerUtilCard.evaluateCounterExchangeValue):
+     * creature spells go through the state-aware evaluateCreature(SpellAbility)
+     * overload, which uses the same evaluator and flags as the fodder side — including
+     * CreatureEvaluator's own non-token +20, so token handling is identical on both
+     * sides with no further adjustment here. Non-creature spells use the same
+     * mana-value formula as the fodder side's non-creature branch, with tgtCMC (which
+     * already estimates X) in place of printed CMC and the same non-token +20.
+     */
+    private static int evaluateCounterTargetThreat(final SpellAbility topSA, final int tgtCMC) {
+        final Card host = topSA.getHostCard();
+        if (topSA.getApi() == ApiType.PermanentCreature) {
+            return ComputerUtilCard.evaluateCreature(topSA);
+        }
+        int threat = 50 + 30 * tgtCMC;
+        if (host == null || !host.isToken()) {
+            threat += 20;
+        }
+        return threat;
+    }
 
     @Override
     protected AiAbilityDecision checkApiLogic(Player ai, SpellAbility sa) {
@@ -85,6 +108,39 @@ public class CounterAi extends SpellAbilityAi {
                 }
             } else {
                 return new AiAbilityDecision(0, AiPlayDecision.TargetingFailed);
+            }
+
+            // Counters with a non-self sacrifice additional cost (e.g. Abjure): only counter
+            // when the threat of the countered spell exceeds the value of the cheapest
+            // permanent we would give up. chooseSacrificeType picks the argmin candidate for
+            // Counter abilities using the same valuation, so the fodder checked here is the
+            // fodder that will actually be sacrificed at payment time.
+            Cost payCosts = sa.getPayCosts();
+            if (payCosts != null && payCosts.hasSpecificCostType(CostSacrifice.class)) {
+                CostSacrifice sacCost = payCosts.getCostPartByType(CostSacrifice.class);
+                if (sacCost != null && !sacCost.payCostFromSource() && !"OriginalHost".equals(sacCost.getType())) {
+                    int sacAmount = 1;
+                    try {
+                        sacAmount = sacCost.getAbilityAmount(sa);
+                    } catch (Exception e) {
+                        // non-numeric amount; assume 1
+                    }
+                    CardCollection wouldSac = ComputerUtil.chooseSacrificeType(ai, sacCost.getType(), sa, null, false, sacAmount, null);
+                    if (wouldSac == null || wouldSac.isEmpty()) {
+                        return new AiAbilityDecision(0, AiPlayDecision.CantAfford);
+                    }
+                    int sacValue = 0;
+                    for (Card sacFodder : wouldSac) {
+                        sacValue = Math.max(sacValue, ComputerUtilCard.evaluateSacrificeCostValue(sacFodder));
+                    }
+                    int threatValue = evaluateCounterTargetThreat(topSA, tgtCMC);
+                    System.out.println("SAC-CTR: " + source + " vs " + topSA.getHostCard() + ": threat=" + threatValue
+                            + " sacValue=" + sacValue + " fodder=" + wouldSac
+                            + (threatValue > sacValue ? " -> counter" : " -> decline"));
+                    if (threatValue <= sacValue) {
+                        return new AiAbilityDecision(0, AiPlayDecision.CostNotAcceptable);
+                    }
+                }
             }
         } else {
             // This spell doesn't target. Must be a "Counter All" or "Counter trigger" type of ability.

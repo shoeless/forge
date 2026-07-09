@@ -595,9 +595,19 @@ public class ComputerUtil {
         int count = 0;
 
         while (count < amount) {
-            Card prefCard = getCardPreference(ai, source, "SacCost", typeList, ability);
-            if (prefCard == null) {
-                prefCard = ComputerUtilCard.getWorstAI(typeList);
+            Card prefCard;
+            if (ability != null && ability.getApi() == ApiType.Counter) {
+                // Sacrifice-cost counterspells (e.g. Abjure): sacrifice the argmin-value
+                // candidate. The generic SacCost preference path below is biased to sac
+                // enchantments/artifacts before creatures, which would feed a real
+                // enchantment to the cost while fungible creature tokens are available.
+                // CounterAi gates the cast on this same valuation (threat > fodder).
+                prefCard = ComputerUtilCard.getCheapestSacrificeAI(typeList);
+            } else {
+                prefCard = getCardPreference(ai, source, "SacCost", typeList, ability);
+                if (prefCard == null) {
+                    prefCard = ComputerUtilCard.getWorstAI(typeList);
+                }
             }
             if (prefCard == null) {
                 return null;

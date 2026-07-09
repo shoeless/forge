@@ -794,6 +794,70 @@ public class ComputerUtilCard {
         return eval;
     }
 
+    /**
+     * Shared base value for counter-exchange decisions, used SYMMETRICALLY for both
+     * sides of the trade: the permanent we would sacrifice as an additional cost AND
+     * the spell we would counter (via CounterAi.evaluateCounterTargetThreat). Creatures
+     * use evaluateCreature with the same flags as the SpellAbility overload
+     * (considerPT, no CMC); other cards use a mana-value heuristic on the same scale,
+     * with the non-token +20 mirroring CreatureEvaluator's non-token bonus (a real
+     * card is worth more than a token on either side of the exchange).
+     */
+    public static int evaluateCounterExchangeValue(final Card c) {
+        if (c.isCreature()) {
+            return evaluateCreature(c, true, false);
+        }
+        int value = 50 + 30 * c.getCMC();
+        if (!c.isToken()) {
+            value += 20;
+        }
+        return value;
+    }
+
+    /**
+     * Value of a permanent considered as sacrifice-cost fodder (lower = better to give
+     * up): the shared exchange base plus fodder-side-only modifiers (SacMe-flagged
+     * cards are preferred). A sacrificed COMMANDER returns to the command zone and can
+     * be recast, so its fodder cost is the recast TEMPO — mana value plus accumulated
+     * command tax (CostAdjustment: 2 per prior cast) — on the same 30-per-mana scale
+     * as the non-creature exchange formula. This prices the real commander below a
+     * clone of it (a sacrificed clone is gone for good, so it gets ordinary full
+     * value) and above free-to-replace tokens. Used by the Counter-API sacrifice
+     * value gate (CounterAi) and argmin selection (ComputerUtil.chooseSacrificeType).
+     */
+    public static int evaluateSacrificeCostValue(final Card c) {
+        if (c.isCommander() && c.getOwner() != null) {
+            // Recast tempo (mana + command tax) PLUS an engine-downtime premium: the
+            // commander is usually the deck's engine, and while it sits in the command
+            // zone awaiting recast that engine is off (e.g. no Drakes per spell). Pure
+            // recast pricing (first sac = 180) proved too cheap in a 10k-game sim —
+            // the AI fed Talrand to Abjure 788 times, mostly against 186-251-threat
+            // creatures. +150 (~5 mana-equivalent) sets the first-sac bar at ~330, so
+            // only genuine bombs (Drakuseth 346, Lyra 361) justify eating the engine.
+            int recastMana = c.getCMC() + 2 * c.getOwner().getCommanderCast(c);
+            return 30 * recastMana + 150;
+        }
+        int value = evaluateCounterExchangeValue(c);
+        if (c.hasSVar("SacMe")) {
+            value -= 100;
+        }
+        return value;
+    }
+
+    /** Argmin of evaluateSacrificeCostValue over list, or null if the list is empty. */
+    public static Card getCheapestSacrificeAI(final Iterable<Card> list) {
+        Card best = null;
+        int bestValue = Integer.MAX_VALUE;
+        for (final Card c : list) {
+            final int v = evaluateSacrificeCostValue(c);
+            if (best == null || v < bestValue) {
+                bestValue = v;
+                best = c;
+            }
+        }
+        return best;
+    }
+
     public static int evaluatePermanentList(final CardCollectionView list) {
         int value = 0;
         for (int i = 0; i < list.size(); i++) {
