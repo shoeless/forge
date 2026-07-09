@@ -1193,8 +1193,13 @@ public class AiController {
                 }
 
                 if (!discardedUnplayable) {
-                    // discard worst card
-                    Card worst = ComputerUtilCard.getWorstAI(validCards);
+                    // discard worst card, but respect DoNotDiscardIfAble: getWorstAI() doesn't check
+                    // the SVar, so an otherwise-worst protected card (e.g. Ertai, Steal Enchantment)
+                    // was handed to a loot/discard trigger despite the flag. Filter first, and only
+                    // fall back to the full list if every discardable card is protected.
+                    CardCollection discardable = CardLists.filter(validCards,
+                            c -> !c.hasSVar("DoNotDiscardIfAble"));
+                    Card worst = ComputerUtilCard.getWorstAI(discardable.isEmpty() ? validCards : discardable);
                     if (worst == null) {
                         // there were only instants and sorceries, and maybe cards that are not good to discard, so look
                         // for more discard options
