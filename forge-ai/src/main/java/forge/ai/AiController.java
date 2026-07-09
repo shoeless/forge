@@ -1693,6 +1693,14 @@ public class AiController {
         Thread t = new Thread(future, "Game AI Eval");
         t.start();
         try {
+            // Deterministic-sim mode (canUseTimeout() false under -Dforge.rngSeed): wait for the eval
+            // to finish with no wall-clock timeout, so a slow decision on a wide board can't fire a
+            // timing-dependent TimeoutException that makes the AI pass and diverges seeded runs. (The
+            // headless DeckBattler has its own no-progress abort as the hang backstop.) Otherwise keep
+            // the per-decision timeout as the interactive hang-breaker + profiler sample.
+            if (!game.canUseTimeout()) {
+                return future.get();
+            }
             return future.get(game.getAITimeout(), TimeUnit.SECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
