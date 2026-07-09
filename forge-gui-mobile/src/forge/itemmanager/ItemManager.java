@@ -300,6 +300,12 @@ public abstract class ItemManager<T extends InventoryItem> extends FContainer im
         return favorite != null && favorite != 0;
     }
 
+    //When enabled (e.g. the Card Gallery), a single tap on a card in image view toggles its
+    //favorite (star) instead of selecting it. Off by default so deck-building selection is unchanged.
+    private boolean tapToFavorite;
+    public boolean isTapToFavorite() { return tapToFavorite; }
+    public void setTapToFavorite(boolean value) { tapToFavorite = value; }
+
     public abstract class ItemRenderer {
         public abstract float getItemHeight();
 

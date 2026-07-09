@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.function.Function;
 
 import com.google.common.collect.Lists;
@@ -159,6 +160,14 @@ public enum GroupDef {
                     }
                 }
                 return -1;
+            }),
+    ARTIST("lblArtist", getArtistGroups(),
+            groupIndex -> null,
+            item -> {
+                if (item instanceof PaperCard) {
+                    return getArtistGroup(((PaperCard) item).getArtist());
+                }
+                return -1;
             });
 
     GroupDef(String name0, String[] groups0, Function<Integer, ColumnDef> fnGetPileByOverride0, Function<InventoryItem, Integer> fnGroupItem0) {
@@ -253,6 +262,41 @@ public enum GroupDef {
 
     private static Integer getSetGroup(String set) {
         Integer groupNum = setGroupMap.get(set);
+        if (groupNum == null) {
+            groupNum = -1;
+        }
+        return groupNum;
+    }
+
+    private static Map<String, Integer> artistGroupMap;
+
+    private static String[] getArtistGroups() {
+        artistGroupMap = new HashMap<>(); //cache mappings to make lookup quicker later
+
+        //build sorted, unique list of artists across all printings
+        TreeSet<String> artists = new TreeSet<>();
+        for (PaperCard pc : FModel.getMagicDb().getCommonCards().getAllCards()) {
+            String artist = pc.getArtist();
+            if (artist != null && !artist.isEmpty()) {
+                artists.add(artist);
+            }
+        }
+
+        int groupNum = 0;
+        String[] artistGroups = new String[artists.size()];
+        for (String artist : artists) {
+            artistGroups[groupNum] = artist;
+            artistGroupMap.put(artist, groupNum);
+            groupNum++;
+        }
+        return artistGroups;
+    }
+
+    private static Integer getArtistGroup(String artist) {
+        if (artist == null) {
+            return -1;
+        }
+        Integer groupNum = artistGroupMap.get(artist);
         if (groupNum == null) {
             groupNum = -1;
         }

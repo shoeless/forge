@@ -362,7 +362,13 @@ public enum ColumnDef {
                     return item; // pass the card through to the renderer
                 }
                 return null;
-            });
+            }),
+    /**
+     * The artist column.
+     */
+    ARTIST("lblArtist", "lblArtist", 90, false, SortState.ASC,
+            from -> toArtist(from.getKey()),
+            from -> toArtist(from.getKey()));
 
     ColumnDef(String shortName0, String longName0, int preferredWidth0, boolean isWidthFixed0, SortState sortState0,
               Function<Entry<InventoryItem, Integer>, Comparable<?>> fnSort0,
@@ -444,6 +450,10 @@ public enum ColumnDef {
 
     private static CardRarity toRarity(final InventoryItem i) {
         return i instanceof PaperCard ? ((IPaperCard) i).getRarity() : CardRarity.Unknown;
+    }
+
+    private static String toArtist(final InventoryItem i) {
+        return i instanceof PaperCard ? ((PaperCard) i).getArtist() : "";
     }
 
     private static Double toRanking(final InventoryItem i, boolean truncate) {
