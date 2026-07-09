@@ -1294,7 +1294,10 @@ public class GameAction {
                 continue;
             }
 
-            boolean exists = stAb.getHostCard().getStaticAbilities().contains(stAb);
+            // CR 613.8 dependency detection compares membership before and after applying another
+            // static ability, so it MUST read fresh (bypass the memo) - a memoized read would hand
+            // back the same object both times and silently report "no dependency".
+            boolean exists = stAb.getHostCard().getStaticAbilities(false).contains(stAb);
             boolean compareAffected = false;
             CardCollectionView affectedHere = affectedPerAbility.get(stAb);
             if (affectedHere == null) {
@@ -1324,7 +1327,7 @@ public class GameAction {
                 // CR 613.8a An effect is said to "depend on" another if
                 // * (a) + (c) already handled *
                 // (b) applying the other would change the text or the existence of the first effect...
-                boolean dependency = exists != stAb.getHostCard().getStaticAbilities().contains(stAb);
+                boolean dependency = exists != stAb.getHostCard().getStaticAbilities(false).contains(stAb);
                 // ...what it applies to...
                 if (!dependency && compareAffected) {
                     CardCollectionView affectedAfterOther = StaticAbilityContinuous.getAffectedCards(stAb, preList);

@@ -300,6 +300,16 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     private long controllerTimestamp;
     private NavigableMap<Long, Player> tempControllers = Maps.newTreeMap();
 
+    // Memoization version: monotonically bumped on any continuous-effect change that can alter
+    // getStaticAbilities() / getReplacementEffects() / type-with-changes. Per-CardState memos key on
+    // this so they skip rebuilding an unchanged collection (see CardState.getStaticAbilities). Bumped
+    // from the keyword/trait/type view-refresh tail-calls (covers updateView=true mutations) plus the
+    // clear/remove/set variants that skip those, and the rep-affecting counter mutators. Completeness
+    // is proven empirically by the seeded determinism A/B (memo on vs off must be bit-identical) and
+    // the -Dforge.assertStaticMemo shadow-assert; a missed bump shows up as a stale-memo assert or a
+    // divergent seeded game. The memo itself is default OFF (-Dforge.staticMemo=on to enable).
+    private long contEffVersion = 0L;
+
     private String originalText = "", text = "";
     private String chosenType = "";
     private String chosenType2 = "";
@@ -1923,10 +1933,23 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
 
     @Override
+    public void setCounters(final CounterType counterType, final Integer num) {
+        super.setCounters(counterType, num);
+        // Bump the memo AFTER the counter value is committed (the add/subtract paths route through
+        // here), so getReplacementEffects rebuilds with the actual count. Only shield/stun/finality
+        // add or remove a replacement effect, so limit the bump to them to preserve hit-rate.
+        if (counterAffectsReplacements(counterType)) {
+            invalidateContinuousEffectsMemo();
+        }
+    }
+
+    @Override
     public final void setCounters(final Multiset<CounterType> allCounters) {
         boolean changed = counters.contains(CounterEnumType.MANABOND) || counters.elementSet().stream().allMatch(CounterType::isKeywordCounter);
         counters = allCounters;
         view.updateCounters(this);
+        // full counter reset is infrequent; a blanket invalidation is cheap and safe
+        invalidateContinuousEffectsMemo();
 
         if (!isLKI()) {
             for (CounterType ct : counters.elementSet()) {
@@ -1947,6 +1970,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
         counters.clear();
         view.updateCounters(this);
+        invalidateContinuousEffectsMemo();
 
         if (changed) {
             updateKeywords();
@@ -4176,6 +4200,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
     public final void updateTypeCache() {
         this.getCurrentState().updateTypes();
+        // type-with-changes drives loyalty/defense/saga/adventure/omen reps and type-conditioned
+        // static abilities, so a type change must invalidate the continuous-effect memo
+        invalidateContinuousEffectsMemo();
     }
 
     public boolean hasChangedCardColors() {
@@ -4915,6 +4942,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             spells, trigger, replacements, statics, e -> true
         ));
 
+        invalidateContinuousEffectsMemo();
+
         // setting card traits via text, does overwrite any other word change effects?
         this.changedTextColors.addEmpty(timestamp, staticId);
         this.changedTextTypes.addEmpty(timestamp, staticId);
@@ -4936,6 +4965,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
     public final ICardTraitChanges addChangedCardTraits(ICardTraitChanges changes, long timestamp, long staticId, boolean updateView) {
         changedCardTraits.put(timestamp, staticId, changes);
+        // changed traits contribute static abilities and replacement effects (getChangedCardTraitsList
+        // feeds updateStaticAbilities/updateReplacementEffects), so invalidate the memo
+        invalidateContinuousEffectsMemo();
         if (updateView) {
             updateAbilityTextForView();
         }
@@ -4943,9 +4975,11 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
 
     public final boolean removeChangedCardTraits(long timestamp, long staticId) {
+        invalidateContinuousEffectsMemo();
         return changedCardTraits.remove(timestamp, staticId) != null;
     }
     public final boolean removeChangedCardTraitsByText(long timestamp, long staticId) {
+        invalidateContinuousEffectsMemo();
         return changedCardTraitsByText.remove(timestamp, staticId) != null;
     }
 
@@ -5223,6 +5257,10 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         }
 
         state.setCachedKeywords(keywords);
+        // getStaticAbilities() merges each unhidden keyword's static abilities and reads this cache,
+        // so rebuilding it must invalidate the memo (intrinsic keyword statics like Flying/Islandwalk
+        // materialize here, not via updateKeywords()).
+        invalidateContinuousEffectsMemo();
     }
     private void visitUnhiddenKeywords(CardState state, Visitor<KeywordInterface> visitor) {
         for (KeywordInterface kw : getUnhiddenKeywords(state)) {
@@ -6972,6 +7010,65 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public final FCollectionView<StaticAbility> getStaticAbilities() {
         return currentState.getStaticAbilities();
     }
+    /** Pass useMemo=false at CR 613.8 dependency-detector reads that compare membership before/after
+     *  applying another static ability - a memo would hand back the same object both times and hide
+     *  the dependency. All other callers should use the no-arg form. */
+    public final FCollectionView<StaticAbility> getStaticAbilities(boolean useMemo) {
+        return currentState.getStaticAbilities(useMemo);
+    }
+    public final long getContEffVersion() {
+        return contEffVersion;
+    }
+    /** Invalidate the per-CardState continuous-effect memos (static abilities / replacement effects).
+     *  Cheap (an int bump); called from every mutator that can change what those collections contain. */
+    public final void invalidateContinuousEffectsMemo() {
+        contEffVersion++;
+    }
+    // Counter types whose presence adds/removes a replacement effect (see materializeCounterReps /
+    // updateReplacementEffects). Only these need to invalidate the getReplacementEffects memo; +1/+1
+    // and the like do not, which preserves the memo hit-rate.
+    private static boolean counterAffectsReplacements(final CounterType ct) {
+        return ct.is(CounterEnumType.SHIELD) || ct.is(CounterEnumType.STUN) || ct.is(CounterEnumType.FINALITY);
+    }
+    // Guarded lazy creation of the shield/stun/finality counter reps. Hoisted out of
+    // updateReplacementEffects so the memoized getReplacementEffects assembly never allocates a
+    // process-global replacement/SA id on a cache hit (which would shift ids and reorder simultaneous
+    // triggers). Creation stays once-per-card; the conditions match the list.add() sites below.
+    public void materializeCounterReps() {
+        if (getCounters(CounterEnumType.SHIELD) > 0) {
+            String sa = "DB$ RemoveCounter | Defined$ Self | CounterType$ Shield | CounterNum$ 1";
+            if (shieldCounterReplaceDamage == null) {
+                String reStr = "Event$ DamageDone | ActiveZones$ Battlefield | ValidTarget$ Card.Self | PreventionEffect$ True | AlwaysReplace$ True | Secondary$ True "
+            + "| Description$ If damage would be dealt to this permanent, prevent that damage and remove a shield counter from it.";
+                shieldCounterReplaceDamage = ReplacementHandler.parseReplacement(reStr, this, false, null);
+                shieldCounterReplaceDamage.setOverridingAbility(AbilityFactory.getAbility(sa, this));
+            }
+            if (shieldCounterReplaceDestroy == null) {
+                String reStr = "Event$ Destroy | ActiveZones$ Battlefield | ValidCard$ Card.Self | ValidCause$ SpellAbility | Secondary$ True | ShieldCounter$ True "
+            + "| Description$ If this permanent would be destroyed as the result of an effect, instead remove a shield counter from it.";
+                shieldCounterReplaceDestroy = ReplacementHandler.parseReplacement(reStr, this, false, null);
+                shieldCounterReplaceDestroy.setOverridingAbility(AbilityFactory.getAbility(sa, this));
+            }
+        }
+        if (getCounters(CounterEnumType.STUN) > 0) {
+            String sa = "DB$ RemoveCounter | Defined$ Self | CounterType$ Stun | CounterNum$ 1";
+            if (stunCounterReplaceUntap == null) {
+                String reStr = "Event$ Untap | ActiveZones$ Battlefield | ValidCard$ Card.Self | Secondary$ True "
+            + "| Description$ If this permanent would become untapped, instead remove a stun counter from it.";
+                stunCounterReplaceUntap = ReplacementHandler.parseReplacement(reStr, this, false, null);
+                stunCounterReplaceUntap.setOverridingAbility(AbilityFactory.getAbility(sa, this));
+            }
+        }
+        if (getCounters(CounterEnumType.FINALITY) > 0) {
+            if (finalityCounterReplaceDying == null) {
+                String reStr = "Event$ Moved | ActiveZones$ Battlefield | Origin$ Battlefield | Destination$ Graveyard | ValidCard$ Card.Self | Secondary$ True "
+            + " | Description$ If CARDNAME would die, exile it instead.";
+                String sa = "DB$ ChangeZone | Origin$ Battlefield | Destination$ Exile | Defined$ ReplacedCard";
+                finalityCounterReplaceDying = ReplacementHandler.parseReplacement(reStr, this, false, null);
+                finalityCounterReplaceDying.setOverridingAbility(AbilityFactory.getAbility(sa, this));
+            }
+        }
+    }
     public final StaticAbility addStaticAbility(final String s) {
         if (!s.trim().isEmpty()) {
             final StaticAbility stAb = StaticAbility.create(s, this, currentState, true);
@@ -7052,45 +7149,19 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             return;
         }
 
-        // Shield Counter aren't affected by Changed Card Traits
+        // Shield/Stun/Finality counter reps aren't affected by Changed Card Traits. Their guarded
+        // creation is hoisted to materializeCounterReps() (run on every getReplacementEffects call,
+        // incl. memo hits) so this assembly allocates no process-global ids and is safe to memoize;
+        // here we only ADD the already-created reps.
+        materializeCounterReps();
         if (getCounters(CounterEnumType.SHIELD) > 0) {
-            String sa = "DB$ RemoveCounter | Defined$ Self | CounterType$ Shield | CounterNum$ 1";
-            if (shieldCounterReplaceDamage == null) {
-                String reStr = "Event$ DamageDone | ActiveZones$ Battlefield | ValidTarget$ Card.Self | PreventionEffect$ True | AlwaysReplace$ True | Secondary$ True "
-            + "| Description$ If damage would be dealt to this permanent, prevent that damage and remove a shield counter from it.";
-                shieldCounterReplaceDamage = ReplacementHandler.parseReplacement(reStr, this, false, null);
-                shieldCounterReplaceDamage.setOverridingAbility(AbilityFactory.getAbility(sa, this));
-            }
-            if (shieldCounterReplaceDestroy == null) {
-                String reStr = "Event$ Destroy | ActiveZones$ Battlefield | ValidCard$ Card.Self | ValidCause$ SpellAbility | Secondary$ True | ShieldCounter$ True "
-            + "| Description$ If this permanent would be destroyed as the result of an effect, instead remove a shield counter from it.";
-                shieldCounterReplaceDestroy = ReplacementHandler.parseReplacement(reStr, this, false, null);
-                shieldCounterReplaceDestroy.setOverridingAbility(AbilityFactory.getAbility(sa, this));
-            }
-
             list.add(shieldCounterReplaceDamage);
             list.add(shieldCounterReplaceDestroy);
         }
         if (getCounters(CounterEnumType.STUN) > 0) {
-            String sa = "DB$ RemoveCounter | Defined$ Self | CounterType$ Stun | CounterNum$ 1";
-            if (stunCounterReplaceUntap == null) {
-                String reStr = "Event$ Untap | ActiveZones$ Battlefield | ValidCard$ Card.Self | Secondary$ True "
-            + "| Description$ If this permanent would become untapped, instead remove a stun counter from it.";
-
-                stunCounterReplaceUntap = ReplacementHandler.parseReplacement(reStr, this, false, null);
-                stunCounterReplaceUntap.setOverridingAbility(AbilityFactory.getAbility(sa, this));
-            }
             list.add(stunCounterReplaceUntap);
         }
         if (getCounters(CounterEnumType.FINALITY) > 0) {
-            if (finalityCounterReplaceDying == null) {
-                String reStr = "Event$ Moved | ActiveZones$ Battlefield | Origin$ Battlefield | Destination$ Graveyard | ValidCard$ Card.Self | Secondary$ True "
-            + " | Description$ If CARDNAME would die, exile it instead.";
-                String sa = "DB$ ChangeZone | Origin$ Battlefield | Destination$ Exile | Defined$ ReplacedCard";
-
-                finalityCounterReplaceDying = ReplacementHandler.parseReplacement(reStr, this, false, null);
-                finalityCounterReplaceDying.setOverridingAbility(AbilityFactory.getAbility(sa, this));
-            }
             list.add(finalityCounterReplaceDying);
         }
     }

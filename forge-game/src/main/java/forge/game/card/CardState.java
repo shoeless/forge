@@ -54,10 +54,12 @@ import io.sentry.Sentry;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 
 public class CardState implements GameObject, IHasSVars, ITranslatable {
@@ -700,7 +702,49 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         return triggers.add(t);
     }
 
+    // --- Continuous-effect memo (default OFF). Caches the fully-built getStaticAbilities() /
+    // getReplacementEffects() collections keyed on the host card's contEffVersion, so an unchanged
+    // card skips rebuilding them. -Dforge.staticMemo=on enables the static-ability memo;
+    // -Dforge.repMemo=on (defaults to follow forge.staticMemo) the replacement memo. With both off
+    // (the default), every path below builds fresh exactly like upstream. -Dforge.assertStaticMemo
+    // shadow-computes fresh on every hit and logs any mismatch (the completeness oracle for the
+    // invalidation sites in Card). See [[static-ability-memo]] / [[sim-deterministic-seed]]. ---
+    private static final boolean STATIC_MEMO = "on".equals(System.getProperty("forge.staticMemo", "off"));
+    private static final boolean REP_MEMO = "on".equals(System.getProperty("forge.repMemo",
+            System.getProperty("forge.staticMemo", "off")));
+    private static final boolean ASSERT_MEMO = System.getProperty("forge.assertStaticMemo") != null;
+    private static final AtomicLong MEMO_STALE = new AtomicLong();
+    private transient FCollection<StaticAbility> cachedStaticAbilities;
+    private transient long cachedStaticAbilitiesVersion = -1L;
+    private transient FCollection<ReplacementEffect> cachedReplacementEffects;
+    private transient long cachedReplacementEffectsVersion = -1L;
+
     public final FCollectionView<StaticAbility> getStaticAbilities() {
+        return getStaticAbilities(STATIC_MEMO);
+    }
+    public final FCollectionView<StaticAbility> getStaticAbilities(boolean useMemo) {
+        if (!useMemo) {
+            return buildStaticAbilities();
+        }
+        final long ver = card.getContEffVersion();
+        if (cachedStaticAbilities != null && cachedStaticAbilitiesVersion == ver) {
+            if (ASSERT_MEMO) {
+                FCollection<StaticAbility> fresh = buildStaticAbilities();
+                if (!sameStaticAbilities(cachedStaticAbilities, fresh)) {
+                    MEMO_STALE.incrementAndGet();
+                    System.out.println("[STATICMEMO][STALE] " + card + " state=" + getStateName()
+                            + " ver=" + ver + " cachedN=" + cachedStaticAbilities.size()
+                            + " freshN=" + fresh.size());
+                }
+            }
+            return cachedStaticAbilities;
+        }
+        FCollection<StaticAbility> result = buildStaticAbilities();
+        cachedStaticAbilities = result;
+        cachedStaticAbilitiesVersion = ver;
+        return result;
+    }
+    private FCollection<StaticAbility> buildStaticAbilities() {
         FCollection<StaticAbility> result = new FCollection<>(staticAbilities);
         if (getStateName().equals(CardStateName.Original)) {
             if (getCard().hasState(CardStateName.LeftSplit))
@@ -710,6 +754,33 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         }
         card.updateStaticAbilities(result, this);
         return result;
+    }
+    // identity + order equality (the memo must return the same objects in the same order as a fresh build)
+    private static boolean sameStaticAbilities(FCollection<StaticAbility> a, FCollection<StaticAbility> b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        Iterator<StaticAbility> ia = a.iterator();
+        Iterator<StaticAbility> ib = b.iterator();
+        while (ia.hasNext()) {
+            if (ia.next() != ib.next()) {
+                return false;
+            }
+        }
+        return true;
+    }
+    private static boolean sameReplacementEffects(FCollection<ReplacementEffect> a, FCollection<ReplacementEffect> b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        Iterator<ReplacementEffect> ia = a.iterator();
+        Iterator<ReplacementEffect> ib = b.iterator();
+        while (ia.hasNext()) {
+            if (ia.next() != ib.next()) {
+                return false;
+            }
+        }
+        return true;
     }
     public final boolean addStaticAbility(StaticAbility stab) {
         return staticAbilities.add(stab);
@@ -722,6 +793,57 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         return getReplacementEffects(true);
     }
     public FCollectionView<ReplacementEffect> getReplacementEffects(boolean rulesHost) {
+        // Create the type-driven lazy reps on EVERY call (guarded, so id-allocating creation still
+        // happens once per card at a deterministic point even when the memoized assembly is skipped
+        // on a cache hit). The assembly in buildReplacementEffects only ADDs the already-created reps.
+        materializeLazyReps(rulesHost);
+        if (!REP_MEMO || !rulesHost) {
+            // Only the rulesHost path is memoized (it's the hot getReplacementEffects() path); the
+            // non-rules-host path is rare and always built fresh.
+            return buildReplacementEffects(rulesHost);
+        }
+        final long ver = card.getContEffVersion();
+        if (cachedReplacementEffects != null && cachedReplacementEffectsVersion == ver) {
+            if (ASSERT_MEMO) {
+                FCollection<ReplacementEffect> fresh = buildReplacementEffects(rulesHost);
+                if (!sameReplacementEffects(cachedReplacementEffects, fresh)) {
+                    MEMO_STALE.incrementAndGet();
+                    System.out.println("[REPMEMO][STALE] " + card + " state=" + getStateName() + " ver=" + ver
+                            + " cachedN=" + cachedReplacementEffects.size() + " freshN=" + fresh.size());
+                }
+            }
+            return cachedReplacementEffects;
+        }
+        FCollection<ReplacementEffect> result = buildReplacementEffects(rulesHost);
+        cachedReplacementEffects = result;
+        cachedReplacementEffectsVersion = ver;
+        return result;
+    }
+    // Guarded lazy creation of the type-driven reps (loyalty/defense/saga always; adventure/omen only
+    // as rules host, matching the original placement relative to the rulesHost early-return). Hoisted
+    // out of the memoized assembly so creation (which consumes process-global replacement/SA ids)
+    // happens at a deterministic point independent of memo hit/miss.
+    private void materializeLazyReps(boolean rulesHost) {
+        CardTypeView type = getTypeWithChanges();
+        if (type.isPlaneswalker() && loyaltyRep == null) {
+            loyaltyRep = CardFactoryUtil.makeEtbCounter("etbCounter:LOYALTY:" + this.baseLoyalty, this, true);
+        }
+        if (type.isBattle() && defenseRep == null) {
+            defenseRep = CardFactoryUtil.makeEtbCounter("etbCounter:DEFENSE:" + this.baseDefense, this, true);
+        }
+        if (type.isSaga() && !hasKeyword(Keyword.READ_AHEAD) && sagaRep == null) {
+            sagaRep = CardFactoryUtil.makeEtbCounter("etbCounter:LORE:1", this, true);
+        }
+        if (rulesHost) {
+            if (type.hasSubtype("Adventure") && this.adventureRep == null) {
+                adventureRep = CardFactoryUtil.setupAdventureAbility(this);
+            }
+            if (type.hasSubtype("Omen") && this.omenRep == null) {
+                omenRep = CardFactoryUtil.setupOmenAbility(this);
+            }
+        }
+    }
+    private FCollection<ReplacementEffect> buildReplacementEffects(boolean rulesHost) {
         FCollection<ReplacementEffect> result = new FCollection<>(replacementEffects);
         // add Split to Original
         if (getStateName().equals(CardStateName.Original)) {
@@ -732,21 +854,12 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         }
         CardTypeView type = getTypeWithChanges();
         if (type.isPlaneswalker()) {
-            if (loyaltyRep == null) {
-                loyaltyRep = CardFactoryUtil.makeEtbCounter("etbCounter:LOYALTY:" + this.baseLoyalty, this, true);
-            }
             result.add(loyaltyRep);
         }
         if (type.isBattle()) {
-            if (defenseRep == null) {
-                defenseRep = CardFactoryUtil.makeEtbCounter("etbCounter:DEFENSE:" + this.baseDefense, this, true);
-            }
             result.add(defenseRep);
         }
         if (type.isSaga() && !hasKeyword(Keyword.READ_AHEAD)) {
-            if (sagaRep == null) {
-                sagaRep = CardFactoryUtil.makeEtbCounter("etbCounter:LORE:1", this, true);
-            }
             result.add(sagaRep);
         }
 
@@ -758,15 +871,9 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
 
         // below are global rules
         if (type.hasSubtype("Adventure")) {
-            if (this.adventureRep == null) {
-                adventureRep = CardFactoryUtil.setupAdventureAbility(this);
-            }
             result.add(adventureRep);
         }
         if (type.hasSubtype("Omen")) {
-            if (this.omenRep == null) {
-                omenRep = CardFactoryUtil.setupOmenAbility(this);
-            }
             result.add(omenRep);
         }
 
