@@ -451,6 +451,10 @@ public class Forge implements ApplicationListener {
                         }
                         safeToClose = true;
                         clearTransitionScreen();
+                        // Load the deferred skin sheets (foils, avatars, sleeves, deckboxes,
+                        // cracks) on the next frame - after the home screen is visible - so
+                        // they don't sit on the splash-to-home critical path.
+                        Gdx.app.postRunnable(FSkin::loadDeferred);
                         if (GuiBase.isIOS()) {
                             // POST-LOAD memory reclaim (iOS): booting parses ~32k card rules +
                             // builds ~100k PaperCards + loads skin assets — a large transient
