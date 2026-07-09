@@ -360,6 +360,16 @@ public class ComputerUtilMana {
             }
         }
 
+        // When paying for a spell (not a recursive activation cost), prefer costly mana
+        // sources (signets, filter lands) over free-tap sources. Costly sources produce
+        // extra mana (e.g., {R}{W} for {1} activation) but need a free source to pay
+        // the activation cost. Using them first preserves free sources for activation.
+        if (!sa.isManaAbility()) {
+            List<SpellAbility> costlyFirstList = Lists.newArrayList(maList);
+            costlyFirstList.sort(Comparator.comparing(ma -> !hasManaActivationCost(ma)));
+            maList = costlyFirstList;
+        }
+
         for (final SpellAbility ma : maList) {
             // this rarely seems like a good idea
             if (ma.getHostCard() == saHost) {
@@ -702,6 +712,10 @@ public class ComputerUtilMana {
             }
 
             toPay = getNextShardToPay(cost, sourcesForShards);
+            if (toPay == null) {
+                // unpayable shard combination — bail out instead of NPE-ing below
+                break;
+            }
 
             Collection<SpellAbility> saList = null;
             if (hasConverge &&
@@ -797,6 +811,24 @@ public class ComputerUtilMana {
                     }
                 }
 
+                // Check mana cost when testing (for abilities like signets that cost generic mana to activate,
+                // or filter lands that cost hybrid mana like WB to activate)
+                // This ensures we don't double-count mana sources
+                CostPartMana activationManaCost = saPayment.getPayCosts().getCostMana();
+                if (activationManaCost != null && !activationManaCost.getMana().isZero()) {
+                    ManaCost activationCost = activationManaCost.getMana();
+
+                    if (isHybridOnlyCost(activationCost)) {
+                        // Preserve hybrid shards - they require specific colors (W or B, not R or G)
+                        for (ManaCostShard shard : activationCost) {
+                            cost.increaseShard(shard, 1);
+                        }
+                    } else {
+                        // Generic or mixed costs - use existing behavior (add as generic)
+                        cost.increaseShard(ManaCostShard.GENERIC, activationCost.getCMC());
+                    }
+                }
+
                 String manaProduced = predictManafromSpellAbility(saPayment, ai, toPay);
                 payMultipleMana(cost, manaProduced, ai);
 
@@ -839,7 +871,7 @@ public class ComputerUtilMana {
             if (test) {
                 resetPayment(paymentList);
             } else {
-                System.out.println("ComputerUtilMana: payManaCost() cost was not paid for " + sa + " (" +  sa.getHostCard().getName() + "). Didn't find what to pay for " + toPay);
+                System.out.println("ComputerUtilMana: payManaCost() cost was not paid for " + sa + " (" +  sa.getHostCard().getName() + "). Didn't find what to pay for " + (toPay != null ? toPay : "unknown shard (cost: " + cost + ")"));
                 sa.setSkip(true);
             }
             return null;
@@ -1143,6 +1175,36 @@ public class ComputerUtilMana {
         }
 
         return false;
+    }
+
+    /**
+     * Check if a mana ability has a mana activation cost.
+     * E.g., Boros Signet ({1}, {T}: Add {R}{W}) returns true.
+     * Basic lands ({T}: Add {R}) return false.
+     */
+    private static boolean hasManaActivationCost(SpellAbility sa) {
+        CostPartMana costMana = sa.getPayCosts().getCostMana();
+        if (costMana == null) {
+            return false;
+        }
+        ManaCost manaCost = costMana.getMana();
+        return !manaCost.isZero();
+    }
+
+    /**
+     * Check if a mana cost consists only of hybrid shards (like WB, UR, etc.)
+     * without any mono-colored or generic components.
+     */
+    private static boolean isHybridOnlyCost(ManaCost cost) {
+        if (cost.getGenericCost() > 0) {
+            return false;
+        }
+        for (ManaCostShard shard : cost) {
+            if (!shard.isMultiColor()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static ManaCostShard getNextShardToPay(ManaCostBeingPaid cost, Multimap<ManaCostShard, SpellAbility> sourcesForShards) {
