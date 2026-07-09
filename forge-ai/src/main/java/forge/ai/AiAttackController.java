@@ -38,6 +38,7 @@ import forge.game.spellability.SpellAbility;
 import forge.game.spellability.SpellAbilityPredicates;
 import forge.game.staticability.StaticAbility;
 import forge.game.staticability.StaticAbilityAssignCombatDamageAsUnblocked;
+import forge.game.staticability.StaticAbilityCantAttackBlock;
 import forge.game.staticability.StaticAbilityMode;
 import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
@@ -255,6 +256,10 @@ public class AiAttackController {
      *
      */
     public final static List<Card> sortAttackers(final List<Card> in) {
+        return sortAttackers(in, null);
+    }
+
+    public final static List<Card> sortAttackers(final List<Card> in, final GameEntity defender) {
         final List<Card> result = new ArrayList<>();
 
         // Cards with triggers should come first (for Battle Cry)
@@ -270,6 +275,36 @@ public class AiAttackController {
         for (final Card attacker : in) {
             if (!result.contains(attacker)) {
                 result.add(attacker);
+            }
+        }
+
+        // If the defender is a player, check whether non-ONLY_ALONE creatures can deal lethal
+        // damage on their own. If so, move "can only attack alone" creatures (e.g. Master of
+        // Cruelties) to the end so they don't get declared first and lock out the group attack.
+        if (defender instanceof Player) {
+            final Player defPlayer = (Player) defender;
+            final int defLife = defPlayer.getLife();
+            int groupPower = 0;
+            boolean hasOnlyAlone = false;
+            for (final Card c : result) {
+                if (c.hasKeyword("CARDNAME can only attack alone.")) {
+                    hasOnlyAlone = true;
+                } else {
+                    groupPower += c.getNetPower();
+                }
+            }
+            if (hasOnlyAlone && groupPower >= defLife) {
+                final List<Card> reordered = new ArrayList<>();
+                final List<Card> onlyAlone = new ArrayList<>();
+                for (final Card c : result) {
+                    if (c.hasKeyword("CARDNAME can only attack alone.")) {
+                        onlyAlone.add(c);
+                    } else {
+                        reordered.add(c);
+                    }
+                }
+                reordered.addAll(onlyAlone);
+                return reordered;
             }
         }
 
@@ -1315,6 +1350,59 @@ public class AiAttackController {
             aiAggression = 0;
         } // stay at home to block
 
+        // Boost aggression when close to lethal damage on opponent
+        if (candidateUnblockedDamage > 0 && defendingOpponent.canLoseLife()
+                && !defendingOpponent.cantLoseForZeroOrLessLife()) {
+            int oppLife = defendingOpponent.getLife()
+                    - ComputerUtil.possibleNonCombatDamage(ai, defendingOpponent);
+            if (unblockableDamage >= oppLife && oppLife > 0) {
+                // Unblockable creatures alone can kill the opponent
+                aiAggression = Math.max(aiAggression, 5);
+            } else if (candidateUnblockedDamage >= oppLife && oppLife > 0) {
+                // Total board damage could be lethal if enough gets through
+                aiAggression = Math.max(aiAggression, 4);
+            } else if (candidateUnblockedDamage * 2 >= oppLife && oppLife > 0) {
+                // Within 2 turns of lethal
+                aiAggression = Math.max(aiAggression, 3);
+            }
+        }
+
+        // Racing consideration: if AI wins the unblockable damage race, be more aggressive
+        if (unblockableDamage > 0 && nextUnblockableDamage > 0
+                && defendingOpponent.canLoseLife() && !defendingOpponent.cantLoseForZeroOrLessLife()) {
+            int oppLife = defendingOpponent.getLife();
+            int aiLife = ai.getLife();
+            int aiTurnsToKill = (int) Math.ceil(oppLife / unblockableDamage);
+            int oppTurnsToKill = (int) Math.ceil(aiLife / nextUnblockableDamage);
+            if (aiTurnsToKill <= 2) {
+                // AI is very close to winning with unblockable damage
+                aiAggression = Math.max(aiAggression, 4);
+            } else if (aiTurnsToKill < oppTurnsToKill) {
+                // AI wins the damage race
+                aiAggression = Math.max(aiAggression, 3);
+            }
+        }
+
+        // Evasion aggression: if flying/unblockable creatures can clock the
+        // opponent in ~3 turns, push aggression so the AI actually attacks
+        if (defendingOpponent.canLoseLife() && !defendingOpponent.cantLoseForZeroOrLessLife()) {
+            int evasivePower = 0;
+            for (Card attacker : this.attackers) {
+                if (attacker.hasKeyword(Keyword.FLYING) || attacker.hasKeyword(Keyword.HORSEMANSHIP)
+                        || StaticAbilityCantAttackBlock.cantBlockBy(attacker, null)) {
+                    evasivePower += attacker.getNetCombatDamage();
+                }
+            }
+            int oppLife = defendingOpponent.getLife();
+            if (evasivePower > 0 && oppLife > 0) {
+                if (evasivePower * 3 >= oppLife) {
+                    aiAggression = Math.max(aiAggression, 4);
+                } else if (evasivePower * 5 >= oppLife) {
+                    aiAggression = Math.max(aiAggression, 3);
+                }
+            }
+        }
+
         if ( LOG_AI_ATTACKS )
             System.out.println(aiAggression + " = ai aggression");
 
@@ -1327,7 +1415,7 @@ public class AiAttackController {
 
         List<Card> left = new ArrayList<>(attackersLeft);
         left = notNeededAsBlockers(combat.getAttackers(), left);
-        left = sortAttackers(left);
+        left = sortAttackers(left, defender);
 
         if ( LOG_AI_ATTACKS )
             System.out.println("attackersLeft = " + left);
@@ -1554,6 +1642,41 @@ public class AiAttackController {
             if (LOG_AI_ATTACKS)
                 System.out.println(attacker.getName() + " = expecting to survive and get some Trample damage through");
             return true;
+        }
+
+        // Blocker overflow: account for the fact that each blocker can only block one attacker.
+        // If enough attackers are already committed to occupy all relevant blockers,
+        // additional attackers are effectively unblocked.
+        if (aiAggression >= 2 && attacker.getNetCombatDamage() > 0) {
+            List<Card> currentAttackers = combat.getAttackers();
+
+            // Flying-specific: only flying/reach creatures can block flyers
+            if (attacker.hasKeyword(Keyword.FLYING)) {
+                int flyingBlockers = 0;
+                for (Card b : defenders) {
+                    if (b.hasKeyword(Keyword.FLYING) || b.hasKeyword(Keyword.REACH)) {
+                        flyingBlockers++;
+                    }
+                }
+                int flyingAttackersInCombat = 0;
+                for (Card a : currentAttackers) {
+                    if (a.hasKeyword(Keyword.FLYING)) {
+                        flyingAttackersInCombat++;
+                    }
+                }
+                if (flyingAttackersInCombat >= flyingBlockers) {
+                    if (LOG_AI_ATTACKS)
+                        System.out.println(attacker.getName() + " = attacking because all flying/reach blockers are occupied");
+                    return true;
+                }
+            }
+
+            // General overflow: if all blockers are already occupied by other attackers
+            if (aiAggression >= 3 && currentAttackers.size() >= defenders.size() && !defenders.isEmpty()) {
+                if (LOG_AI_ATTACKS)
+                    System.out.println(attacker.getName() + " = attacking because all blockers are occupied by other attackers");
+                return true;
+            }
         }
 
         // decide if the creature should attack based on the prevailing strategy choice in aiAggression
