@@ -1047,6 +1047,24 @@ public class AiBlockController {
      * @param possibleBlockers list of blockers to be considered
      */
     private void assignBlockers(final Combat combat, List<Card> possibleBlockers) {
+        // Open a combat-evaluation cache scope around the whole block decision (no-op unless
+        // -Dforge.combatEvalCache=on). makeChumpBlocks and friends call isCombatDamagePrevented /
+        // damageIfUnblocked in O(attackers x blockers) loops; the scope lets those short-circuit /
+        // memoize while the board is frozen. Guard against an already-open outer scope.
+        final boolean openedScope = ComputerUtilCombat.isCombatEvalCacheEnabled()
+                && !ComputerUtilCombat.isInCombatEvaluation();
+        if (openedScope) {
+            ComputerUtilCombat.beginCombatEvaluation(ai.getGame());
+        }
+        try {
+            assignBlockersImpl(combat, possibleBlockers);
+        } finally {
+            if (openedScope) {
+                ComputerUtilCombat.endCombatEvaluation();
+            }
+        }
+    }
+    private void assignBlockersImpl(final Combat combat, List<Card> possibleBlockers) {
         if (attackers.isEmpty()) {
             return;
         }

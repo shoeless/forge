@@ -47,10 +47,14 @@ import forge.game.zone.ZoneType;
 import forge.util.IterableUtil;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
+import forge.util.Visitor;
 import forge.util.collect.FCollection;
 
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -62,6 +66,84 @@ import java.util.Map;
  * @version $Id: ComputerUtil.java 19179 2013-01-25 18:48:29Z Max mtg  $
  */
 public class ComputerUtilCombat {
+
+    // ---- Combat-evaluation scope (gated behind -Dforge.combatEvalCache=on, default OFF) -----------
+    // With the flag off, beginCombatEvaluation() is a no-op and every code path below behaves exactly
+    // like upstream. With the flag on, an explicit begin/endCombatEvaluation scope (opened around
+    // declareAttackers / declareBlockersFor / assignBlockers / getSpellAbilityToPlay) caches:
+    //   - a per-scope EnumSet of ReplacementTypes present anywhere in the game, short-circuiting the
+    //     per-(source,target) all-zones scan in isCombatDamagePrevented when no DamageDone
+    //     replacement exists (the makeChumpBlocks O(attackers^2 x allCards) latent hang), and
+    //   - a damageIfUnblocked memo keyed by (attacker id, attacked id) - invariant while only blocker
+    //     lists change; cached ONLY for combat==null && !withoutAbilities (pumped-LKI callers pass a
+    //     combat or withoutAbilities and must not key in).
+    // Both are ThreadLocal: the AI runs evaluations on several threads (the CompletableFuture common
+    // pool in the attack controller), and the caches must never leak across them; a thread without an
+    // open scope simply falls back to the exact upstream computation. The board is frozen for the
+    // duration of a scope (the AI evaluates hypotheticals without mutating it), so both memos are
+    // invariant within the scope. Reconciliation with AiCache (upstream's global memo): the game-wide
+    // Fog check (isPreventCombatDamageThisTurn) already routes through AiCache below and is NOT
+    // duplicated here; these scope-local memos target the per-pair scans AiCache doesn't cover.
+    private static final boolean COMBAT_EVAL_CACHE;
+    static {
+        final String v = System.getProperty("forge.combatEvalCache", "off");
+        COMBAT_EVAL_CACHE = "on".equalsIgnoreCase(v) || "true".equalsIgnoreCase(v);
+    }
+    // Validation toggle: when -Dforge.ai.sigAudit=true, every memo HIT also recomputes the real value
+    // and logs + counts any mismatch - a deterministic proof the memo key is complete. Off (and free)
+    // in production. The seeded off==on A/B is the primary correctness gate; this is the finer probe.
+    private static final boolean SIG_AUDIT = Boolean.getBoolean("forge.ai.sigAudit");
+    public static final AtomicLong AUDIT_MISMATCHES = new AtomicLong();
+
+    private static final ThreadLocal<EnumSet<ReplacementType>> presentReplacementTypes = new ThreadLocal<>();
+    private static final ThreadLocal<Map<Long, Integer>> cachedUnblockedDamage = new ThreadLocal<>();
+
+    static boolean isCombatEvalCacheEnabled() {
+        return COMBAT_EVAL_CACHE;
+    }
+
+    /** Log + count a -Dforge.ai.sigAudit mismatch (cached value != freshly computed value). */
+    static void reportAuditMismatch(final String site, final Object cached, final Object real, final String key) {
+        System.err.println("[SIGAUDIT] " + site + " MISMATCH (#" + AUDIT_MISMATCHES.incrementAndGet()
+                + ") cached=" + cached + " real=" + real + " key=" + key);
+    }
+
+    /**
+     * Opens a combat-evaluation cache scope on the current thread. No-op unless
+     * {@code -Dforge.combatEvalCache=on}. Callers must pair with {@link #endCombatEvaluation()} in a
+     * finally block, and should skip both when {@link #isInCombatEvaluation()} is already true (an
+     * outer scope is active — reuse it instead of clobbering it).
+     */
+    public static void beginCombatEvaluation(final Game game) {
+        if (!COMBAT_EVAL_CACHE) {
+            return;
+        }
+        // Which ReplacementTypes exist anywhere in the game right now? Board-invariant for the scope;
+        // lets isCombatDamagePrevented skip its all-zones getReplacementList scan when no DamageDone
+        // replacement effect exists at all (the overwhelmingly common case).
+        final EnumSet<ReplacementType> present = EnumSet.noneOf(ReplacementType.class);
+        game.forEachCardInGame(new Visitor<Card>() {
+            @Override
+            public boolean visit(final Card card) {
+                for (final ReplacementEffect re : card.getReplacementEffects()) {
+                    present.add(re.getMode());
+                }
+                return true;
+            }
+        });
+        presentReplacementTypes.set(present);
+        cachedUnblockedDamage.set(new HashMap<>());
+    }
+
+    public static void endCombatEvaluation() {
+        presentReplacementTypes.remove();
+        cachedUnblockedDamage.remove();
+    }
+
+    /** True if a beginCombatEvaluation() scope is currently open on this thread. */
+    public static boolean isInCombatEvaluation() {
+        return presentReplacementTypes.get() != null;
+    }
 
     /**
      * <p>
@@ -169,6 +251,32 @@ public class ComputerUtilCombat {
      * @return a int.
      */
     public static int damageIfUnblocked(final Card attacker, final GameEntity attacked, final Combat combat, boolean withoutAbilities) {
+        // Memo the unblocked damage per (attacker, attacked) within a combat-evaluation scope, but ONLY
+        // for the combat==null && !withoutAbilities case: that result depends solely on the two entities
+        // and the (scope-frozen) board, not on any block assignment, so it's invariant while the AI tries
+        // different blocks. Pumped-LKI callers pass a combat or withoutAbilities and are never memoized.
+        final Map<Long, Integer> memo = (combat == null && !withoutAbilities) ? cachedUnblockedDamage.get() : null;
+        long key = 0L;
+        if (memo != null) {
+            key = (((long) attacker.getId()) << 32) ^ (attacked.getId() & 0xffffffffL);
+            final Integer cached = memo.get(key);
+            if (cached != null) {
+                if (SIG_AUDIT) {
+                    final int real = damageIfUnblockedCompute(attacker, attacked, combat, withoutAbilities);
+                    if (real != cached) {
+                        reportAuditMismatch("damageIfUnblocked", cached, real, Long.toString(key));
+                    }
+                }
+                return cached;
+            }
+        }
+        final int sum = damageIfUnblockedCompute(attacker, attacked, combat, withoutAbilities);
+        if (memo != null) {
+            memo.put(key, sum);
+        }
+        return sum;
+    }
+    private static int damageIfUnblockedCompute(final Card attacker, final GameEntity attacked, final Combat combat, boolean withoutAbilities) {
         int damage = attacker.getNetCombatDamage();
         int sum = 0;
         if (attacked instanceof Player p && !p.canLoseLife()) {
@@ -2338,6 +2446,16 @@ public class ComputerUtilCombat {
         }
 
         final Game game = attacker.getGame();
+
+        // Scope short-circuit: presentReplacementTypes (populated by beginCombatEvaluation) is the exact
+        // set of ReplacementTypes present anywhere in the game. If no DamageDone replacement exists (the
+        // overwhelmingly common case), the all-zones getReplacementList scan below can only return empty,
+        // so skip it. Behaviorally identical - just avoids the O(allCards) scan per (attacker,target) that
+        // makes wide token boards crawl. No effect outside a scope (get() == null).
+        final EnumSet<ReplacementType> present = presentReplacementTypes.get();
+        if (present != null && !present.contains(ReplacementType.DamageDone)) {
+            return false;
+        }
 
         // first try to replace the damage
         final Map<AbilityKey, Object> repParams = AbilityKey.mapFromAffected(target);

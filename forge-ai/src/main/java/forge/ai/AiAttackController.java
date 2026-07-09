@@ -817,6 +817,24 @@ public class AiAttackController {
      * @return a {@link forge.game.combat.Combat} object.
      */
     public final int declareAttackers(final Combat combat) {
+        // Open a combat-evaluation cache scope around the attack decision (no-op unless
+        // -Dforge.combatEvalCache=on). The attacker loop calls damageIfUnblocked / isCombatDamagePrevented
+        // per attacker x defender; the scope lets those short-circuit / memoize on a frozen board. Guard
+        // against an already-open outer scope.
+        final boolean openedScope = ComputerUtilCombat.isCombatEvalCacheEnabled()
+                && !ComputerUtilCombat.isInCombatEvaluation();
+        if (openedScope) {
+            ComputerUtilCombat.beginCombatEvaluation(ai.getGame());
+        }
+        try {
+            return declareAttackersImpl(combat);
+        } finally {
+            if (openedScope) {
+                ComputerUtilCombat.endCombatEvaluation();
+            }
+        }
+    }
+    private int declareAttackersImpl(final Combat combat) {
         // something prevents attacking, try another
         if (this.attackers.isEmpty() && ai.getOpponents().size() > 1) {
             final PlayerCollection opps = ai.getOpponents();
