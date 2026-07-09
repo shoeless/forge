@@ -41,4 +41,9 @@ public enum PlaybackSpeed {
                 return PlaybackSpeed.NORMAL;
         }
     }
+
+    /** How much faster animations should run to keep pace (1.0 at normal, 30.0 at 30x, etc.). */
+    public float getAnimationSpeedMultiplier() {
+        return (float) (1.0 / modifier);
+    }
 }

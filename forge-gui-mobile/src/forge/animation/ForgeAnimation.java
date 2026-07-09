@@ -35,6 +35,11 @@ public abstract class ForgeAnimation {
         if (activeAnimations.isEmpty()) { return; }
 
         float dt = Gdx.graphics.getDeltaTime();
+        // Scale animation speed to the playback speed (30x playback = 30x faster animations),
+        // so sped-up AI-vs-AI watching doesn't stall on real-time card/damage animations.
+        if (forge.screens.match.MatchController.instance != null) {
+            dt *= forge.screens.match.MatchController.instance.getAnimationSpeedMultiplier();
+        }
         for (int i = 0; i < activeAnimations.size(); i++) {
             if (!activeAnimations.get(i).advance(dt)) {
                 // Without this guard, there is leaky behavior when a new animation is started

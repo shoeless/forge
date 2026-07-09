@@ -412,6 +412,11 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
     public PlaybackSpeed getGameSpeed() {
         return playbackSpeed;
     }
+    /** How much faster animations should run to match the playback speed. */
+    public float getAnimationSpeedMultiplier() {
+        return playbackSpeed.getAnimationSpeedMultiplier();
+    }
+
     public void setGameSpeed(PlaybackSpeed speed) {
         playbackSpeed = speed;
     }
