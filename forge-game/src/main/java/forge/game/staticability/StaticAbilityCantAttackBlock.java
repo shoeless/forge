@@ -35,6 +35,23 @@ import forge.game.zone.ZoneType;
  */
 public class StaticAbilityCantAttackBlock {
 
+    // Guarded diagnostic (default off) for the multiplayer "creature with a Reach keyword counter can't block
+    // Signal Pest" report. Single-player is proven correct (SignalPestReachCounterTest); this captures the
+    // reach-relevant state at the block-legality decision so a live multiplayer recurrence shows whether a
+    // present Reach counter failed to surface as an unhidden keyword at that instant. Zero cost when unset.
+    private static final boolean DEBUG_CANT_BLOCK = System.getProperty("forge.debugCantBlock") != null;
+    private static void debugCantBlockReach(final Card host, final Card blocker, final boolean stillblock) {
+        final forge.game.card.CounterType reach = forge.game.card.CounterType.getType("Reach");
+        final StringBuilder sb = new StringBuilder("[CANTBLOCK-REACH] ");
+        sb.append(host).append(" restricting blocker ").append(blocker);
+        sb.append(" | stillRestricted=").append(!stillblock);
+        sb.append(" | unhiddenReach=").append(blocker.hasStartOfUnHiddenKeyword("Reach"));
+        sb.append(" | hasReachKeyword=").append(blocker.hasKeyword(Keyword.REACH));
+        sb.append(" | reachCounters=").append(reach == null ? -1 : blocker.getCounters(reach));
+        sb.append(" | blockerIsLKI=").append(blocker.isLKI());
+        System.out.println(sb.toString());
+    }
+
     public static boolean cantAttack(final Card attacker, final GameEntity defender) {
         // Keywords
         // replace with Static Ability if able
@@ -245,6 +262,9 @@ public class StaticAbilityCantAttackBlock {
                     // Dragon Hunter check
                     if (v.contains("withoutReach") && canBlockIfReach(attacker, blocker)) {
                         stillblock = true;
+                    }
+                    if (DEBUG_CANT_BLOCK && v.contains("withoutReach")) {
+                        debugCantBlockReach(host, blocker, stillblock);
                     }
                     if (!stillblock) {
                         break;
