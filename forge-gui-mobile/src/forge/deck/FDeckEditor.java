@@ -609,6 +609,28 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
                         dialog.show();
                         setSelectedPage(getMainDeckPage()); //select main deck page if needed so main deck if visible below dialog
                     }));
+                    // Archidekt import - browse/search decks on archidekt.com and import one
+                    addItem(new FMenuItem(localizer.getMessage("lblImportFromArchidekt"), Forge.hdbuttons ? FSkinImage.HDIMPORT : FSkinImage.OPEN, e -> {
+                        ArchidektImportScreen.show(importedDeck -> {
+                            if (importedDeck != null) {
+                                if (importedDeck.hasName()) {
+                                    deck.setName(importedDeck.getName());
+                                    setHeaderText(importedDeck.getName());
+                                }
+                                // Replace current deck contents
+                                for (DeckSectionPage page : pagesBySection.values()) {
+                                    if (importedDeck.has(page.deckSection)) {
+                                        page.setCards(importedDeck.get(page.deckSection));
+                                        if (hiddenExtraSections.contains(page.deckSection)) {
+                                            showExtraSectionTab(page.deckSection);
+                                        }
+                                    } else {
+                                        page.setCards(new CardPool());
+                                    }
+                                }
+                            }
+                        });
+                    }));
                     if (allowSaveAs())
                         addItem(new FMenuItem(localizer.getMessage("lblSaveAs"), Forge.hdbuttons ? FSkinImage.HDSAVEAS : FSkinImage.SAVEAS, e -> {
                             String defaultName = deckController.getNextAvailableName();
