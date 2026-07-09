@@ -95,6 +95,11 @@ public class FTextField extends FDisplayObject implements ITextField {
         if (text0 == null) {
             text0 = ""; //don't allow setting null
         }
+        // Don't reset the cursor/selection if the text hasn't changed - prevents the cursor
+        // jumping to the start when callbacks re-set the field with the same value mid-typing.
+        if (text.equals(text0)) {
+            return;
+        }
         text = text0;
         selStart = 0;
         selLength = 0;
