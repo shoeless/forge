@@ -162,6 +162,14 @@ public class HostedMatch {
         game = match.createGame();
         game.EXPERIMENTAL_RESTORE_SNAPSHOT = FModel.getPreferences().getPrefBoolean(FPref.MATCH_EXPERIMENTAL_RESTORE);
         game.AI_TIMEOUT = FModel.getPreferences().getPrefInt(FPref.MATCH_AI_TIMEOUT);
+        // Combat evaluation on wide boards is the heaviest AI search; give it extra wall-clock headroom
+        // beyond the general per-decision timeout (esp. on the slower iPad). Still auto-disabled in
+        // deterministic-sim mode via Game.canUseTimeout().
+        int aiCombatTimeout = Math.max(game.AI_TIMEOUT, 10);
+        if (GuiBase.isIOS() && aiCombatTimeout < 20) {
+            aiCombatTimeout = 20;
+        }
+        game.AI_COMBAT_TIMEOUT = aiCombatTimeout;
         // Android API 31 and above can use completeOnTimeout -> CompletableFuture:
         //https://developer.android.com/reference/java/util/concurrent/CompletableFuture#completeOnTimeout(T,%20long,%20java.util.concurrent.TimeUnit)
         game.AI_CAN_USE_TIMEOUT = !GuiBase.isAndroid() || GuiBase.getAndroidAPILevel() > 30;

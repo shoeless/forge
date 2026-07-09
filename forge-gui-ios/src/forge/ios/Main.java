@@ -250,8 +250,9 @@ public class Main extends IOSApplication.Delegate {
             boolean isTablet = org.robovm.apple.uikit.UIDevice.getCurrentDevice().getUserInterfaceIdiom()
                 == org.robovm.apple.uikit.UIUserInterfaceIdiom.Pad;
 
-            // Mark this as the iOS port (mirrors the Android launcher's setIsAndroid) so shared
-            // modules branch on GuiBase.isIOS() instead of sniffing libGDX's ApplicationType.
+            // Mark this as the iOS port so platform-agnostic modules (which can't call
+            // Gdx.app.getType()) can tune iOS-specific behavior, e.g. HostedMatch's larger
+            // AI combat-eval timeout for the slower iPad.
             forge.gui.GuiBase.setIsIOS(true);
 
             // Log physical device RAM (MB) for diagnostics. Upstream's getApp no
