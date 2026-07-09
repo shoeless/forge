@@ -309,8 +309,12 @@ public class HostedMatch {
             final Game currentGame = game;
 
             if (humanCount == 0) {
-                // Create FControlGamePlayback in game thread to allow pausing
+                // Create FControlGamePlayback in game thread to allow pausing.
+                // Preserve playback speed from the previous game in the match, so the user
+                // doesn't have to re-set the speed multiplier after every game.
+                PlaybackSpeed previousSpeed = playbackControl != null ? playbackControl.getSpeed() : PlaybackSpeed.NORMAL;
                 playbackControl = new FControlGamePlayback(humanControllers.get(0));
+                playbackControl.setSpeed(previousSpeed);
                 playbackControl.setGame(currentGame);
                 currentGame.subscribeToEvents(playbackControl);
             }
@@ -403,7 +407,8 @@ public class HostedMatch {
                 }
                 ngg.shutdownForwarder();
             }
-            humanController.getGui().setGameSpeed(PlaybackSpeed.NORMAL);
+            // Don't reset playback speed - preserve it across games in a match (the playback
+            // controller carries it forward for AI-vs-AI; the GUI button stays in sync).
             humanController.getYieldController().clearAutoYields();
 
             //conceded

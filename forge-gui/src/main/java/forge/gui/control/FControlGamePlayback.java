@@ -39,6 +39,8 @@ public class FControlGamePlayback extends IGameEventVisitor.Base<Void> {
     public void setGame(final Game game0) {
         game = game0;
         inputPlayback = new InputPlaybackControl(game, this);
+        // (The input control reads this controller's speed directly via getSpeed(), so a
+        // preserved playback speed set via setSpeed() before setGame() is already in effect.)
     }
 
     @Subscribe
