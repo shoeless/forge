@@ -247,6 +247,13 @@ public class Forge implements ApplicationListener {
             if (totalDeviceRAM > 5000) //devices with more than 10GB RAM will have 600 Cache size, 400 Cache size for morethan 5GB RAM
                 cacheSize = totalDeviceRAM > 10000 ? 600 : 400;
         }
+        // Shrink the card-texture cache on RAM-constrained devices (<=~4GB, e.g. the base iPad)
+        // regardless of the auto-cache pref: 300 full card textures is hundreds of MB of native
+        // memory, and long games ratchet toward the jetsam ceiling. Runs after the auto-cache
+        // bump so it only ever lowers, never raises.
+        if (totalDeviceRAM > 0 && totalDeviceRAM <= 4500 && cacheSize > 200) {
+            cacheSize = 200;
+        }
         if (!initialized) {
             initialized = true;
 
@@ -454,21 +461,20 @@ public class Forge implements ApplicationListener {
                         // Load the deferred skin sheets (foils, avatars, sleeves, deckboxes,
                         // cracks) on the next frame - after the home screen is visible - so
                         // they don't sit on the splash-to-home critical path.
-                        Gdx.app.postRunnable(FSkin::loadDeferred);
-                        if (GuiBase.isIOS()) {
-                            // POST-LOAD memory reclaim (iOS): booting parses ~32k card rules +
-                            // builds ~100k PaperCards + loads skin assets — a large transient
-                            // allocation spike that leaves ~200MB of freed-but-unmapped bytes in
-                            // the GC heap at idle home. Two full GCs return them to iOS (the GC
-                            // needs the second pass to unmap pages the first one freed) —
-                            // device-measured: GC heap 690→492MB before a game starts. Only
-                            // unreachable garbage is collected; iOS-gated because other
-                            // platforms don't sit against a per-process memory ceiling.
-                            FThreads.invokeInBackgroundThread(() -> {
-                                System.gc();
-                                System.gc();
-                            });
-                        }
+                        Gdx.app.postRunnable(() -> {
+                            FSkin.loadDeferred();
+                            // POST-LOAD memory reclaim. Booting parses ~32k card rules + builds
+                            // ~103k PaperCards + loads skin assets - a large transient allocation
+                            // spike that leaves freed-but-unmapped bytes held in the GC heap
+                            // (~200MB on a 4GB iPad: gcHeap 690 vs live ~480 at idle home). Two
+                            // full GCs at idle home unmap them back to the OS - the collector
+                            // needs the 2nd pass to munmap the pages the 1st freed (same
+                            // mechanism proven at match-end). Zero correctness risk: only
+                            // unreachable garbage is affected.
+                            System.gc();
+                            System.gc();
+                            MemProbe.tick();
+                        });
                     }, takeScreenshot(), false, false, true, false));
                 });
             });
@@ -566,6 +572,10 @@ public class Forge implements ApplicationListener {
 
     public static IDeviceAdapter getDeviceAdapter() {
         return deviceAdapter;
+    }
+
+    public static int getContinuousRenderingCount() {
+        return continuousRenderingCount;
     }
 
     public static void startContinuousRendering() {
@@ -912,6 +922,7 @@ public class Forge implements ApplicationListener {
 
     @Override
     public void render() {
+        MemProbe.tick(); //gated memory probe (throttled; no-op unless -Dforge.memLog)
         if (showFPS)
             frameRate.update(ImageCache.getInstance().counter, getAssets().manager().getMemoryInMegabytes());
 
