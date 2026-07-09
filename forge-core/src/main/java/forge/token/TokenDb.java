@@ -10,7 +10,6 @@ import forge.card.CardEdition;
 import forge.card.CardRules;
 import forge.item.IPaperCard;
 import forge.item.PaperToken;
-import forge.util.Aggregates;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -104,6 +103,19 @@ public class TokenDb implements ITokenDatabase {
         return new PaperToken(rules, edition, name, t.collectorNumber(), t.artistName());
     }
 
+    // Token art/edition variants are cosmetic (gameplay-identical); pick them from a DEDICATED RNG,
+    // never the shared seeded gameplay MyRandom (which Aggregates.random draws from). Selecting token
+    // art at creation time off the gameplay stream shifts every later draw and breaks bit-reproducible
+    // seeded sims. A separate RNG keeps art variety without touching gameplay.
+    private static final Random ART_RNG = new Random();
+    private static <T> T randomArt(final Collection<T> collection) {
+        if (collection == null || collection.isEmpty()) {
+            return null;
+        }
+        final List<T> list = new ArrayList<>(collection);
+        return list.get(ART_RNG.nextInt(list.size()));
+    }
+
     // Null filter: historical first-alphabetical match. Non-null: random among
     // editions that register the token and pass the filter, or null if none.
     // When preferEraMatchedArt is on and hostDate != null, instead picks the
@@ -114,7 +126,7 @@ public class TokenDb implements ITokenDatabase {
                 if (restrictedTokenEntries.contains(edition.getCode() + "/" + tokenName)) continue;
                 String fullName = String.format("%s_%s", tokenName, edition.getCode().toLowerCase());
                 if (loadTokenFromSet(edition, tokenName)) {
-                    return Aggregates.random(allTokenByName.get(fullName));
+                    return randomArt(allTokenByName.get(fullName));
                 }
             }
             return null;
@@ -138,10 +150,10 @@ public class TokenDb implements ITokenDatabase {
                 }
             }
         } else {
-            pick = Aggregates.random(legal);
+            pick = randomArt(legal);
         }
         String fullName = String.format("%s_%s", tokenName, pick.getCode().toLowerCase());
-        return Aggregates.random(allTokenByName.get(fullName));
+        return randomArt(allTokenByName.get(fullName));
     }
 
     protected PaperToken fallbackToken(String name, String hostEditionCode) {
@@ -173,7 +185,7 @@ public class TokenDb implements ITokenDatabase {
             Collection<PaperToken> collection = allTokenByName.get(fullName);
 
             if (artIndex < 1 || artIndex > collection.size()) {
-                return Aggregates.random(collection);
+                return randomArt(collection);
             }
 
             return Iterables.get(collection, artIndex - 1);

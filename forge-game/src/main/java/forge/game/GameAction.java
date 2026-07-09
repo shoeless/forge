@@ -2524,9 +2524,15 @@ public class GameAction {
         return newFirst;
     }
 
+    private static final boolean DETERMINISTIC_RNG = System.getProperty("forge.rngSeed") != null;
+
     // Invokes given runnable in Game thread pool - used to start game and perform actions from UI (when game-0 waits for input)
     public void invoke(final Runnable proc) {
-        if (ThreadUtil.isGameThread()) {
+        // Deterministic-sim mode (-Dforge.rngSeed): run inline. Headless sims run games on
+        // generic pool worker threads (not "Game"-named), so otherwise this dispatches async to
+        // a Game thread - a race that's nondeterministic across runs. (In GUI play the game
+        // already runs on a Game thread, so isGameThread() is true and this path is unchanged.)
+        if (DETERMINISTIC_RNG || ThreadUtil.isGameThread()) {
             proc.run();
         } else {
             ThreadUtil.invokeInGameThread(proc);

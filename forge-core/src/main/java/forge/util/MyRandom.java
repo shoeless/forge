@@ -33,6 +33,60 @@ public class MyRandom {
     /** Constant <code>random</code>. */
     private static Random random = new SecureRandom();
 
+    static {
+        // Deterministic-sim hook: -Dforge.rngSeed=<long> installs a seeded java.util.Random in place of
+        // SecureRandom so AI-vs-AI runs are reproducible (used to PROVE engine/JVM-flag changes are
+        // behavior-neutral: same seed + single sim thread => bit-identical games). No effect on normal
+        // play or iOS (property unset => SecureRandom).
+        final String seedProp = System.getProperty("forge.rngSeed");
+        if (seedProp != null) {
+            try {
+                random = new CountingRandom(Long.parseLong(seedProp.trim()));
+            } catch (NumberFormatException e) {
+                // malformed seed -> keep SecureRandom
+            }
+        }
+    }
+
+    // Diagnostic (temp): counts every underlying draw; with -Dforge.rngTrace it also prints the Forge
+    // caller of each draw, so two same-seed runs' draw-streams can be diffed to localize a
+    // variable-draw-count seed-leak (the thing that drifts a later game's shuffle). Only when seeded.
+    public static final java.util.concurrent.atomic.AtomicLong DRAW_COUNT = new java.util.concurrent.atomic.AtomicLong();
+    private static final boolean RNG_TRACE = System.getProperty("forge.rngTrace") != null;
+    private static final boolean RNG_STACK = System.getProperty("forge.rngStack") != null;
+    private static final class CountingRandom extends Random {
+        private static final long serialVersionUID = 1L;
+        CountingRandom(final long seed) { super(seed); }
+        @Override
+        protected int next(final int bits) {
+            DRAW_COUNT.incrementAndGet();
+            if (RNG_TRACE) {
+                String caller = "?";
+                for (final StackTraceElement e : Thread.currentThread().getStackTrace()) {
+                    final String cn = e.getClassName();
+                    if (cn.startsWith("java.") || cn.startsWith("jdk.") || cn.contains("MyRandom")
+                            || cn.equals("forge.util.Aggregates")) {
+                        continue;
+                    }
+                    caller = cn + "." + e.getMethodName() + ":" + e.getLineNumber();
+                    break;
+                }
+                System.out.println("[RNGTRACE] " + caller);
+            }
+            if (RNG_STACK) {
+                final StringBuilder sb = new StringBuilder("[RNGSTACK]");
+                for (final StackTraceElement e : Thread.currentThread().getStackTrace()) {
+                    final String cn = e.getClassName();
+                    if (cn.startsWith("forge.") && !cn.contains("MyRandom")) {
+                        sb.append(' ').append(cn).append(':').append(e.getLineNumber());
+                    }
+                }
+                System.out.println(sb.toString());
+            }
+            return super.next(bits);
+        }
+    }
+
     /**
      * <p>
      * percentTrue.<br>

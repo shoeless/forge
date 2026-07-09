@@ -82,6 +82,8 @@ public class AiAttackController {
     private final int timeOut;
     private final boolean canUseTimeout;
     private List<CompletableFuture<Integer>> futures = new ArrayList<>();
+    // Deterministic-sim mode: run parallel combat checks inline (see declareAttackers).
+    private static final boolean INLINE_DETERMINISTIC = System.getProperty("forge.rngSeed") != null;
 
     /**
      * <p>
@@ -892,7 +894,7 @@ public class AiAttackController {
         if (!nextTurn) {
             for (final Card attacker : this.attackers) {
                 final GameEntity finalDefender = defender;
-                futures.add(CompletableFuture.supplyAsync(()-> {
+                final java.util.function.Supplier<Integer> forcedAttackCheck = () -> {
                     GameEntity mustAttackDef = null;
                     if (attacker.getSVar("MustAttack").equals("True")) {
                         mustAttackDef = finalDefender;
@@ -950,10 +952,24 @@ public class AiAttackController {
                         numForcedAttackers.incrementAndGet();
                     }
                     return 0;
-                }).exceptionally(ex -> {
-                    ex.printStackTrace();
-                    return 0;
-                }));
+                };
+                if (INLINE_DETERMINISTIC) {
+                    // Deterministic-sim mode (-Dforge.rngSeed): run the forced-attacker checks INLINE
+                    // (synchronously, in stable attacker order) instead of on the common pool. Parallel
+                    // execution interleaves addAttacker order and any ids the checks allocate in
+                    // GC/CPU-timing-dependent order, breaking seeded reproducibility. Normal play is
+                    // unchanged (property unset).
+                    try {
+                        forcedAttackCheck.get();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                } else {
+                    futures.add(CompletableFuture.supplyAsync(forcedAttackCheck).exceptionally(ex -> {
+                        ex.printStackTrace();
+                        return 0;
+                    }));
+                }
             }
             CompletableFuture<?>[] futuresArray = futures.toArray(new CompletableFuture<?>[0]);
             if (canUseTimeout)

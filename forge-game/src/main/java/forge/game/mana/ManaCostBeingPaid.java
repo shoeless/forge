@@ -118,7 +118,13 @@ public class ManaCostBeingPaid {
 
     // holds Mana_Part objects
     // ManaPartColor is stored before ManaPartGeneric
-    private final Map<ManaCostShard, ShardCount> unpaidShards = Maps.newHashMap();
+    // EnumMap (not HashMap) so keySet()/entrySet() iterate in deterministic ORDINAL order. A plain
+    // HashMap keyed by the ManaCostShard enum iterates in per-JVM-run identity-hash order, which leaks
+    // into getDistinctShards() -> getNextShardToPay's tie-break (when two shards have equal available
+    // source counts) -> the order mana sources are tapped, making otherwise-seeded sims diverge
+    // run-to-run (e.g. tapping Plains-then-Swamp vs Swamp-then-Plains for a {1}{W}{B} cost). Ordinal
+    // order is deterministic and also matches the documented "color before generic" intent above.
+    private final Map<ManaCostShard, ShardCount> unpaidShards = new EnumMap<>(ManaCostShard.class);
     private Map<String, Integer> xManaCostPaidByColor;
     private byte sunburstMap = 0;
     private int cntX = 0;

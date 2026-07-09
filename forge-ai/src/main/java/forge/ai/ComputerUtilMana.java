@@ -1147,7 +1147,11 @@ public class ComputerUtilMana {
      */
     private static ListMultimap<ManaCostShard, SpellAbility> groupAndOrderToPayShards(final Player ai, final ListMultimap<Integer, SpellAbility> manaAbilityMap,
             final ManaCostBeingPaid cost) {
-        ListMultimap<ManaCostShard, SpellAbility> res = ArrayListMultimap.create();
+        // Deterministic: ManaCostShard is an enum (identity hashCode), so an ArrayListMultimap's
+        // keySet()/values() iterate in a per-JVM-run order - scrambling the mana-payment shard
+        // order and thus which lands get tapped. EnumMap-backed keys iterate in ordinal order,
+        // making seeded sims reproducible. (Real play unaffected aside from a stable tap order.)
+        ListMultimap<ManaCostShard, SpellAbility> res = com.google.common.collect.MultimapBuilder.enumKeys(ManaCostShard.class).arrayListValues().build();
 
         if ((cost.getGenericManaAmount() > 0 || cost.hasAnyKind(ManaAtom.OR_2_GENERIC)) && manaAbilityMap.containsKey(ManaAtom.GENERIC)) {
             res.putAll(ManaCostShard.GENERIC, manaAbilityMap.get(ManaAtom.GENERIC));

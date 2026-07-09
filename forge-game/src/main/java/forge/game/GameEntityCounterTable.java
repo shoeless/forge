@@ -1,5 +1,8 @@
 package forge.game;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -7,6 +10,7 @@ import java.util.stream.Collectors;
 import com.google.common.collect.ForwardingTable;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.LinkedHashMultiset;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multisets;
 import com.google.common.collect.Table;
@@ -71,11 +75,25 @@ public class GameEntityCounterTable extends ForwardingTable<Optional<Player>, Ga
      * returns the counters that can still be removed from game entity
      */
     public Multiset<CounterType> filterToRemove(GameEntity ge) {
+        Multiset<CounterType> raw;
         if (!containsColumn(ge)) {
-            return HashMultiset.create(ge.getCounters());
+            raw = ge.getCounters();
+        } else {
+            Multiset<CounterType> alreadyRemoved = column(ge).get(Optional.<Player>empty());
+            raw = Multisets.difference(ge.getCounters(), alreadyRemoved);
         }
-        Multiset<CounterType> alreadyRemoved = column(ge).get(Optional.<Player>empty());
-        return HashMultiset.create(Multisets.difference(ge.getCounters(), alreadyRemoved));
+        // Deterministic iteration order: a HashMultiset of CounterType iterates in per-JVM-run
+        // identity-hash order. The cost-decision over-pay loops (AiCostDecision/HumanCostDecision)
+        // iterate this result and stop once the removal budget is met, so an unordered multiset
+        // makes WHICH counter type is removed nondeterministic across seeded runs. Return a
+        // LinkedHashMultiset populated in stable name order. Rolls no RNG; rules-neutral.
+        List<CounterType> types = new ArrayList<>(raw.elementSet());
+        types.sort(Comparator.comparing(CounterType::toString));
+        Multiset<CounterType> result = LinkedHashMultiset.create();
+        for (CounterType ct : types) {
+            result.add(ct, raw.count(ct));
+        }
+        return result;
     }
 
     public Map<GameEntity, Integer> filterTable(CounterType type, String valid, String validSource, Card host, CardTraitBase sa) {

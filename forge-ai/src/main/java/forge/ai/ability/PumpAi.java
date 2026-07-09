@@ -774,7 +774,13 @@ public class PumpAi extends PumpAiBase {
         }
 
         if (!data.isEmpty()) {
-            Map.Entry<Player, Map.Entry<String, Integer>> max = Collections.max(data.entrySet(), Comparator.comparingInt(o -> o.getValue().getValue()));
+            // Deterministic tie-break: `data` is keyed by Player (identity-hash order), so
+            // Collections.max's first-on-tie pick of the opponent varied per JVM run, breaking
+            // seeded-sim reproducibility. Iterate entries in stable player-id order first.
+            // Gameplay-neutral - only resolves ties among equally-valued opponent targets.
+            List<Map.Entry<Player, Map.Entry<String, Integer>>> sortedData = new ArrayList<>(data.entrySet());
+            sortedData.sort(Comparator.comparingInt(o -> o.getKey().getId()));
+            Map.Entry<Player, Map.Entry<String, Integer>> max = Collections.max(sortedData, Comparator.comparingInt(o -> o.getValue().getValue()));
 
             // filter list again by the opponent and a creature of the wanted name that can be targeted
             list = CardLists.filter(CardLists.filterControlledBy(list, max.getKey()),

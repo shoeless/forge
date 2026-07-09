@@ -544,7 +544,12 @@ public class ComputerUtil {
                 }
             }
             typeList.clear();
-            typeList.addAll(uniqueNameCards);
+            // Deterministic order: uniqueNameCards is an identity-hash HashSet, so the downstream
+            // sacrifice tie-break (getWorstAI) picked a process-dependent card. Sort by stable id
+            // before repopulating so seeded sims are reproducible (gameplay-neutral tie-break).
+            final List<Card> uniqueSorted = new ArrayList<>(uniqueNameCards);
+            uniqueSorted.sort(java.util.Comparator.comparingInt(Card::getId));
+            typeList.addAll(uniqueSorted);
         }
 
         if (exclude != null) {

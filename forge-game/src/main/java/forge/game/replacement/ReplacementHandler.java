@@ -626,11 +626,16 @@ public class ReplacementHandler {
                                  final GameEntityCounterTable counterTable, final SpellAbility cause) {
         PlayerCollection players = game.getPlayersInTurnOrder();
         for (int i = 0; i < players.size(); i++) {
-            replaceDamageList.add(new HashMap<>());
+            // LinkedHashMap (not HashMap): keyed by ReplacementEffect, whose hashCode is identity (per-JVM-run).
+            // It is iterated (entrySet) to decide the ORDER simultaneous damage replacement effects apply
+            // (shield prevent-and-remove-counter vs Gisela double/half, etc.), so a plain HashMap makes that
+            // order nondeterministic run-to-run. Insertion order = the deterministic getReplacementList order.
+            replaceDamageList.add(new LinkedHashMap<>());
         }
 
         // Map of all executed replacement effect for DamageDone event, including run params
-        Map<ReplacementEffect, List<Map<AbilityKey, Object>>> executedDamageMap = new HashMap<>();
+        // LinkedHashMap for the same reason (ReplacementEffect identity-hash keys, iterated for order).
+        Map<ReplacementEffect, List<Map<AbilityKey, Object>>> executedDamageMap = new LinkedHashMap<>();
 
         // First, gather all possible replacement effects
         getPossibleReplaceDamageList(players, isCombat, damageMap, cause);
