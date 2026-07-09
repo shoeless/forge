@@ -37,6 +37,8 @@ public final class ForgeConstants {
     public static final String ASSETS_DIR                       = GuiBase.getInterface().getAssetsDir();
     public static final String PROFILE_FILE                     = ASSETS_DIR + "forge.profile.properties";
     public static final String PROFILE_TEMPLATE_FILE            = PROFILE_FILE + ".example";
+    /** UDP port used for LAN multiplayer server discovery broadcasts. */
+    public static final int DISCOVERY_PORT                      = 36744;
 
     public static final String RES_DIR                      = ASSETS_DIR + "res" + PATH_SEPARATOR;
     public static final String ADVENTURE_DIR                = RES_DIR + "adventure" + PATH_SEPARATOR;

@@ -5,6 +5,7 @@ import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
+import forge.gamemodes.net.client.ServerDiscovery;
 import forge.gamemodes.net.event.IdentifiableNetEvent;
 import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.event.NetEvent;
@@ -25,6 +26,7 @@ import forge.util.Localizer;
 import forge.util.URLValidator;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class NetConnectUtil {
@@ -159,6 +161,81 @@ public class NetConnectUtil {
             GuiBase.getInterface().copyToClipboard(externalUrl);
         } else if (result == localCopyIndex) {
             GuiBase.getInterface().copyToClipboard(internalUrl);
+        }
+    }
+
+    /**
+     * Builds the ordered list of candidate URLs to try for a discovered server.
+     * Addresses are prioritized for cross-network reliability:
+     * <ol>
+     *   <li>Tailscale CGNAT addresses (100.64.0.0/10) — most likely to work cross-network</li>
+     *   <li>UDP source IP / private LAN IPs (192.168.x, 10.x, 172.16-31.x)</li>
+     *   <li>Everything else (public IPv6, etc.)</li>
+     * </ol>
+     * Within each bucket, the UDP source address (which delivered the discovery
+     * packet, so it's known routable) keeps its position ahead of host-reported IPs.
+     */
+    public static List<String> getPrioritizedServerUrls(final ServerDiscovery.DiscoveredServer server) {
+        final List<String> allIps = new ArrayList<>();
+        allIps.add(server.address());
+        for (final String ip : server.allHostIps()) {
+            if (!allIps.contains(ip)) {
+                allIps.add(ip);
+            }
+        }
+        final List<String> ordered = new ArrayList<>(allIps.size());
+        allIps.stream().filter(NetConnectUtil::isTailscaleAddress).forEach(ordered::add);
+        allIps.stream().filter(ip -> !isTailscaleAddress(ip) && isPrivateAddress(ip)).forEach(ordered::add);
+        allIps.stream().filter(ip -> !isTailscaleAddress(ip) && !isPrivateAddress(ip)).forEach(ordered::add);
+        return ordered.stream().map(ip -> formatAddressPort(ip, server.gamePort())).toList();
+    }
+
+    /**
+     * Formats an address and port for URL parsing. Brackets IPv6 addresses
+     * so the URI parser can distinguish address from port.
+     */
+    private static String formatAddressPort(final String address, final int port) {
+        if (address.contains(":")) {
+            return "[" + address + "]:" + port;
+        }
+        return address + ":" + port;
+    }
+
+    /** Returns true if the IP is in Tailscale's CGNAT range (100.64.0.0/10). */
+    private static boolean isTailscaleAddress(final String ip) {
+        final int[] octets = parseIPv4(ip);
+        // 100.64.0.0/10 = 100.64.0.0 - 100.127.255.255
+        return octets != null && octets[0] == 100 && octets[1] >= 64 && octets[1] <= 127;
+    }
+
+    /** Returns true if the IP is a private/LAN address (192.168.x, 10.x, 172.16-31.x). */
+    private static boolean isPrivateAddress(final String ip) {
+        final int[] octets = parseIPv4(ip);
+        if (octets == null) {
+            return false;
+        }
+        return octets[0] == 10
+                || (octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31)
+                || (octets[0] == 192 && octets[1] == 168);
+    }
+
+    /** Parses a dotted-quad IPv4 string; returns null for IPv6 or malformed input. */
+    private static int[] parseIPv4(final String ip) {
+        if (ip == null || ip.contains(":")) {
+            return null; // IPv6
+        }
+        final String[] parts = ip.split("\\.");
+        if (parts.length != 4) {
+            return null;
+        }
+        try {
+            final int[] octets = new int[4];
+            for (int i = 0; i < 4; i++) {
+                octets[i] = Integer.parseInt(parts[i]);
+            }
+            return octets;
+        } catch (final NumberFormatException e) {
+            return null;
         }
     }
 

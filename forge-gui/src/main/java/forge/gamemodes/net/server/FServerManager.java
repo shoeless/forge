@@ -82,6 +82,7 @@ public final class FServerManager implements IHasForgeLog {
     private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private UpnpService upnpService = null;
+    private ServerBroadcaster broadcaster;
     private ServerGameLobby localLobby;
     private ILobbyListener lobbyListener;
     private IDraftEventHandler draftHandler;
@@ -205,8 +206,45 @@ public final class FServerManager implements IHasForgeLog {
             }
             Runtime.getRuntime().addShutdownHook(shutdownHook);
             isHosting = true;
+            startDiscoveryBroadcast(port);
         } catch (final InterruptedException e) {
             netLog.error(e, "Server start interrupted");
+        }
+    }
+
+    /**
+     * Starts the LAN/Tailscale discovery broadcast so guests can find this
+     * server without typing an IP. Guarded so a discovery failure can never
+     * break normal hosting.
+     */
+    private void startDiscoveryBroadcast(final int port) {
+        try {
+            String playerName = FModel.getPreferences().getPref(FPref.PLAYER_NAME);
+            if (playerName == null || playerName.isEmpty()) {
+                playerName = "Host";
+            }
+            broadcaster = new ServerBroadcaster(playerName, port, 4);
+            final String tailscaleApiKey = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.TAILSCALE_API_KEY);
+            if (tailscaleApiKey != null && !tailscaleApiKey.isEmpty()) {
+                broadcaster.setTailscaleApiKey(tailscaleApiKey);
+                netLog.info("ServerBroadcaster: Tailscale Cloud API key configured");
+            }
+            broadcaster.start();
+        } catch (final Throwable t) {
+            broadcaster = null;
+            netLog.error(t, "Server discovery broadcast failed to start");
+        }
+    }
+
+    private void stopDiscoveryBroadcast() {
+        final ServerBroadcaster b = broadcaster;
+        broadcaster = null;
+        if (b != null) {
+            try {
+                b.stop();
+            } catch (final Throwable t) {
+                netLog.error(t, "Server discovery broadcast failed to stop");
+            }
         }
     }
 
@@ -238,6 +276,8 @@ public final class FServerManager implements IHasForgeLog {
     }
 
     private void stopServer(final boolean removeShutdownHook) {
+        stopDiscoveryBroadcast();
+
         // Cancel all reconnect timers
         for (final Timer timer : reconnectTimers.values()) {
             timer.cancel();
@@ -550,6 +590,87 @@ public final class FServerManager implements IHasForgeLog {
             netLog.error(e, "Failed to get local address");
             return "localhost";
         }
+    }
+
+    /**
+     * Returns all non-VPN, non-loopback IPv4 LAN addresses on this machine.
+     * Used by the discovery broadcaster to compute subnet broadcast addresses,
+     * and by the Tailscale resolver to identify this machine's own addresses.
+     */
+    public static List<String> getAllLanAddresses() {
+        final List<String> result = new ArrayList<>();
+        try {
+            final Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces != null && interfaces.hasMoreElements()) {
+                final NetworkInterface ni = interfaces.nextElement();
+                if (!ni.isUp() || ni.isLoopback()) {
+                    continue;
+                }
+                // Skip VPN tunnel interfaces
+                final String name = ni.getName().toLowerCase();
+                if (name.startsWith("tun") || name.startsWith("utun")
+                        || name.startsWith("ppp") || name.startsWith("tap")) {
+                    continue;
+                }
+                final Enumeration<InetAddress> addresses = ni.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    final InetAddress addr = addresses.nextElement();
+                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                        result.add(addr.getHostAddress());
+                    }
+                }
+            }
+        } catch (final SocketException e) {
+            netLog.error(e, "Failed to enumerate network interfaces");
+        }
+        netLog.debug("getAllLanAddresses: {}", result);
+        return result;
+    }
+
+    /**
+     * Returns all non-loopback, non-link-local addresses on this machine,
+     * including both IPv4 and IPv6. Unlike {@link #getAllLanAddresses()}, this
+     * does NOT skip VPN/tunnel interfaces — we want Tailscale addresses for
+     * discovery. IPv6 addresses are listed first to encourage direct connections.
+     */
+    public static List<String> getAllAddressesForDiscovery() {
+        final List<String> ipv6 = new ArrayList<>();
+        final List<String> ipv4 = new ArrayList<>();
+        try {
+            final Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces != null && interfaces.hasMoreElements()) {
+                final NetworkInterface ni = interfaces.nextElement();
+                if (!ni.isUp() || ni.isLoopback()) {
+                    continue;
+                }
+                final Enumeration<InetAddress> addresses = ni.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    final InetAddress addr = addresses.nextElement();
+                    if (addr.isLoopbackAddress() || addr.isLinkLocalAddress()) {
+                        continue;
+                    }
+                    String hostAddr = addr.getHostAddress();
+                    // Strip IPv6 scope ID (e.g. "%en0") if present
+                    final int scopeIdx = hostAddr.indexOf('%');
+                    if (scopeIdx >= 0) {
+                        hostAddr = hostAddr.substring(0, scopeIdx);
+                    }
+                    if (addr instanceof Inet6Address) {
+                        ipv6.add(hostAddr);
+                    } else if (addr instanceof Inet4Address) {
+                        ipv4.add(hostAddr);
+                    }
+                }
+            }
+        } catch (final SocketException e) {
+            netLog.error(e, "Failed to enumerate network interfaces");
+        }
+        // IPv6 first — better chance of direct connection over Tailscale
+        final List<String> result = new ArrayList<>(ipv6.size() + ipv4.size());
+        result.addAll(ipv6);
+        result.addAll(ipv4);
+        netLog.debug("getAllAddressesForDiscovery: {}", result);
+        return result;
     }
 
     /**
