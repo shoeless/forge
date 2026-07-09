@@ -1285,6 +1285,27 @@ public class ComputerUtilCard {
             return true;
         }
 
+        // Avoid targeting creatures with "becomes the target" triggers that
+        // punish the caster (e.g. Blanka dealing damage, Bonecrusher Giant).
+        // Only target them if the AI would die without removing the threat.
+        if (sa.usesTargeting() && c.getController().isOpponentOf(ai)) {
+            for (Trigger t : c.getTriggers()) {
+                if (t.getMode() == TriggerType.BecomesTarget || t.getMode() == TriggerType.BecomesTargetOnce) {
+                    SpellAbility tSa = t.ensureAbility();
+                    if (tSa != null && (ApiType.DealDamage.equals(tSa.getApi())
+                            || ApiType.Pump.equals(tSa.getApi())
+                            || ApiType.PutCounter.equals(tSa.getApi()))) {
+                        // This creature punishes targeting — only target if lethal threat
+                        boolean lethalThreat = ai.getLife() > 0
+                                && ComputerUtilCombat.damageIfUnblocked(c, ai, game.getCombat(), true) >= ai.getLife();
+                        if (!lethalThreat) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
         //Check for cards that profit from spells - for example Prowess or Threshold
         if (phaseType == PhaseType.MAIN1 && ComputerUtil.castSpellInMain1(ai, sa)) {
             return true;
@@ -1416,6 +1437,24 @@ public class ComputerUtilCard {
             if (!ph.isPlayerTurn(ai) &&
                     (phaseType.isBefore(PhaseType.COMBAT_BEGIN) || phaseType.isAfter(PhaseType.COMBAT_DECLARE_BLOCKERS))) {
                 threat *= 0.1f;
+            }
+
+            // Commanders return to command zone when removed, so removal is
+            // less effective. But factor in accumulated commander damage —
+            // a commander approaching 21 damage is an urgent threat regardless.
+            if (c.isCommander() && c.getController().isOpponentOf(ai)) {
+                int cmdDmg = ai.getCommanderDamage(c);
+                if (cmdDmg >= 14 || c.getNetPower() >= ai.getLife()) {
+                    // Commander damage is critical or power is lethal — worth removing
+                    // even though it comes back, buying time is essential
+                    threat *= 1.5f;
+                } else if (cmdDmg >= 10 || c.getNetPower() * 2 >= ai.getLife()) {
+                    // Approaching danger zone — moderate priority
+                    threat *= 0.8f;
+                } else {
+                    // Low commander damage, not an immediate threat
+                    threat *= 0.15f;
+                }
             }
         } else if (c.isPlaneswalker()) {
             threat = 1;
