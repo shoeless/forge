@@ -2781,6 +2781,16 @@ public class GameAction {
         damageMap.triggerDamageDoneOnce(isCombat, game);
         damageMap.clear();
 
+        // Process the DamageDoneOnce triggers immediately so they fire while creatures are still
+        // on the battlefield. Without this they sit queued until the next state-based-action check,
+        // by which point a lethally-damaged creature is already in the graveyard and the trigger's
+        // TriggerZones$ Battlefield check fails - so Enrage (and other DamageDoneOnce triggers)
+        // never fire on lethal combat damage. The queue is drained here, so they don't re-fire on
+        // the later SBA pass.
+        if (isCombat) {
+            game.getTriggerHandler().runWaitingTriggers();
+        }
+
         counterTable.replaceCounterEffect(game, cause);
         counterTable.clear();
     }
