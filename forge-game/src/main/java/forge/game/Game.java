@@ -64,8 +64,8 @@ public class Game {
 
     private static final TaggedLogger netLog = Logger.tag("NETWORK");
 
-    private static int maxId = 0;
-    private static int nextId() { return ++maxId; }
+    private static final java.util.concurrent.atomic.AtomicInteger maxId = new java.util.concurrent.atomic.AtomicInteger(0);
+    private static int nextId() { return maxId.incrementAndGet(); }
 
     /** The ID. */
     private int id;
