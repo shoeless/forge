@@ -84,6 +84,10 @@ public class AiAttackController {
     private List<CompletableFuture<Integer>> futures = new ArrayList<>();
     // Deterministic-sim mode: run parallel combat checks inline (see declareAttackers).
     private static final boolean INLINE_DETERMINISTIC = System.getProperty("forge.rngSeed") != null;
+    // Counts real exceptions (NOT timeouts) thrown during combat evaluation and swallowed below. These
+    // used to be silently dropped (an attacker just vanished from the eval), hiding bugs like NPEs;
+    // surfaced + counted so the throwing handler is findable in logs.
+    public static final java.util.concurrent.atomic.AtomicLong COMBAT_EVAL_FAILS = new java.util.concurrent.atomic.AtomicLong();
 
     /**
      * <p>
@@ -101,7 +105,7 @@ public class AiAttackController {
         myList = ai.getCreaturesInPlay();
         this.nextTurn = nextTurn;
         refreshCombatants(defendingOpponent);
-        this.timeOut = ai.getGame().getAITimeout();
+        this.timeOut = ai.getGame().getAICombatTimeout();
         this.canUseTimeout = ai.getGame().canUseTimeout();
     } // overloaded constructor to evaluate attackers that should attack next turn
 
@@ -116,7 +120,7 @@ public class AiAttackController {
             attackers.add(attacker);
         }
         this.blockers = getPossibleBlockers(oppList, this.attackers, this.nextTurn);
-        this.timeOut = ai.getGame().getAITimeout();
+        this.timeOut = ai.getGame().getAICombatTimeout();
         this.canUseTimeout = ai.getGame().canUseTimeout();
     } // overloaded constructor to evaluate single specified attacker
 
@@ -980,11 +984,20 @@ public class AiAttackController {
                     try {
                         forcedAttackCheck.get();
                     } catch (Exception ex) {
+                        // Real failure in inline combat eval - surface + count instead of hiding it
+                        // (a swallowed exception just drops the attacker from evaluation silently).
+                        System.err.println("[AI-COMBAT-EVAL-FAIL] inline combat-eval task threw (#"
+                                + COMBAT_EVAL_FAILS.incrementAndGet() + "): " + ex);
                         ex.printStackTrace();
                     }
                 } else {
                     futures.add(CompletableFuture.supplyAsync(forcedAttackCheck).exceptionally(ex -> {
-                        ex.printStackTrace();
+                        // A real exception (e.g. NPE) thrown in combat eval - used to be silently dropped
+                        // so the attacker just vanished from evaluation. Surface the cause + count it.
+                        Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                        System.err.println("[AI-COMBAT-EVAL-FAIL] combat-eval future threw (#"
+                                + COMBAT_EVAL_FAILS.incrementAndGet() + "): " + cause);
+                        cause.printStackTrace();
                         return 0;
                     }));
                 }

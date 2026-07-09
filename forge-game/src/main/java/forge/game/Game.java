@@ -96,6 +96,10 @@ public class Game {
 
     private final Zone stackZone = new Zone(ZoneType.Stack, this);
     public int AI_TIMEOUT = 5;
+    // Wide-board combat evaluation (AiAttackController) is the heaviest AI search and needs more
+    // wall-clock headroom than the general per-decision timeout, so it has its own value. Still
+    // auto-disabled in deterministic-sim mode via canUseTimeout().
+    public int AI_COMBAT_TIMEOUT = 10;
     public boolean AI_CAN_USE_TIMEOUT = true;
 
     public boolean EXPERIMENTAL_RESTORE_SNAPSHOT = false;
@@ -1431,6 +1435,9 @@ public class Game {
 
     public int getAITimeout() {
         return AI_TIMEOUT;
+    }
+    public int getAICombatTimeout() {
+        return AI_COMBAT_TIMEOUT;
     }
 
     // Deterministic-sim mode (-Dforge.rngSeed): disable the AI's wall-clock timeouts (incl. the
