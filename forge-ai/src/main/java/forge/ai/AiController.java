@@ -43,6 +43,7 @@ import forge.game.combat.Combat;
 import forge.game.combat.CombatUtil;
 import forge.game.cost.*;
 import forge.game.keyword.Keyword;
+import forge.game.keyword.KeywordInterface;
 import forge.game.mana.ManaCostBeingPaid;
 import forge.game.phase.PhaseType;
 import forge.game.player.Player;
@@ -820,6 +821,226 @@ public class AiController {
         return false;
     }
 
+    /**
+     * Reserves mana for a counterspell if an opponent could cast their commander
+     * on their next turn. This prevents the AI from tapping out when it should
+     * hold up interaction against a threatening commander.
+     */
+    void reserveManaForCounterSpellIfNeeded() {
+        // Reserve on our own turn during any phase — a counter drawn mid-turn
+        // (e.g., from a cantrip) should immediately trigger reservation so the
+        // AI stops tapping out.
+        if (!game.getPhaseHandler().isPlayerTurn(player)) {
+            return;
+        }
+
+        // Clear any prior counterspell reservation from a previous priority
+        memory.clearMemorySet(AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+
+        // Check if any opponent has a commander in the command zone that they
+        // could cast with their current mana sources (available next turn).
+        // Remember WHICH commander so sacrifice-cost counters can be checked
+        // against it below.
+        boolean commanderThreat = false;
+        Card threateningCommander = null;
+        for (Player opp : player.getOpponents()) {
+            for (Card commander : opp.getCommanders()) {
+                if (!commander.isInZone(ZoneType.Command)) {
+                    continue;
+                }
+                int commanderTax = opp.getCommanderCast(commander) * 2;
+                int commanderCMC = commander.getCMC() + commanderTax;
+                // Pass false to count ALL mana sources including summoning-sick
+                // creatures — they'll untap and be available on opponent's turn
+                int oppMana = getAvailableManaEstimate(opp, false);
+                // Reserve when opponent is within 1 mana of casting (tightened from 2:
+                // the 2-mana buffer over-fired, making the AI sandbag mana nearly every
+                // turn against commanders it couldn't actually cast yet).
+                // NOTE: a velocity-based dynamic buffer (oppMana + observed per-turn mana
+                // growth, clamped [1,3]) was A/B-tested 2026-06-12 vs a ramp deck (Blanka)
+                // and proved BEHAVIORALLY INERT: the commander-denial funnel was unchanged
+                // in every bucket (deny-by-cast 81/40/47 -> 80/38/46; tapped-out-with-
+                // counter 20.0% -> 22.5%), and the win-rate delta was within observed
+                // run-to-run variance. Earlier arming almost never converts to a different
+                // decision — the recasts resolve because the first counter legitimately
+                // spends the held mana (same-turn recasts off mana bursts), not because
+                // the trigger fires late. Don't re-add without funnel evidence.
+                if (oppMana >= commanderCMC - 1) {
+                    commanderThreat = true;
+                    threateningCommander = commander;
+                    break;
+                }
+            }
+            if (commanderThreat) {
+                break;
+            }
+        }
+
+        if (!commanderThreat) {
+            return;
+        }
+
+        // Find the cheapest counterspell we can hold up next turn. Includes counters already
+        // foretold into exile (castable from there for their cheaper foretell cost), so once the AI
+        // foretells a counter it keeps reserving for it instead of tapping out.
+        List<SpellAbility> counters = getPlayableCounters(counterReservationSources());
+        if (counters.isEmpty()) {
+            // EXPERIMENTAL (AiProps default OFF): with a commander threat and cantrips but no counter yet in
+            // hand, speculatively hold ~2 mana so a cantrip can dig into a counter without the AI having
+            // tapped out first. Ships dark — prior speculative reservation tweaks (velocity buffer, hold-two;
+            // see the notes above) proved BEHAVIORALLY INERT, so do NOT enable without funnel evidence.
+            if (getBoolProperty(AiProps.RESERVE_MANA_FOR_SPECULATIVE_COUNTER) && handHasCantrip()) {
+                CardCollection specSources = ComputerUtilMana.getAvailableManaSources(player, true);
+                int specReserve = Math.min(specSources.size(), 2);
+                for (int i = 0; i < specReserve; i++) {
+                    memory.rememberCard(specSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+                }
+            }
+            return;
+        }
+
+        // Pick the cheapest counter that can target creature spells
+        // (the commander). Skip narrow counters like Dispel (instants only)
+        // that can't stop the primary threat.
+        SpellAbility cheapestCounter = null;
+        int cheapestCMC = Integer.MAX_VALUE;
+        for (SpellAbility counter : counters) {
+            // Check if this counter can target creature spells (the commander).
+            // Skip counters restricted to non-creature spell types.
+            String validTgts = counter.getParamOrDefault("ValidTgts", "Card");
+            if (validTgts.contains("nonCreature") || validTgts.contains("Noncreature")) {
+                continue; // explicitly excludes creatures
+            }
+            if (!validTgts.contains("Card") && !validTgts.contains("Creature")) {
+                continue; // doesn't include creatures (e.g. "Instant" or "Sorcery")
+            }
+            // Counters with a non-self sacrifice additional cost (e.g. Abjure) are only a
+            // real reservation basis if the sacrifice can actually be paid right now AND
+            // the CounterAi value gate would approve the trade against this commander —
+            // otherwise reserving just 1 mana for Abjure is hollow (the AI taps out,
+            // the commander resolves, and the "reserved" counter can't or won't fire).
+            // Uses the same valuation as the gate so reservation and cast can't disagree.
+            Cost counterCost = counter.getPayCosts();
+            if (counterCost != null && counterCost.hasSpecificCostType(CostSacrifice.class)) {
+                CostSacrifice sacCost = counterCost.getCostPartByType(CostSacrifice.class);
+                if (sacCost != null && !sacCost.payCostFromSource() && !"OriginalHost".equals(sacCost.getType())) {
+                    int sacAmount = 1;
+                    try {
+                        sacAmount = sacCost.getAbilityAmount(counter);
+                    } catch (Exception e) {
+                        // non-numeric amount; assume 1
+                    }
+                    CardCollection wouldSac = ComputerUtil.chooseSacrificeType(player, sacCost.getType(), counter, null, false, sacAmount, null);
+                    if (wouldSac == null || wouldSac.isEmpty()) {
+                        System.out.println("MANA-RES: skipping " + counter.getHostCard() + " as reservation basis (sac cost unpayable)");
+                        continue;
+                    }
+                    int sacValue = 0;
+                    for (Card sacFodder : wouldSac) {
+                        sacValue = Math.max(sacValue, ComputerUtilCard.evaluateSacrificeCostValue(sacFodder));
+                    }
+                    if (threateningCommander != null
+                            && ComputerUtilCard.evaluateCounterExchangeValue(threateningCommander) <= sacValue) {
+                        System.out.println("MANA-RES: skipping " + counter.getHostCard() + " as reservation basis (gate would decline vs "
+                                + threateningCommander + ": fodder " + sacValue + ")");
+                        continue;
+                    }
+                }
+            }
+            int cmc = counterReservationCMC(counter);
+            if (cmc < cheapestCMC) {
+                cheapestCMC = cmc;
+                cheapestCounter = counter;
+            }
+        }
+        if (cheapestCounter != null && cheapestCMC > 0) {
+            // Reserve a single counter's worth. A +2 "hold two answers" bump for explosive
+            // (pump-into-lethal) commanders was A/B-tested 2026-06-13 and was inert/slightly
+            // negative — the tapped-out funnel bucket did NOT shrink. The binding constraint
+            // is counter ALLOCATION (spending the counter on a non-commander spell before the
+            // commander lands), not reservation SIZE; being investigated via #COUNTERCAST.
+            CardCollection allSources = ComputerUtilMana.getAvailableManaSources(player, true);
+            int toReserve = Math.min(allSources.size(), cheapestCMC);
+            for (int i = 0; i < toReserve; i++) {
+                memory.rememberCard(allSources.get(i), AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+            }
+        }
+    }
+
+    // True if the hand holds a cantrip/dig spell that could find a counter (used only by the experimental
+    // speculative reservation above). Draw/Dig put cards into hand; Scry alone can't, so it's excluded.
+    private boolean handHasCantrip() {
+        for (Card c : player.getCardsIn(ZoneType.Hand)) {
+            for (SpellAbility sa : c.getSpellAbilities()) {
+                ApiType api = sa.getApi();
+                if (api == ApiType.Draw || api == ApiType.Dig) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Counters we can hold mana for: those in hand plus any already foretold into exile. */
+    private CardCollection counterReservationSources() {
+        final CardCollection sources = new CardCollection(player.getCardsIn(ZoneType.Hand));
+        for (final Card c : player.getCardsIn(ZoneType.Exile)) {
+            if (c.isForetold()) {
+                sources.add(c);
+            }
+        }
+        return sources;
+    }
+
+    /** A counter's effective reservation cost: its foretell cost if already foretold, else its mana cost. */
+    private static int counterReservationCMC(final SpellAbility counter) {
+        final Card host = counter.getHostCard();
+        if (host != null && host.isForetold()) {
+            final Integer ft = foretellCostCMC(host);
+            if (ft != null) {
+                return ft;
+            }
+        }
+        return counter.getPayCosts().getTotalMana().getCMC();
+    }
+
+    /**
+     * Converted mana cost of {@code c}'s Foretell cost (from {@code K:Foretell:<cost>}), or null if
+     * the card has no Foretell keyword, a bare {@code Foretell} (no explicit cost), or
+     * {@code Foretell:ManaCost} (foretell cost equals the card cost — no discount). Reads the
+     * original state's keywords so it also works for a face-down foretold card in exile.
+     */
+    private static Integer foretellCostCMC(final Card c) {
+        if (c == null) {
+            return null;
+        }
+        Integer cmc = foretellCMCFromKeywords(c.getKeywords());
+        if (cmc != null) {
+            return cmc;
+        }
+        final CardState orig = c.getState(CardStateName.Original);
+        return orig == null ? null : foretellCMCFromKeywords(orig.getCachedKeywords());
+    }
+
+    private static Integer foretellCMCFromKeywords(final Iterable<KeywordInterface> keywords) {
+        if (keywords == null) {
+            return null;
+        }
+        for (final KeywordInterface ki : keywords) {
+            final String kw = ki.getOriginal();
+            if (kw != null && kw.startsWith("Foretell")) {
+                final String[] k = kw.split(":");
+                if (k.length < 2 || "ManaCost".equals(k[1])) {
+                    return null; // bare Foretell or Foretell:ManaCost -> no usable discount
+                }
+                // Mirror GameActionUtil's foretold alt-cost build: new Cost(k[1], false).
+                final Cost ftCost = new Cost(k[1], false);
+                return ftCost.getCostMana() == null ? null : ftCost.getCostMana().getMana().getCMC();
+            }
+        }
+        return null;
+    }
+
     private AiPlayDecision canPlayAndPayFor(final SpellAbility sa) {
         final Card host = sa.getHostCard();
         Card altHost = host;
@@ -1366,7 +1587,18 @@ public class AiController {
         // Reset priority mana reservation that's meant to work for one spell only
         memory.clearMemorySet(AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_NEXT_SPELL);
 
+        // Reserve mana for counterspells before any spell selection path.
+        // Both the simulation picker and the heuristic evaluator need this
+        // so the AI doesn't tap out when it should hold counter mana.
+        reserveManaForCounterSpellIfNeeded();
+
         if (useSimulation) {
+            // TODO: The simulation picker doesn't naturally account for holding mana
+            // against future opponent plays (e.g., commander recast). It only evaluates
+            // the immediate board state change. The proper fix is to teach
+            // GameStateEvaluator to penalize game states where the player taps out
+            // with a counterable commander threat, rather than relying on the
+            // reservation system as an external constraint.
             return singleSpellAbilityList(simPicker.chooseSpellAbilityToPlay(null));
         }
 
@@ -1580,6 +1812,11 @@ public class AiController {
             saList.removeAll(skipped);
         //update LivingEndPlayer
         useLivingEnd = IterableUtil.any(player.getZone(ZoneType.Library), CardPredicates.nameEquals("Living End"));
+
+        // Reservation already set in chooseSpellAbilityToPlay() before entering
+        // this method. Re-run here in case hand changed (e.g., drew a counter
+        // from a cantrip resolved earlier this priority).
+        reserveManaForCounterSpellIfNeeded();
 
         SpellAbility chosenSa = chooseSpellAbilityToPlayFromList(saList, true);
 

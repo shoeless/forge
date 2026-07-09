@@ -970,7 +970,7 @@ public class ComputerUtilMana {
     private static boolean canPayShardWithSpellAbility(ManaCostShard toPay, Player ai, SpellAbility ma, SpellAbility sa, ManaCostBeingPaid cost, boolean checkCosts, Map<String, Integer> xManaCostPaidByColor) {
         final Card sourceCard = ma.getHostCard();
 
-        if (isManaSourceReserved(ai, sourceCard)) {
+        if (isManaSourceReserved(ai, sourceCard, sa)) {
             return false;
         }
 
@@ -1070,9 +1070,12 @@ public class ComputerUtilMana {
     }
 
     // returns true if sourceCard is reserved as a mana source for payment
-    // for the future spell to be cast in another phase. However, if the spell ability that is
-    // being considered for casting is high priority, then mana source reservation will be ignored.
-    private static boolean isManaSourceReserved(Player ai, Card sourceCard) {
+    // for the future spell to be cast in another phase. However, if "sa" (the spell ability that is
+    // being considered for casting) is high priority, then mana source reservation will be ignored.
+    private static boolean isManaSourceReserved(Player ai, Card sourceCard, SpellAbility sa) {
+        if (sa == null) {
+            return false;
+        }
         if (!(ai.getController() instanceof PlayerControllerAi)) {
             return false;
         }
@@ -1080,6 +1083,27 @@ public class ComputerUtilMana {
         // reserved for spell synchronization
         if (AiCardMemory.isRememberedCard(ai, sourceCard, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_NEXT_SPELL)) {
             return true;
+        }
+
+        // Mana reserved for counterspells against opponent threats (e.g. commander).
+        // Released on opponent's turn so the counter can actually be cast.
+        if (AiCardMemory.isRememberedCard(ai, sourceCard, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL)) {
+            if (!ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
+                // Opponent's turn — only release reservation for counterspells.
+                // Block cantrips/card draw from using reserved counter mana.
+                if (sa.getApi() == ApiType.Counter) {
+                    // This IS a counter — allow using reserved sources
+                    AiCardMemory.clearMemorySet(ai, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+                } else {
+                    // Not a counter (cantrip, card draw, etc.) — keep reserved
+                    return true;
+                }
+            } else {
+                // Enforce reservation — reserved sources cannot be used for any spell
+                // including the AI's own commander. The AI must wait until it has
+                // enough total mana for both the spell and the counter.
+                return true;
+            }
         }
 
         PhaseType curPhase = ai.getGame().getPhaseHandler().getPhase();

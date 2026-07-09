@@ -56,6 +56,7 @@ public class AiCardMemory {
         HELD_MANA_SOURCES_FOR_DECLBLK, // These mana sources will not be used before Combat - Declare Blockers
         HELD_MANA_SOURCES_FOR_ENEMY_DECLBLK, // These mana sources will not be used before the opponent's Combat - Declare Blockers
         HELD_MANA_SOURCES_FOR_NEXT_SPELL, // These mana sources will not be used until the next time the AI chooses a spell to cast
+        HELD_MANA_SOURCES_FOR_COUNTERSPELL, // These mana sources are reserved for casting a counterspell against a threatening opponent spell
         ATTACHED_THIS_TURN, // These equipments were attached to something already this turn
         ANIMATED_THIS_TURN, // These cards had their AF Animate effect activated this turn
         BOUNCED_THIS_TURN, // These cards were bounced this turn

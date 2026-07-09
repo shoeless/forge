@@ -89,6 +89,14 @@ public class PlayerControllerAi extends PlayerController {
     }
 
     @Override
+    public void onCardDrawn(Card drawnCard) {
+        // When a counter is drawn, immediately re-evaluate mana reservation.
+        // Without this, the AI might continue casting cantrips with the mana
+        // that should now be held for the newly drawn counter.
+        brains.reserveManaForCounterSpellIfNeeded();
+    }
+
+    @Override
     public boolean isAI() {
         return true;
     }

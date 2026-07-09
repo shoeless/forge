@@ -188,6 +188,13 @@ public abstract class PlayerController {
     /** Shows message to player to reveal chosen cardName, creatureType, number etc. AI must analyze API to understand what that is */
     public abstract void notifyOfValue(SpellAbility saSource, GameObject realtedTarget, String value);
 
+    /**
+     * Called after this player draws a card. Default no-op; the AI controller
+     * overrides this to re-evaluate mana reservation (e.g., hold mana for a
+     * counterspell that was just drawn mid-turn).
+     */
+    public void onCardDrawn(Card drawnCard) { /* default no-op */ }
+
     public abstract ImmutablePair<CardCollection, CardCollection> arrangeForScry(CardCollection topN);
     public abstract ImmutablePair<CardCollection, CardCollection> arrangeForSurveil(CardCollection topN);
 
