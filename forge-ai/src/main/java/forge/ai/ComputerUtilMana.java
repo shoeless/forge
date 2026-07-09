@@ -1088,7 +1088,12 @@ public class ComputerUtilMana {
         // Mana reserved for counterspells against opponent threats (e.g. commander).
         // Released on opponent's turn so the counter can actually be cast.
         if (AiCardMemory.isRememberedCard(ai, sourceCard, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL)) {
-            if (!ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
+            if (sa.isForetelling()) {
+                // Foretelling on our own MAIN2 is pre-vetted by AiController.shouldForetell to leave
+                // enough untapped for the (cheaper, post-foretell) counter, so the {2} foretell cost
+                // may draw on reserved counter mana. Don't treat this source as reserved for it.
+                // (fall through — not reserved)
+            } else if (!ai.getGame().getPhaseHandler().isPlayerTurn(ai)) {
                 // Opponent's turn — only release reservation for counterspells.
                 // Block cantrips/card draw from using reserved counter mana.
                 if (sa.getApi() == ApiType.Counter) {

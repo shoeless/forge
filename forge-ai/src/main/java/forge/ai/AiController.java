@@ -45,6 +45,7 @@ import forge.game.cost.*;
 import forge.game.keyword.Keyword;
 import forge.game.keyword.KeywordInterface;
 import forge.game.mana.ManaCostBeingPaid;
+import forge.game.phase.PhaseHandler;
 import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.player.PlayerActionConfirmMode;
@@ -981,6 +982,58 @@ public class AiController {
         return false;
     }
 
+    // ---- Foretell -----------------------------------------------------------------------------
+    // The foretell keyword grants a no-API AbilityStatic (cost {2}) that, left to the generic
+    // picker, returns WillPlay in any phase and so the AI foretells opportunistically (and rarely,
+    // since the counter reservation usually eats its mana). These helpers gate foretelling to our
+    // own MAIN2 when there's mana to spare beyond the cheapest counter's POST-foretell reservation.
+
+    /**
+     * Decide whether to foretell {@code foretellSa}'s host card now. Only on our own MAIN2 with an
+     * empty stack, only when foretelling is a real discount, and only if — after paying the {2}
+     * foretell cost — we still keep enough untapped sources for the cheapest counter at its
+     * post-foretell cost (a foretold instant remains castable from exile on the opponent's turn).
+     */
+    private boolean shouldForetell(final SpellAbility foretellSa) {
+        final PhaseHandler ph = game.getPhaseHandler();
+        if (!ph.isPlayerTurn(player) || !ph.is(PhaseType.MAIN2) || !game.getStack().isEmpty()) {
+            return false;
+        }
+        final Card c = foretellSa.getHostCard();
+        if (c == null) {
+            return false;
+        }
+        final Integer foretellCMC = foretellCostCMC(c);
+        if (foretellCMC == null || foretellCMC >= c.getCMC()) {
+            return false; // no foretell cost we can read, or no real discount
+        }
+        final int totalSources = ComputerUtilMana.getAvailableManaSources(player, true).size();
+        int reservationPost = 0;
+        // Only hold counter mana back when a reservation is actually active (a commander threat).
+        Set<Card> held = AiCardMemory.getMemorySet(player, AiCardMemory.MemorySet.HELD_MANA_SOURCES_FOR_COUNTERSPELL);
+        if (held != null && !held.isEmpty()) {
+            reservationPost = postForetellCounterReservation(c, foretellCMC);
+        }
+        return totalSources - 2 >= reservationPost;
+    }
+
+    /**
+     * Cheapest counter (in mana) we'd want to hold up next turn, computed as if {@code foretelling}
+     * were already foretold (i.e. counted at {@code foretellCMC} rather than its hand cost). Mirrors
+     * the counter set used by {@link #reserveManaForCounterSpellIfNeeded()}.
+     */
+    private int postForetellCounterReservation(final Card foretelling, final int foretellCMC) {
+        final List<SpellAbility> counters = getPlayableCounters(counterReservationSources());
+        int cheapest = Integer.MAX_VALUE;
+        for (final SpellAbility counter : counters) {
+            final int cmc = counter.getHostCard() == foretelling ? foretellCMC : counterReservationCMC(counter);
+            if (cmc < cheapest) {
+                cheapest = cmc;
+            }
+        }
+        return cheapest == Integer.MAX_VALUE ? 0 : cheapest;
+    }
+
     /** Counters we can hold mana for: those in hand plus any already foretold into exile. */
     private CardCollection counterReservationSources() {
         final CardCollection sources = new CardCollection(player.getCardsIn(ZoneType.Hand));
@@ -1110,6 +1163,14 @@ public class AiController {
         }
         if (sa instanceof WrappedAbility) {
             return canPlaySa(((WrappedAbility) sa).getWrappedAbility());
+        }
+
+        // Foretell: decide deliberately rather than letting the no-API foretell AbilityStatic fall
+        // through to WillPlay (which makes the AI foretell in any phase whenever it has a spare {2}).
+        // Only foretell on our own MAIN2 when there's mana to spare beyond the cheapest counter's
+        // POST-foretell reservation. See shouldForetell.
+        if (sa.isForetelling()) {
+            return shouldForetell(sa) ? AiPlayDecision.WillPlay : AiPlayDecision.AnotherTime;
         }
 
         if (!sa.canCastTiming(player)) {
