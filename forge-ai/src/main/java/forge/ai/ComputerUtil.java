@@ -2118,13 +2118,28 @@ public class ComputerUtil {
         int currentHandSize = handList.size();
         int finalHandSize = currentHandSize - cardsToReturn;
 
+        // Instant-heavy decks (like counter-spell decks) mulligan aggressively
+        // for interaction — even below the normal threshold, down to 4 cards.
+        // Use isInstant() as a robust check since API-based detection can be
+        // unreliable at mulligan time before abilities are fully initialized.
+        CardCollectionView library = ai.getCardsIn(ZoneType.Library);
+        int landsInDeck = CardLists.count(library, CardPredicates.LANDS);
+        if (finalHandSize >= 4) {
+            int instantsInDeck = CardLists.count(library, c -> c.isInstant());
+            int nonLandsInDeck = library.size() - landsInDeck;
+            if (nonLandsInDeck > 0 && instantsInDeck * 4 >= nonLandsInDeck) {
+                // Deck is 25%+ instants — need at least one in hand
+                int instantsInHand = CardLists.count(handList, c -> c.isInstant());
+                if (instantsInHand == 0) {
+                    return 0; // mulligan — no instants in an instant-heavy deck
+                }
+            }
+        }
+
         // don't mulligan when already too low
         if (finalHandSize < aic.getIntProperty(AiProps.MULLIGAN_THRESHOLD)) {
             return finalHandSize;
         }
-
-        CardCollectionView library = ai.getCardsIn(ZoneType.Library);
-        int landsInDeck = CardLists.count(library, CardPredicates.LANDS);
 
         // no land deck, can't do anything better
         if (landsInDeck == 0) {
