@@ -196,6 +196,13 @@ public class CounterAi extends SpellAbilityAi {
                 if (!SpecialCardAi.NullBrooch.consider(ai, sa)) {
                     return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
                 }
+            } else if ("NoCommander".equals(logic)) {
+                // Bounce-counters (Remand, Memory Lapse) shouldn't target commanders
+                // since the spell goes to hand/library — no command tax increase,
+                // opponent just recasts it next turn
+                if (tgtSA != null && tgtSA.getHostCard() != null && tgtSA.getHostCard().isCommander()) {
+                    return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+                }
             }
         }
 
@@ -220,7 +227,43 @@ public class CounterAi extends SpellAbilityAi {
             dontCounter = true;
         }
 
-        // TODO check against game changers
+        // Always counter commander casts — they are the highest priority target
+        if (tgtSA != null && tgtSA.getHostCard() != null && tgtSA.getHostCard().isCommander()) {
+            dontCounter = false;
+        }
+
+        // Only counter high-priority targets, saving counters for what matters:
+        // enchantments, planeswalkers, big creatures, removal/damage aimed our way,
+        // counter wars, and pump on threats. Skip this check for bounce-counters
+        // (Destination$ Hand like Remand) since they're lower-commitment tempo
+        // plays acceptable on weaker targets.
+        if (tgtSA != null && !dontCounter
+                && (tgtSA.getHostCard() == null || !tgtSA.getHostCard().isCommander())
+                && !"Hand".equals(sa.getParam("Destination"))) {
+            Card tgtCard = tgtSA.getHostCard();
+            boolean isHighPriority = false;
+            if (tgtCard != null) {
+                // Enchantments are high priority (persistent value, strategy multipliers)
+                isHighPriority |= tgtCard.isEnchantment();
+                // CMC 4+ creatures are real threats
+                isHighPriority |= tgtCard.isCreature() && tgtCMC >= 4;
+                // Planeswalkers
+                isHighPriority |= tgtCard.isPlaneswalker();
+                // Pump spells — only if targeting a commander or CMC 4+ creature
+                if (tgtSA.getApi() == ApiType.Pump || tgtSA.getApi() == ApiType.PumpAll) {
+                    Card pumpTgt = tgtSA.getTargetCard();
+                    isHighPriority |= pumpTgt != null
+                            && (pumpTgt.isCommander() || pumpTgt.getCMC() >= 4);
+                }
+                // Damage/removal targeting the AI
+                isHighPriority |= tgtSA.getApi() == ApiType.DealDamage || tgtSA.getApi() == ApiType.Destroy;
+                // Other counterspells
+                isHighPriority |= tgtSA.getApi() == ApiType.Counter;
+            }
+            if (!isHighPriority) {
+                dontCounter = true;
+            }
+        }
 
         if (tgtSA != null && tgtCMC < AiProfileUtil.getIntProperty(ai, AiProps.MIN_SPELL_CMC_TO_COUNTER)) {
             dontCounter = true;
@@ -386,8 +429,23 @@ public class CounterAi extends SpellAbilityAi {
             if (bestOption == null) {
                 bestOption = tgtSA;
             } else {
-                // TODO Determine if this option is better than the current best option
+                // Prefer countering commander casts — they are high-impact
+                // threats that the entire opponent deck is built around
                 boolean betterThanBest = false;
+                Card tgtCard = tgtSA.getHostCard();
+                Card bestCard = bestOption.getHostCard();
+                boolean tgtIsCommander = tgtCard != null && tgtCard.isCommander();
+                boolean bestIsCommander = bestCard != null && bestCard.isCommander();
+                if (tgtIsCommander && !bestIsCommander) {
+                    betterThanBest = true;
+                } else if (!tgtIsCommander && !bestIsCommander) {
+                    // Neither is a commander — prefer higher CMC
+                    int tgtCmc = tgtSA.getPayCosts().getTotalMana() != null
+                            ? tgtSA.getPayCosts().getTotalMana().getCMC() : 0;
+                    int bestCmc = bestOption.getPayCosts().getTotalMana() != null
+                            ? bestOption.getPayCosts().getTotalMana().getCMC() : 0;
+                    betterThanBest = tgtCmc > bestCmc;
+                }
                 if (betterThanBest) {
                     bestOption = tgtSA;
                 }
