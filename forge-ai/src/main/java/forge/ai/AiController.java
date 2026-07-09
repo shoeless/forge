@@ -100,6 +100,11 @@ public class AiController {
     private List<SpellAbility> skipped;
     private volatile boolean timeoutReached;
 
+    // Counts real exceptions (NOT timeouts/interrupts) thrown during AI ability evaluation and swallowed
+    // by the picker. These used to be silently turned into a "pass", hiding bugs (e.g. an NPE in a card's
+    // SpellAbilityAi); surfaced + counted so the throwing handler is findable in logs.
+    public static final java.util.concurrent.atomic.AtomicLong AI_EVAL_FAILS = new java.util.concurrent.atomic.AtomicLong();
+
     public AiController(final Player computerPlayer, final Game game0) {
         player = computerPlayer;
         game = game0;
@@ -1691,6 +1696,16 @@ public class AiController {
             return future.get(game.getAITimeout(), TimeUnit.SECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
+            if (e instanceof ExecutionException) {
+                // A real exception thrown deep in AI evaluation (e.g. a getCMC()-on-null NPE in some
+                // card's SpellAbilityAi) - previously just printed and swallowed, which turned the bug
+                // into a silent "AI passes" and hid the throwing handler. Surface the unwrapped cause
+                // and count it so it's findable in sim logs. (Interrupts/timeouts are expected under
+                // load and are NOT counted here.)
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                System.err.println("[AI-EVAL-FAIL] chooseSpellAbilityToPlay swallowed exception (#"
+                        + AI_EVAL_FAILS.incrementAndGet() + "): " + cause);
+            }
             if (e instanceof TimeoutException) {
                 // log where the eval thread currently is - each timeout doubles as a
                 // profiler sample for diagnosing remaining AI slowdowns from user logs
