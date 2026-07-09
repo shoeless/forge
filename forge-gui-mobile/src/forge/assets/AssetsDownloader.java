@@ -38,6 +38,13 @@ public class AssetsDownloader {
     public static void checkForUpdates(boolean exited, Runnable runnable) {
         if (exited)
             return;
+        // iOS apps are deployed via the App Store / TestFlight, not self-updating.
+        // Skip the update network check, which can block startup for seconds on
+        // slow or absent connections.
+        if (Gdx.app != null && Gdx.app.getType() == com.badlogic.gdx.Application.ApplicationType.iOS) {
+            run(runnable);
+            return;
+        }
         final String versionString = Forge.getDeviceAdapter().getVersionString();
         Forge.getSplashScreen().getProgressBar().setDescription("Checking for updates...");
         if (versionString.contains("GIT")) {
