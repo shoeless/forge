@@ -98,9 +98,10 @@ public class Match {
 
         // will pull UI dialog, when the UI is listening
         game.fireEvent(new GameEventGameFinished());
-
-        //run GC after game is finished
-        System.gc();
+        // NOTE: no System.gc() here. The per-game GC lives in HostedMatch.endCurrentGame
+        // (GUI-hosted matches only, where it prevents mobile jetsam kills). Headless sims
+        // (SimulateMatch etc.) build Match directly and skip it - faster, lower peak RSS,
+        // and it removes a sim-side nondeterminism source.
     }
 
     public GameOutcome getOutcomeById(int id) {
