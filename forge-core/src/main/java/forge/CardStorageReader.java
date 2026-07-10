@@ -103,6 +103,20 @@ public class CardStorageReader {
         this.charset = Charset.forName(CardStorageReader.DEFAULT_CHARSET_NAME);
     } // CardReader()
 
+    /**
+     * Timestamp of the card-script source (cardsfolder.zip mtime, or the folder's if loose files),
+     * folded into {@link forge.card.CardRulesCache#computeCacheVersion} so the binary card cache is
+     * invalidated when a card body changes without the edition/card counts changing (e.g. editing an
+     * AI hint, trigger, or P/T). Without this, an edited script silently served its stale parse.
+     */
+    public long getCardSourceTimestamp() {
+        final File zipFile = new File(cardsfolder, "cardsfolder.zip");
+        if (zipFile.exists()) {
+            return zipFile.lastModified();
+        }
+        return cardsfolder.lastModified();
+    }
+
     private List<CardRules> loadCardsInRange(final List<File> files, final int from, final int to) {
         final CardRules.Reader rulesReader = new CardRules.Reader();
 
