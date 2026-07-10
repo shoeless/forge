@@ -134,6 +134,11 @@ public class CardImageRenderer {
         //override
         if (isFaceDown && altState && card.isSplitCard())
             state = card.getLeftSplitState();
+        // DEFENSIVE (multiplayer): an unresolved ID-only CardView stub has a null state — render the back.
+        if (state == null) {
+            drawFaceDownCard(card, g, x, y, w, h);
+            return;
+        }
         boolean isSaga = state.getType().hasSubtype("Saga");
         boolean isClass = state.getType().hasSubtype("Class") || state.getType().hasSubtype("Case");
         boolean isDungeon = state.getType().isDungeon();

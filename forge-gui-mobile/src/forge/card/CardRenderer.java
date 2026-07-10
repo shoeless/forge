@@ -698,16 +698,25 @@ public class CardRenderer {
     }
 
     public static void drawCard(Graphics g, CardView card, float x, float y, float w, float h, CardStackPosition pos, boolean rotate, boolean showAltState, boolean isChoiceList, boolean magnify) {
+        // DEFENSIVE (multiplayer): a network client can hold an ID-only CardView stub whose
+        // Current/Alternate state was never synced (e.g. a permanent bounced into a hidden hand
+        // by a River's Rebuke-style mass bounce). Render the state-free face-down back instead
+        // of NPEing on getImageKey()/getSetCode() every frame on the render thread.
+        CardStateView stateForImg = showAltState ? card.getAlternateState() : card.getCurrentState();
+        if (stateForImg == null) {
+            CardImageRenderer.drawFaceDownCard(card, g, x, y, w, h);
+            return;
+        }
         boolean canshow = MatchController.instance.mayView(card);
         boolean showsleeves = card.isFaceDown() && card.isInZone(EnumSet.of(ZoneType.Exile)); //fix facedown card image ie gonti lord of luxury
-        Texture image = new RendererCachedCardImage(card, false).getImage(showAltState ? card.getAlternateState().getImageKey() : card.getCurrentState().getImageKey());
+        Texture image = new RendererCachedCardImage(card, false).getImage(stateForImg.getImageKey());
         TextureRegion crack_overlay = FSkin.getCracks().get(card.getCrackOverlayInt());
         FImage sleeves = MatchController.getPlayerSleeve(card.getOwner());
         float radius = (h - w) / 8;
         float croppedArea = isModernFrame(card) ? CROP_MULTIPLIER : 0.97f;
         float minusxy = isModernFrame(card) ? 0.0f : 0.13f * radius;
         boolean needsRotation = rotate && !Forge.enableUIMask.equals("Art") && CardRendererUtils.needsRotation(card, showAltState);
-        if (card.getCurrentState().getSetCode().equals("LEA") || card.getCurrentState().getSetCode().equals("LEB")) {
+        if (stateForImg.getSetCode().equals("LEA") || stateForImg.getSetCode().equals("LEB")) {
             croppedArea = 0.975f;
             minusxy = 0.135f * radius;
         }

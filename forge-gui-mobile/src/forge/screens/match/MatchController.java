@@ -530,6 +530,13 @@ public class MatchController extends NetworkGuiGame {
     @Override
     public void updateCards(final Iterable<CardView> cards) {
         for (final CardView card : cards) {
+            // DEFENSIVE (multiplayer): a coalesced updateCards batch can mix resolvable views with
+            // ID-only stubs whose CurrentState was never synced (a mass bounce like River's Rebuke
+            // sends both). Skip the un-renderable stubs PER-CARD (never abort the batch) — the card
+            // is removed/refreshed by the accompanying zone/GameView update, not by updateSingleCard.
+            if (card == null || card.getCurrentState() == null) {
+                continue;
+            }
             view.updateSingleCard(card);
         }
     }
