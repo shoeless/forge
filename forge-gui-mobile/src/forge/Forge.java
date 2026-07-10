@@ -167,8 +167,15 @@ public class Forge implements ApplicationListener {
             localizer = Localizer.getInstance();
         return localizer;
     }
+    // FORGE-TIMING: splash-to-home startup instrumentation. Set at create() start; deltas logged
+    // at the FModel.initialize boundary (the card-DB load the CardRules cache accelerates) and at
+    // home-visible. Kept as a lightweight startup diagnostic (a few println on the boot path).
+    private static long splashStartMs;
+
     @Override
     public void create() {
+        splashStartMs = System.currentTimeMillis();
+        System.out.println("[FORGE-TIMING] create() start");
         //install our error handler
         ExceptionHandler.registerErrorHandling();
         //log version and system info
@@ -260,7 +267,10 @@ public class Forge implements ApplicationListener {
             Runnable runnable = () -> {
                 safeToClose = false;
                 ImageKeys.setIsLibGDXPort(GuiBase.getInterface().isLibgdxPort());
+                long dbStart = System.currentTimeMillis();
+                System.out.println("[FORGE-TIMING] FModel.initialize start (create+" + (dbStart - splashStartMs) + "ms)");
                 FModel.initialize(getSplashScreen().getProgressBar(), null);
+                System.out.println("[FORGE-TIMING] FModel.initialize done, took " + (System.currentTimeMillis() - dbStart) + "ms (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingFonts"));
                 FSkinFont.preloadAll(locale);
@@ -457,6 +467,7 @@ public class Forge implements ApplicationListener {
                             }
                         }
                         safeToClose = true;
+                        System.out.println("[FORGE-TIMING] home visible, splash-to-home=" + (System.currentTimeMillis() - splashStartMs) + "ms");
                         clearTransitionScreen();
                         // Load the deferred skin sheets (foils, avatars, sleeves, deckboxes,
                         // cracks) on the next frame - after the home screen is visible - so
