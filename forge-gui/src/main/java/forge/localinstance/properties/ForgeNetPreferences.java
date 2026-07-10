@@ -30,8 +30,7 @@ public class ForgeNetPreferences extends PreferencesStore<ForgeNetPreferences.FN
         NET_BANDWIDTH_LOGGING("false"),
         NET_LOG_CLEANUP_ENABLED("true"),
         NET_AFK_TIMEOUT("5"),
-        NET_LAST_COPIED_URL(""),
-        TAILSCALE_API_KEY("");
+        NET_LAST_COPIED_URL("");
 
         private final String strDefaultVal;
 

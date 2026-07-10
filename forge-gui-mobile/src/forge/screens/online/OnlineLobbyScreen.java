@@ -19,9 +19,7 @@ import forge.gui.FThreads;
 import forge.gui.interfaces.ILobbyView;
 import forge.gui.util.SOptionPane;
 import forge.localinstance.properties.ForgeConstants;
-import forge.localinstance.properties.ForgeNetPreferences;
 import forge.localinstance.skin.FSkinProp;
-import forge.model.FModel;
 import forge.screens.LoadingOverlay;
 import forge.screens.constructed.LobbyScreen;
 import forge.screens.online.OnlineMenu.OnlineScreen;
@@ -45,7 +43,6 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
     private final FButton btnHost;
     private final FButton btnJoin;
     private final FLabel lblDiscoveredHeader;
-    private final FLabel lblTailscaleSetup;
     private final List<FButton> discoveredButtons = new ArrayList<>();
     private ServerDiscovery discovery;
 
@@ -87,13 +84,6 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
                 .font(FSkinFont.get(14)).align(Align.center).build();
         lblDiscoveredHeader.setVisible(false);
         add(lblDiscoveredHeader);
-
-        lblTailscaleSetup = new FLabel.Builder()
-                .text(Forge.getLocalizer().getMessageorUseDefault("lblTailscaleSetup", "Tailscale Setup"))
-                .font(FSkinFont.get(14)).align(Align.center)
-                .textColor(FSkinColor.get(FSkinColor.Colors.CLR_ACTIVE))
-                .command(e -> activateTailscaleSetup()).build();
-        add(lblTailscaleSetup);
     }
 
     private static GameLobby gameLobby;
@@ -276,11 +266,6 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
             } else {
                 lblDiscoveredHeader.setVisible(false);
             }
-
-            // Tailscale setup link (cross-network discovery)
-            labelHeight = lblTailscaleSetup.getAutoSizeBounds().height + padding;
-            lblTailscaleSetup.setBounds(padding, y, width - 2 * padding, labelHeight);
-            lblTailscaleSetup.setVisible(true);
         } else {
             lblTitle.setVisible(false);
             lblWarning.setVisible(false);
@@ -289,7 +274,6 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
             btnHost.setVisible(false);
             btnJoin.setVisible(false);
             lblDiscoveredHeader.setVisible(false);
-            lblTailscaleSetup.setVisible(false);
             for (final FButton btn : discoveredButtons) {
                 btn.setVisible(false);
             }
@@ -404,40 +388,4 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
                 || (message != null && message.startsWith(ForgeConstants.CONN_ERROR_PREFIX));
     }
 
-    /**
-     * Prompts for the Tailscale API key used for cross-network discovery when
-     * hosting. Runs on a background thread because the input dialog blocks.
-     */
-    private void activateTailscaleSetup() {
-        FThreads.invokeInBackgroundThread(() -> {
-            final String currentKey = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.TAILSCALE_API_KEY);
-            String prompt = Forge.getLocalizer().getMessageorUseDefault("lblTailscaleApiKeyPrompt",
-                    "Enter your Tailscale API key for cross-network discovery.");
-            if (currentKey != null && !currentKey.isEmpty()) {
-                // Show masked version of existing key
-                final String masked = currentKey.substring(0, Math.min(10, currentKey.length())) + "...";
-                prompt += "\n\nCurrent key: " + masked + "\n(Leave blank to clear)";
-            }
-
-            final String newKey = SOptionPane.showInputDialog(prompt,
-                    Forge.getLocalizer().getMessageorUseDefault("lblTailscaleSetup", "Tailscale Setup"));
-            if (newKey == null) {
-                return; // cancelled — stay on this screen
-            }
-
-            if (newKey.trim().isEmpty()) {
-                if (currentKey != null && !currentKey.isEmpty()) {
-                    FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.TAILSCALE_API_KEY, "");
-                    FModel.getNetPreferences().save();
-                    SOptionPane.showMessageDialog(Forge.getLocalizer().getMessageorUseDefault(
-                            "lblTailscaleApiKeyCleared", "Tailscale API key cleared."));
-                }
-            } else {
-                FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.TAILSCALE_API_KEY, newKey.trim());
-                FModel.getNetPreferences().save();
-                SOptionPane.showMessageDialog(Forge.getLocalizer().getMessageorUseDefault(
-                        "lblTailscaleApiKeySaved", "Tailscale API key saved. It will be used when hosting games."));
-            }
-        });
-    }
 }

@@ -122,45 +122,46 @@ public class NetConnectUtil {
 
     public static void copyHostedServerUrl() {
         final Localizer localizer = Localizer.getInstance();
-        String internalAddress = FServerManager.getLocalAddress();
-        String externalAddress = FServerManager.getExternalAddress();
-        String internalUrl = internalAddress + ":" + FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_PORT);
-        String externalUrl = null;
-        if (externalAddress != null) {
-            externalUrl = externalAddress + ":" + FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_PORT);
-            GuiBase.getInterface().copyToClipboard(externalUrl);
-        } else {
-            GuiBase.getInterface().copyToClipboard(internalUrl);
+        final int port = FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_PORT);
+        final String internalUrl = FServerManager.getLocalAddress() + ":" + port;
+        final String externalAddress = FServerManager.getExternalAddress();
+        final String externalUrl = externalAddress != null ? externalAddress + ":" + port : null;
+        final String tailscaleAddress = FServerManager.getTailscaleAddress();
+        final String tailscaleUrl = tailscaleAddress != null ? tailscaleAddress + ":" + port : null;
+
+        // "Share this so others can join." Ordered by cross-network reliability: a Tailscale address
+        // (join from ANY network, incl. cellular, no port-forwarding) beats a public IP (needs
+        // port-forwarding) beats the LAN address (same-network only). The most reliable available URL
+        // is copied to the clipboard by default. Guests connect to the FULL address:port shown here.
+        final StringBuilder message = new StringBuilder();
+        final List<String> options = new ArrayList<>();
+        final List<String> urls = new ArrayList<>();
+
+        if (tailscaleUrl != null) {
+            message.append(localizer.getMessageorUseDefault("lblTailscaleJoinUrl",
+                    "Tailscale (join from any network): ")).append(tailscaleUrl).append("\n\n");
+            options.add(localizer.getMessageorUseDefault("lblCopyTailscaleURL", "Copy Tailscale URL"));
+            urls.add(tailscaleUrl);
         }
-
-        String message;
-        String title = localizer.getMessage("lblServerURL");
-        List<String> options;
-        int closeIndex;
-        int localCopyIndex;
-
         if (externalUrl != null) {
-            message = localizer.getMessage("lblShareURLToMakePlayerJoinServer", externalUrl, internalUrl);
-            options = List.of(
-                    localizer.getMessage("lblCopyExternalURL"),
-                    localizer.getMessage("lblCopyLocalURL"),
-                    localizer.getMessage("lblClose"));
-            closeIndex = 2;
-            localCopyIndex = 1;
-        } else {
-            message = localizer.getMessage("lblForgeUnableDetermineYourExternalIP", internalUrl);
-            options = List.of(
-                    localizer.getMessage("lblCopyLocalURL"),
-                    localizer.getMessage("lblClose"));
-            closeIndex = 1;
-            localCopyIndex = 0;
+            message.append(localizer.getMessageorUseDefault("lblExternalJoinUrl",
+                    "Internet (needs port forwarding): ")).append(externalUrl).append("\n\n");
+            options.add(localizer.getMessage("lblCopyExternalURL"));
+            urls.add(externalUrl);
         }
+        message.append(localizer.getMessageorUseDefault("lblLocalJoinUrl",
+                "Same network (LAN): ")).append(internalUrl);
+        options.add(localizer.getMessage("lblCopyLocalURL"));
+        urls.add(internalUrl);
+        options.add(localizer.getMessage("lblClose"));
 
-        int result = SOptionPane.showOptionDialog(message, title, SOptionPane.INFORMATION_ICON, options, closeIndex);
-        if (externalUrl != null && result == 0) {
-            GuiBase.getInterface().copyToClipboard(externalUrl);
-        } else if (result == localCopyIndex) {
-            GuiBase.getInterface().copyToClipboard(internalUrl);
+        // Default-copy the most reliable available URL (first in the list).
+        GuiBase.getInterface().copyToClipboard(urls.get(0));
+
+        final int result = SOptionPane.showOptionDialog(message.toString(), localizer.getMessage("lblServerURL"),
+                SOptionPane.INFORMATION_ICON, options, options.size() - 1);
+        if (result >= 0 && result < urls.size()) {
+            GuiBase.getInterface().copyToClipboard(urls.get(result));
         }
     }
 

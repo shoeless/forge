@@ -224,11 +224,6 @@ public final class FServerManager implements IHasForgeLog {
                 playerName = "Host";
             }
             broadcaster = new ServerBroadcaster(playerName, port, 4);
-            final String tailscaleApiKey = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.TAILSCALE_API_KEY);
-            if (tailscaleApiKey != null && !tailscaleApiKey.isEmpty()) {
-                broadcaster.setTailscaleApiKey(tailscaleApiKey);
-                netLog.info("ServerBroadcaster: Tailscale Cloud API key configured");
-            }
             broadcaster.start();
         } catch (final Throwable t) {
             broadcaster = null;
@@ -772,6 +767,21 @@ public final class FServerManager implements IHasForgeLog {
             }
         } catch (final NumberFormatException ignored) { }
         return false;
+    }
+
+    /**
+     * Returns this host's Tailscale (CGNAT 100.64.0.0/10) IPv4 address, or null if Tailscale isn't
+     * active on this device. Used for cross-network direct connections: a guest on the same tailnet
+     * connects straight to this address:port (Tailscale routes it, incl. when the host is on cellular),
+     * which is far more reliable than LAN broadcast or a public IP behind CGNAT.
+     */
+    public static String getTailscaleAddress() {
+        for (final String ip : getAllAddressesForDiscovery()) {
+            if (isTailscaleAddress(ip)) {
+                return ip;
+            }
+        }
+        return null;
     }
 
     public static String getExternalAddress() {

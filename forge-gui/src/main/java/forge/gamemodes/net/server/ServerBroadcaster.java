@@ -29,7 +29,6 @@ public class ServerBroadcaster implements IHasForgeLog {
     private volatile boolean running;
     private Thread broadcastThread;
     private DatagramSocket socket;
-    private final TailscalePeerResolver tailscaleResolver = new TailscalePeerResolver();
 
     private final String playerName;
     private final int gamePort;
@@ -41,13 +40,6 @@ public class ServerBroadcaster implements IHasForgeLog {
         this.gamePort = gamePort;
         this.maxPlayers = maxPlayers;
         this.currentPlayers = 1;
-    }
-
-    /**
-     * Set the Tailscale API key for cloud-based peer discovery.
-     */
-    public void setTailscaleApiKey(final String apiKey) {
-        tailscaleResolver.setApiKey(apiKey);
     }
 
     public void setCurrentPlayers(final int currentPlayers) {
@@ -134,14 +126,10 @@ public class ServerBroadcaster implements IHasForgeLog {
                             + hostIps;
                     final byte[] data = message.getBytes(StandardCharsets.UTF_8);
 
-                    // Send to all subnet broadcast addresses
+                    // Send to all subnet broadcast addresses (same-LAN discovery). Cross-network play
+                    // uses Tailscale direct connect instead (the host shares its Tailscale IP:port).
                     for (final InetAddress addr : getSubnetBroadcastAddresses()) {
                         send(data, addr, "broadcast address");
-                    }
-
-                    // Send unicast to Tailscale peers (for cross-network discovery)
-                    for (final InetAddress peerAddr : tailscaleResolver.getOnlinePeers()) {
-                        send(data, peerAddr, "Tailscale peer");
                     }
                 } catch (final Exception e) {
                     if (running) {
