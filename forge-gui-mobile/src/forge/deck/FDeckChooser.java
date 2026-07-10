@@ -1266,7 +1266,9 @@ public class FDeckChooser extends FScreen {
 
     public void saveState() {
         if (stateSetting == null) {
-            throw new NullPointerException("State setting missing. Specify first using the initialize() method.");
+            // In the network-lobby flow saveState() can fire before initialize() has set stateSetting;
+            // skip rather than NPE-crash the lobby (nothing to persist until it's initialized).
+            return;
         }
         prefs.setPref(stateSetting, getState());
         prefs.save();
