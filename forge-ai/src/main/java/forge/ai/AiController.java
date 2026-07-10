@@ -2000,6 +2000,7 @@ public class AiController {
                     sa.setLastStateBattlefield(game.getLastStateBattlefield());
                     sa.setLastStateGraveyard(game.getLastStateGraveyard());
                 }
+                final long draws0 = sig != null ? MyRandom.DRAW_COUNT.get() : 0;
                 //override decision for living end player
                 AiPlayDecision opinion = useLivingEnd && AiPlayDecision.WillPlay.equals(aiPlayDecision) ? aiPlayDecision : canPlayAndPayFor(sa);
 
@@ -2009,7 +2010,11 @@ public class AiController {
                 // System.out.printf("Ai thinks '%s' of %s -> %s @ %s %s >>> \n", opinion, sa.getHostCard(), sa, Lang.getInstance().getPossesive(ph.getPlayerTurn().getName()), ph.getPhase());
 
                 if (opinion != AiPlayDecision.WillPlay) {
-                    if (sig != null) {
+                    // Record the decline only when the evaluation consumed no RNG draws: in seeded
+                    // sims, skipping a later identical evaluation that WOULD have drawn shifts the
+                    // shared draw stream (and thus every random decision after it); in normal play
+                    // DRAW_COUNT never moves, so every decline is memoized.
+                    if (sig != null && MyRandom.DRAW_COUNT.get() == draws0) {
                         declinedSigs.put(sig, Boolean.TRUE);
                     }
                     continue;

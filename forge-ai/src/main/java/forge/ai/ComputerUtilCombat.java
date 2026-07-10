@@ -114,6 +114,30 @@ public class ComputerUtilCombat {
     }
 
     /**
+     * Canonical fingerprint of the mutable combat-assignment state: attacker ids plus each
+     * attacker's assigned blocker ids. Folded into every identity-memo key because combat math is
+     * not a function of the two cards alone — exalted/battle cry/rampage/flanking/bushido
+     * predictions read the evolving {@link Combat} while the AI is still planning (attackers and
+     * blockers are committed one at a time between evaluations). Evaluation scans over a stable
+     * combat share one fingerprint (so identical tokens still collapse to one computation); any
+     * assignment change makes later lookups miss instead of serving a stale answer.
+     */
+    static String combatStateFingerprint(final Combat combat) {
+        if (combat == null) {
+            return "-";
+        }
+        final StringBuilder sb = new StringBuilder(64);
+        for (final Card a : combat.getAttackers()) {
+            sb.append(a.getId()).append(':');
+            for (final Card b : combat.getBlockers(a)) {
+                sb.append(b.getId()).append(',');
+            }
+            sb.append(';');
+        }
+        return sb.toString();
+    }
+
+    /**
      * Opens a combat-evaluation cache scope on the current thread. No-op unless
      * {@code -Dforge.combatEvalCache=on}. Callers must pair with {@link #endCombatEvaluation()} in a
      * finally block, and should skip both when {@link #isInCombatEvaluation()} is already true (an
@@ -1778,7 +1802,8 @@ public class ComputerUtilCombat {
             final String aSig = AiCardSignature.of(attacker);
             final String bSig = AiCardSignature.of(blocker);
             if (aSig != null && bSig != null) {
-                key = "A|" + aSig + "|" + bSig + "|" + (withoutAbilities ? 1 : 0) + "|" + (withoutAttackerStaticAbilities ? 1 : 0);
+                key = "A|" + aSig + "|" + bSig + "|" + (withoutAbilities ? 1 : 0) + "|" + (withoutAttackerStaticAbilities ? 1 : 0)
+                        + "|" + combatStateFingerprint(combat);
                 final Boolean hit = cache.get(key);
                 if (hit != null) {
                     if (SIG_AUDIT) {
@@ -2036,7 +2061,8 @@ public class ComputerUtilCombat {
             final String bSig = AiCardSignature.of(blocker);
             final String aSig = AiCardSignature.of(attacker);
             if (bSig != null && aSig != null) {
-                key = "B|" + bSig + "|" + aSig + "|" + (withoutAbilities ? 1 : 0) + "|" + (withoutAttackerStaticAbilities ? 1 : 0);
+                key = "B|" + bSig + "|" + aSig + "|" + (withoutAbilities ? 1 : 0) + "|" + (withoutAttackerStaticAbilities ? 1 : 0)
+                        + "|" + combatStateFingerprint(combat);
                 final Boolean hit = cache.get(key);
                 if (hit != null) {
                     if (SIG_AUDIT) {

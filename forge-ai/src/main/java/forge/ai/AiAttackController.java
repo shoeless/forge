@@ -1666,25 +1666,49 @@ public class AiAttackController {
         }
 
         // Identity cache: identical attackers (e.g. token swarms) reuse one evaluation within this
-        // declareAttackers scope. The key folds in aiAggression (a calculate() input) for safety; a
-        // null signature (transformable/merged) bypasses the cache. The Exalted branch of
-        // isEffectiveAttacker reads combat.getAttackers() (flips once an attacker is committed), so
-        // that memo is gated OFF when an Exalted bonus is in play.
-        // Compute the signature ONLY when the caches are active (the gate allocated them because the
-        // board has duplicate creatures); otherwise it is pure overhead on an all-unique board.
+        // declareAttackers scope. The evaluations are NOT a function of the attacker card alone, so
+        // the key folds in every other input that can vary between calls: aiAggression (a calculate()
+        // input), the defender, the mutable combat-assignment state (exalted / battle cry / "attack
+        // with N creatures" trigger predictions read Combat while attackers are still being committed
+        // one at a time), and the candidate attacker/blocker lists (isEffectiveAttacker reads
+        // this.attackers, calculate() reads defenders, and blockers can be pruned mid-planning).
+        // Scans over a stable combat share one key suffix, so identical tokens still collapse to a
+        // single evaluation; any state change makes later lookups miss instead of going stale.
+        // A null signature (transformable/merged) bypasses the cache. Compute the signature ONLY when
+        // the caches are active (the gate allocated them because the board has duplicate creatures);
+        // otherwise it is pure overhead on an all-unique board.
         // effAtkCache and safCache are allocated together, so checking one gates both.
         String sig = null;
         if (effAtkCache != null) {
             final String baseSig = AiCardSignature.of(attacker);
-            sig = baseSig == null ? null : baseSig + "|" + aiAggression;
+            if (baseSig != null) {
+                final StringBuilder sb = new StringBuilder(baseSig.length() + 96);
+                sb.append(baseSig).append('|').append(aiAggression)
+                        .append('|').append(defender.getId())
+                        .append('|').append(ComputerUtilCombat.combatStateFingerprint(combat))
+                        .append('/');
+                for (final Card c : this.attackers) {
+                    sb.append(c.getId()).append(',');
+                }
+                sb.append('/');
+                for (final Card c : defenders) {
+                    sb.append(c.getId()).append(',');
+                }
+                sig = sb.toString();
+            }
         }
 
+        // Populate the memos only when the evaluation consumed no RNG draws: in seeded sims this
+        // keeps the shared draw stream bit-identical when a later identical evaluation is skipped
+        // (a hit that skips draws would shift every random decision after it); in normal play
+        // DRAW_COUNT never moves, so everything is memoized.
         boolean effective;
-        if (sig != null && countExaltedBonus(ai) == 0 && effAtkCache.containsKey(sig)) {
+        if (sig != null && effAtkCache.containsKey(sig)) {
             effective = effAtkCache.get(sig);
         } else {
+            final long draws0 = MyRandom.DRAW_COUNT.get();
             effective = isEffectiveAttacker(ai, attacker, combat, defender);
-            if (sig != null && countExaltedBonus(ai) == 0) {
+            if (sig != null && MyRandom.DRAW_COUNT.get() == draws0) {
                 effAtkCache.put(sig, effective);
             }
         }
@@ -1696,11 +1720,12 @@ public class AiAttackController {
         if (sig != null && safCache.containsKey(sig)) {
             saf = safCache.get(sig);
         } else {
+            final long draws0 = MyRandom.DRAW_COUNT.get();
             saf = new SpellAbilityFactors(attacker);
             if (aiAggression != 5) {
                 saf.calculate(defenders, combat);
             }
-            if (sig != null) {
+            if (sig != null && MyRandom.DRAW_COUNT.get() == draws0) {
                 safCache.put(sig, saf);
             }
         }
