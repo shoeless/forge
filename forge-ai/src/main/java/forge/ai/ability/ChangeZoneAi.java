@@ -174,6 +174,21 @@ public class ChangeZoneAi extends SpellAbilityAi {
                     return new AiAbilityDecision(100, AiPlayDecision.WillPlay);
                 }
                 return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+            } else if (aiLogic.equals("CommanderToHand")) {
+                // Command Beacon: retrieve commander from command zone when tax is high
+                CardCollection commanders = CardLists.filter(aiPlayer.getCardsIn(ZoneType.Command), Card::isCommander);
+                if (commanders.isEmpty()) {
+                    return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+                }
+                // Check if any commander has been cast at least twice (4+ mana tax)
+                for (Card commander : commanders) {
+                    int timesCast = aiPlayer.getCommanderCast(commander);
+                    if (timesCast >= 2) {
+                        // Commander tax is 4+ mana, worth sacrificing the land
+                        return new AiAbilityDecision(100, AiPlayDecision.WillPlay);
+                    }
+                }
+                return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
             }
         }
         if (sa.isHidden()) {
