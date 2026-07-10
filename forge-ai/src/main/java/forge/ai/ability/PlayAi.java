@@ -6,6 +6,7 @@ import forge.card.CardTypeView;
 import forge.game.Game;
 import forge.game.GameType;
 import forge.game.ability.AbilityUtils;
+import forge.game.ability.ApiType;
 import forge.game.card.*;
 import forge.game.cost.Cost;
 import forge.game.keyword.Keyword;
@@ -35,7 +36,25 @@ public class PlayAi extends SpellAbilityAi {
         // don't use this as a response (ReplaySpell logic is an exception, might be called from a subability
         // while the trigger is on stack)
         if (!game.getStack().isEmpty() && !"ReplaySpell".equals(logic)) {
-            return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+            // Allow activation as a response if the imprinted card is a counterspell
+            // (e.g. Isochron Scepter with Counterspell imprinted)
+            boolean hasImprintedCounter = false;
+            if (sa.hasParam("CopyCard") && source.hasImprintedCard()) {
+                for (Card imprinted : source.getImprintedCards()) {
+                    for (SpellAbility ability : imprinted.getCurrentState().getSpellAbilities()) {
+                        if (ability.getApi() == ApiType.Counter) {
+                            hasImprintedCounter = true;
+                            break;
+                        }
+                    }
+                    if (hasImprintedCounter) {
+                        break;
+                    }
+                }
+            }
+            if (!hasImprintedCounter) {
+                return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+            }
         }
 
         if (game.getRules().hasAppliedVariant(GameType.MoJhoSto) && source.getName().equals("Jhoira of the Ghitu Avatar")) {

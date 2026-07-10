@@ -1551,7 +1551,28 @@ public class ChangeZoneAi extends SpellAbilityAi {
                 fetchList = CardLists.filter(fetchList, c12 -> !ComputerUtilCard.isCardRemAIDeck(c12) && !ComputerUtilCard.isCardRemRandomDeck(c12));
             }
         }
-        if (ZoneType.Exile.equals(destination) || origin.contains(ZoneType.Battlefield)
+        if (sa.hasParam("Imprint") && origin.contains(ZoneType.Hand) && !player.isOpponentOf(decider)
+                && type.contains("Instant")) {
+            // Imprinting an instant from our own hand (Isochron Scepter, Elite Arcanist) — the copy is
+            // reusable every turn, so pick the best card to imprint rather than treating it as a cost.
+            // Prefer counterspells, cheapest first (reusable interaction is extremely strong).
+            CardCollection counters = CardLists.filter(fetchList, card -> {
+                for (SpellAbility ability : card.getCurrentState().getSpellAbilities()) {
+                    if (ability.getApi() == ApiType.Counter) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            if (!counters.isEmpty()) {
+                c = ComputerUtilCard.getCheapestSpellAI(counters);
+                if (c == null) {
+                    c = counters.get(0);
+                }
+            } else {
+                c = ComputerUtilCard.getBestAI(fetchList);
+            }
+        } else if (ZoneType.Exile.equals(destination) || origin.contains(ZoneType.Battlefield)
                 || (ZoneType.Library.equals(destination) && origin.contains(ZoneType.Hand))) {
             // Exiling or bouncing stuff
             if (player.isOpponentOf(decider)) {
