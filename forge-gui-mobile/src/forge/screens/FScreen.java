@@ -63,7 +63,14 @@ public abstract class FScreen extends FContainer {
     }
 
     public void onActivate() {
-        Forge.startContinuousRendering();
+        // Continuous rendering is OPT-IN. This used to unconditionally call
+        // Forge.startContinuousRendering() for EVERY screen with nothing ever balancing it, so the
+        // refcount leaked upward and pinned the render loop at ~60fps redrawing idle/static menus
+        // (and, via the leaked count, the settled match board every frame) — a real battery/heat
+        // drain on device. Most screens render on demand (input + ForgeAnimation, which requests
+        // rendering while an animation is active); the few that need a steady loop request it
+        // explicitly (ForgeAnimation, GuiDownloader, AdventureScreen). Leaving this empty lets idle
+        // menus and the settled board fall back to on-demand rendering.
     }
 
     public void onSwitchAway(Consumer<Boolean> canSwitchCallback) {
