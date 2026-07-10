@@ -288,8 +288,10 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
         if (!hasLocalPlayers()) {
             return true; //if not in game, card can be shown
         }
-        if (GuiBase.getInterface().isLibgdxPort() && gameView != null && gameView.isGameOver()) {
+        if (GuiBase.getInterface().isLibgdxPort() && !GuiBase.isNetPlay(this) && gameView != null && gameView.isGameOver()) {
             return true; //mobile: browse every zone from the minimized win/lose overlay after the match ends
+            //...but NOT as a network client — that would reveal the opponent's hand / face-down cards
+            //at game end (matters between games of a best-of-N). Client visibility stays per-card.
         }
         if (getGameController().mayLookAtAllCards()) {
             return true;
