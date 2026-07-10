@@ -392,6 +392,8 @@ public abstract class ImageFetcher {
         fetching.add(destPath);
         currentFetches.put(destPath, observers);
 
+        System.out.println("Downloading image: " + destPath);
+
         final Runnable notifyObservers = () -> {
             FThreads.assertExecutedByEdt(true);
 
