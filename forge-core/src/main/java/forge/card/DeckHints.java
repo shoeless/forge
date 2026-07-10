@@ -79,6 +79,25 @@ public class DeckHints {
         return valid;
     }
 
+    /**
+     * Serialize back to the raw SVar-style string that {@link #DeckHints(String)} parses,
+     * so CardRulesCache can round-trip a DeckHints through the binary startup cache without
+     * re-parsing card scripts. Round-trips {@code new DeckHints(h.toRawString())} == h.
+     */
+    String toRawString() {
+        StringBuilder sb = new StringBuilder();
+        if (!tokens) {
+            sb.append("MODIFIER$NoToken");
+        }
+        if (filters != null) {
+            for (Pair<Type, String> filter : filters) {
+                if (sb.length() > 0) sb.append("&");
+                sb.append(filter.getLeft().name()).append("$").append(filter.getRight());
+            }
+        }
+        return sb.toString();
+    }
+
     public boolean contains(Type type, String hint) {
         if (filters == null) {
             return false;

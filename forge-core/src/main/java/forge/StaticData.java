@@ -3,6 +3,7 @@ package forge;
 import forge.card.CardDb;
 import forge.card.CardEdition;
 import forge.card.CardRules;
+import forge.card.CardRulesCache;
 import forge.card.PrintSheet;
 import forge.item.*;
 import forge.token.TokenDb;
@@ -98,7 +99,22 @@ public class StaticData {
                 }
             }
 
-            for (CardRules card : cardReader.loadCards()) {
+            // Tier-1 startup cache: parsing the ~32k card scripts into CardRules is the dominant
+            // startup cost on iOS. Reuse a binary cache of the parsed rules from a prior launch,
+            // keyed on computeCacheVersion(editions); any miss or read error falls back to a full
+            // parse and rewrites the cache. Cache-loaded rules key/classify identically to parsed
+            // ones (getPreInitName()==getName() and isVariant() agree once faces are populated).
+            // See forge.card.CardRulesCache. Disabled (no-op) until setCacheDir() is called.
+            final String cardCacheVersion = CardRulesCache.computeCacheVersion(editions);
+            final Map<String, CardRules> cachedRules = CardRulesCache.loadRules(cardCacheVersion);
+            final Iterable<CardRules> builtinCards = cachedRules != null ? cachedRules.values() : cardReader.loadCards();
+            // On a miss, collect the built-in rules to persist AFTER the CardDb below resolves
+            // placeholder faces (supplyPlaceholderFaces) — a rule with a deferred main face has a
+            // null mainPart until then and cannot be serialized. Custom cards are excluded (the
+            // cache version does not track them; they are always parsed fresh).
+            final List<CardRules> builtinRulesForCache = cachedRules == null ? new ArrayList<>() : null;
+
+            for (CardRules card : builtinCards) {
                 if (null == card) continue;
 
                 final String cardName = card.getPreInitName();
@@ -111,7 +127,11 @@ public class StaticData {
                 } else {
                     regularCards.put(cardName, card);
                 }
+                if (builtinRulesForCache != null) {
+                    builtinRulesForCache.add(card);
+                }
             }
+
             if (customCardReader != null) { //Load user's custom cards.
                 for (CardRules card : customCardReader.loadCards()) {
                     if (null == card) continue;
@@ -126,6 +146,11 @@ public class StaticData {
                 }
             }
 
+            // Startup diagnostic for the CardRules cache: card counts are identical between a
+            // cache-miss (parse) run and a cache-hit run (verified move-for-move via seeded sim).
+            System.out.println("[FORGE-TIMING] cardDB built: cacheHit=" + (cachedRules != null)
+                    + " regular=" + regularCards.size() + " variant=" + variantsCards.size());
+
             commonCards = new CardDb(regularCards, editions, filtered);
             variantCards = new CardDb(variantsCards, editions, filtered);
 
@@ -135,6 +160,17 @@ public class StaticData {
             //must initialize after establish field values for the sake of card image logic
             commonCards.initialize(false, false, enableUnknownCards);
             variantCards.initialize(false, false, enableUnknownCards);
+
+            // Persist the parsed built-in rules to the Tier-1 startup cache now that the CardDb
+            // constructors have run supplyPlaceholderFaces (all faces resolved; mainPart non-null).
+            // These are the same objects collected above, mutated in place during resolution.
+            if (builtinRulesForCache != null) {
+                final Map<String, CardRules> toCache = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                for (CardRules c : builtinRulesForCache) {
+                    toCache.put(c.getName(), c);
+                }
+                CardRulesCache.saveRules(toCache, cardCacheVersion);
+            }
         }
 
         if (this.tokenReader != null) {
