@@ -62,7 +62,21 @@ public class ViewWinLose extends FOverlay implements IWinLoseView<FButton> {
         btnContinue.setEnabled(!game0.isMatchOver());
 
         lblLog = add(new FLabel.Builder().text(Forge.getLocalizer().getMessage("lblGameLog")).align(Align.center).font(FSkinFont.get(18)).build());
-        txtLog = add(new FTextArea(true, StringUtils.join(game.getGameLog().getLogEntries(null), "\r\n")) {
+        // Include prior games' logs from the match (saved before their Game graphs were
+        // GC'd), then the current game's log. GameView.getMatch() is transient — null on
+        // network clients, which then just show the current game's log.
+        final StringBuilder allLogs = new StringBuilder();
+        final List<String> priorLogs = game.getMatch() != null
+                ? game.getMatch().getCompletedGameLogs() : List.of();
+        if (!priorLogs.isEmpty()) {
+            for (int i = 0; i < priorLogs.size(); i++) {
+                allLogs.append("=== Game ").append(i + 1).append(" ===\r\n");
+                allLogs.append(priorLogs.get(i)).append("\r\n\r\n");
+            }
+            allLogs.append("=== Game ").append(priorLogs.size() + 1).append(" ===\r\n");
+        }
+        allLogs.append(StringUtils.join(game.getGameLog().getLogEntries(null), "\r\n"));
+        txtLog = add(new FTextArea(true, allLogs.toString()) {
             @Override
             public boolean tap(float x, float y, int count) {
                 if (txtLog.getMaxScrollTop() > 0) {

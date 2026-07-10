@@ -239,10 +239,23 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
      * {@link #mayView}.
      */
     public void resetForNewMatch() {
+        releaseGameControllers();
+        currentPlayer = null;
+    }
+
+    /**
+     * Drop per-game controller bookkeeping when a game of a match ends. The controller maps
+     * are keyed by PlayerView, and each game creates fresh Player/PlayerView objects, so
+     * without this the gui — an app-lifetime singleton on the mobile port — accumulates every
+     * finished game's PlayerControllerHuman → Game graph for the rest of the match, defeating
+     * the System.gc() in {@code HostedMatch.endCurrentGame()}. Safe between games: startGame()
+     * repopulates via {@link #setOriginalGameController} (which also re-establishes
+     * currentPlayer since the map is empty again), and spectators re-register per game.
+     */
+    public void releaseGameControllers() {
         gameControllers.clear();
         originalGameControllers.clear();
         spectator = null;
-        currentPlayer = null;
     }
 
     @Override

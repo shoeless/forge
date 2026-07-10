@@ -37,6 +37,9 @@ public class Match {
 
     private final EventBus events = new EventBus("match events");
     private final Map<Integer, GameOutcome> gameOutcomes = Maps.newHashMap();
+    // Finished games' log text, saved by HostedMatch.endCurrentGame() before the Game
+    // graph is released for GC, so the win/lose screen can still show prior games' logs.
+    private final List<String> completedGameLogs = Lists.newArrayList();
 
     private GameOutcome lastOutcome = null;
 
@@ -460,6 +463,13 @@ public class Match {
     }
     public void subscribeToEvents(final Object subscriber) {
         events.register(subscriber);
+    }
+
+    public void addCompletedGameLog(final String log) {
+        completedGameLogs.add(log);
+    }
+    public List<String> getCompletedGameLogs() {
+        return completedGameLogs;
     }
 
 }

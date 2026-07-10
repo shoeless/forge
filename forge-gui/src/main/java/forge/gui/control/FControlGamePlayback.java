@@ -43,6 +43,16 @@ public class FControlGamePlayback extends IGameEventVisitor.Base<Void> {
         // preserved playback speed set via setSpeed() before setGame() is already in effect.)
     }
 
+    /**
+     * Drop the reference to a finished game so its object graph can be collected between
+     * games of a match. The controller object itself survives so the playback speed carries
+     * over to the next game; setGame() re-arms it when that game starts.
+     */
+    public void releaseGame() {
+        game = null;
+        inputPlayback = null;
+    }
+
     @Subscribe
     public void receiveGameEvent(final GameEvent ev) {
         ev.visit(this);

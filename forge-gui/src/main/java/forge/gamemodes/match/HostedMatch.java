@@ -403,6 +403,18 @@ public class HostedMatch {
         if (game == null) { return; }
         boolean isMatchOver = game.getView().isMatchOver();
 
+        // Save the finished game's log into the Match before the Game graph is released,
+        // so the win/lose screen can still show prior games' logs after they're GC'd.
+        if (match != null) {
+            match.addCompletedGameLog(StringUtils.join(game.getGameLog().getLogEntries(null), "\r\n"));
+        }
+
+        // Release the playback controller's grip on the finished game (AI-only matches).
+        // The controller object survives so the playback speed carries to the next game.
+        if (playbackControl != null) {
+            playbackControl.releaseGame();
+        }
+
         game = null;
 
         for (final PlayerControllerHuman humanController : humanControllers) {
@@ -424,6 +436,14 @@ public class HostedMatch {
                 humanController.getGui().afterGameEnd();
             }
             humanController.getGui().updateDayTime(null);
+
+            // Drop per-game controller bookkeeping (keyed by this game's PlayerViews):
+            // otherwise the gui — an app-lifetime singleton on the mobile port — holds every
+            // finished game's PlayerControllerHuman → Game graph for the rest of the match,
+            // and the System.gc() below can't collect them. startGame() repopulates.
+            if (humanController.getGui() instanceof AbstractGuiGame agg) {
+                agg.releaseGameControllers();
+            }
         }
         humanControllers.clear();
 
@@ -444,8 +464,9 @@ public class HostedMatch {
         final ForgePreferences prefs = FModel.getPreferences();
         if (prefs == null) { return; } //do nothing if prefs haven't been initialized yet
 
-        //pause playback if needed
-        if (prefs.getPrefBoolean(FPref.UI_PAUSE_WHILE_MINIMIZED) && playbackControl != null) {
+        //pause playback if needed (getInput() is null between games after releaseGame())
+        if (prefs.getPrefBoolean(FPref.UI_PAUSE_WHILE_MINIMIZED) && playbackControl != null
+                && playbackControl.getInput() != null) {
             playbackControl.getInput().pause();
         }
     }
