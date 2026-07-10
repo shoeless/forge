@@ -713,13 +713,15 @@ public class CardRulesCache {
      * Compute a cache version string from edition data. Changes when editions are added/removed
      * or when the card count within editions changes, invalidating a stale cache.
      */
-    public static String computeCacheVersion(CardEdition.Collection editions) {
+    public static String computeCacheVersion(CardEdition.Collection editions, long cardSourceTimestamp) {
         int editionCount = 0;
         int totalCards = 0;
         for (CardEdition e : editions) {
             editionCount++;
             totalCards += e.getAllCardsInSet().size();
         }
-        return FORMAT_VERSION + ":" + editionCount + ":" + totalCards;
+        // cardSourceTimestamp (cardsfolder.zip mtime) invalidates the cache when a card body is
+        // edited without changing the edition/card counts — otherwise the stale parse is served.
+        return FORMAT_VERSION + ":" + editionCount + ":" + totalCards + ":" + cardSourceTimestamp;
     }
 }
