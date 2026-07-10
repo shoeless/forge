@@ -1005,24 +1005,8 @@ public class CardView extends GameEntityView {
     void updateWasDestroyed(boolean value) {
         set(TrackableProperty.WasDestroyed, value);
     }
-    public boolean needsUntapAnimation() {
-        return get(TrackableProperty.NeedsUntapAnimation);
-    }
-    public void updateNeedsUntapAnimation(boolean value) {
-        set(TrackableProperty.NeedsUntapAnimation, value);
-    }
-    public boolean needsTapAnimation() {
-        return get(TrackableProperty.NeedsTapAnimation);
-    }
-    public void updateNeedsTapAnimation(boolean value) {
-        set(TrackableProperty.NeedsTapAnimation, value);
-    }
-    public boolean needsTransformAnimation() {
-        return get(TrackableProperty.NeedsTransformAnimation);
-    }
-    public void updateNeedsTransformAnimation(boolean value) {
-        set(TrackableProperty.NeedsTransformAnimation, value);
-    }
+    // Tap/untap/transform animation is no longer signalled via synced CardView flags; each GUI derives
+    // it locally from the observed Tapped / current-state transition (see forge.toolbox.FCardPanel).
 
     void updateState(Card c) {
         updateName(c);

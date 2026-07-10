@@ -571,10 +571,6 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         return setState(state, updateView, false);
     }
     public boolean setState(final CardStateName state, boolean updateView, boolean forceUpdate) {
-        boolean rollback = state == CardStateName.Original
-                && (currentStateName == CardStateName.Flipped || currentStateName == CardStateName.Backside);
-        boolean transform = state == CardStateName.Flipped || state == CardStateName.Backside || state == CardStateName.Meld;
-        boolean needsTransformAnimation = transform || rollback;
         // faceDown has higher priority over clone states
         // while text change states doesn't apply while the card is faceDown
         if (state != CardStateName.FaceDown && state != CardStateName.EmptyRoom) {
@@ -606,7 +602,8 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         updateTypeCache();
         if (updateView) {
             updateStateForView();
-            view.updateNeedsTransformAnimation(needsTransformAnimation);
+            // Transform/flip animation is derived locally by each GUI from the observed change of the
+            // card's current state (see FCardPanel), so no synced NeedsTransformAnimation flag is set.
 
             if (game != null) {
                 // update Type, color and keywords again if they have changed
@@ -4737,7 +4734,10 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         tappedThisTurn++;
 
         setTapped(true);
-        view.updateNeedsTapAnimation(tapAnimation);
+        // Tap/untap animation is derived locally by each GUI from the observed Tapped transition
+        // (multiplayer-safe), so the game no longer sets a synced NeedsTapAnimation flag. The
+        // tapAnimation param is retained for callers that suppress animation (e.g. game-state
+        // restore) — a GUI treats its first observation of a card's tapped state as a silent baseline.
         getGame().fireEvent(new GameEventCardTapped(this, true));
         return true;
     }
@@ -4774,7 +4774,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
         runUntapCommands();
         setTapped(false);
-        view.updateNeedsUntapAnimation(true);
+        // Untap animation is derived locally by each GUI from the observed Tapped transition; see tap().
         getGame().fireEvent(new GameEventCardTapped(this, false));
         return true;
     }

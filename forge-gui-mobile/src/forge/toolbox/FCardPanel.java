@@ -25,6 +25,13 @@ public class FCardPanel extends FDisplayObject {
 
     private CardView card;
     private boolean tapped;
+    // Tap/untap/transform animations are derived LOCALLY from observed transitions of the synced,
+    // level-based Tapped / current-state properties — the game no longer sets a synced edge-trigger
+    // flag (which a multiplayer full-state re-sync could re-assert, looping the animation). The first
+    // observation of a card is adopted as a silent baseline, which also preserves silent taps on
+    // game-state restore. null = not yet observed.
+    private Boolean shownTapped;
+    private CardStateName shownState;
     private boolean highlighted;
     CardTapAnimation tapAnimation;
     CardUnTapAnimation untapAnimation;
@@ -121,43 +128,65 @@ public class FCardPanel extends FDisplayObject {
             return;
         }
 
-        if (!animate || MatchController.instance.getGameSpeed() == PlaybackSpeed.FAST || (MatchController.instance.getGameView() != null && MatchController.instance.getGameView().isMatchOver())) {
+        boolean noAnimate = !animate || MatchController.instance.getGameSpeed() == PlaybackSpeed.FAST
+                || (MatchController.instance.getGameView() != null && MatchController.instance.getGameView().isMatchOver());
+
+        // Derive tap/untap/transform animations from observed transitions of the synced level state,
+        // rather than a synced edge-trigger flag (which a multiplayer full-state re-sync could
+        // re-assert, looping the animation). The first observation — or any observation while
+        // animation is suppressed — is adopted as a silent baseline.
+        boolean nowTapped = card.isTapped();
+        CardStateName nowState = card.getCurrentState() != null ? card.getCurrentState().getState() : null;
+        if (shownTapped == null || noAnimate) {
+            shownTapped = nowTapped;
+            shownState = nowState;
+        } else {
+            if (nowTapped != shownTapped.booleanValue()) {
+                shownTapped = nowTapped;
+                if (nowTapped) {
+                    tapAnimation.restart();
+                } else {
+                    untapAnimation.restart();
+                }
+            }
+            if (nowState != shownState) {
+                shownState = nowState;
+                transformAnimation.restart();
+            }
+        }
+
+        if (noAnimate) {
             //don't animate if game is fast or match is over
             rotateTransform(g, x, y, w, h, edgeOffset, false);
-            card.updateNeedsTapAnimation(false);
-            card.updateNeedsUntapAnimation(false);
-            card.updateNeedsTransformAnimation(false);
-        } else {
-            //card destroy animation
-            if (card.wasDestroyed()) {
-                if (destroyedAnimation.progress < 1) {
-                    destroyedAnimation.start();
-                    destroyedAnimation.drawCard(g, card, x, y, w, h, edgeOffset);
-                } else {
-                    rotateTransform(g, x, y, w, h, edgeOffset, animate);
-                }
-                return;
-            }
-            //tap-untap animation
-            if (card.needsTapAnimation()) {
-                //draw tapped
-                if (tapAnimation.progress < 1) {
-                    tapAnimation.start();
-                    tapAnimation.drawCard(g, card, x, y, w, h, w / 2f, getTappedAngle());
-                } else {
-                    rotateTransform(g, x, y, w, h, edgeOffset, animate);
-                }
-            } else if (card.needsUntapAnimation()) {
-                //draw untapped
-                if (untapAnimation.progress < 1) {
-                    untapAnimation.start();
-                    untapAnimation.drawCard(g, card, x, y, w, h, edgeOffset);
-                } else {
-                    rotateTransform(g, x, y, w, h, edgeOffset, animate);
-                }
+            return;
+        }
+
+        //card destroy animation
+        if (card.wasDestroyed()) {
+            if (destroyedAnimation.progress < 1) {
+                destroyedAnimation.start();
+                destroyedAnimation.drawCard(g, card, x, y, w, h, edgeOffset);
             } else {
                 rotateTransform(g, x, y, w, h, edgeOffset, animate);
             }
+            return;
+        }
+        //tap-untap animation (driven by the local transition above; runs until it completes)
+        if (tapAnimation.isRunning()) {
+            tapAnimation.drawCard(g, card, x, y, w, h, w / 2f, getTappedAngle());
+        } else if (untapAnimation.isRunning()) {
+            untapAnimation.drawCard(g, card, x, y, w, h, edgeOffset);
+        } else {
+            rotateTransform(g, x, y, w, h, edgeOffset, animate);
+        }
+    }
+
+    /** Adopt the card's current tapped/transform state as a silent baseline without animating. Used
+     *  while scrolling the field, so re-laying out card panels doesn't spuriously animate them. */
+    public void resyncAnimationBaseline() {
+        if (card != null) {
+            shownTapped = card.isTapped();
+            shownState = card.getCurrentState() != null ? card.getCurrentState().getState() : null;
         }
     }
 
@@ -165,8 +194,7 @@ public class FCardPanel extends FDisplayObject {
         if (tapped) {
             g.startRotateTransform(x + edgeOffset, y + h - edgeOffset, getTappedAngle());
         }
-        if (card.needsTransformAnimation() && animate) {
-            transformAnimation.start();
+        if (transformAnimation.isRunning() && animate) {
             transformAnimation.drawCard(g, card, x, y, w, h);
         } else {
             CardRenderer.drawCardWithOverlays(g, card, x, y, w, h, getStackPosition());
@@ -222,13 +250,17 @@ public class FCardPanel extends FDisplayObject {
         private float DURATION = 0.18f;
         private float progress = 0;
 
+        private void restart() {
+            progress = 0;
+            start();
+        }
+
         private void drawCard(Graphics g, CardView card, float x, float y, float w, float h) {
             float percentage = progress / DURATION;
             if (percentage < 0) {
                 percentage = 0;
             } else if (percentage > 1) {
                 percentage = 1;
-                progress = 0;
             }
             float mod = percentage;
             float y2 = y + (h - (h * mod)) / 2;
@@ -269,7 +301,6 @@ public class FCardPanel extends FDisplayObject {
 
         @Override
         protected void onEnd(boolean endingAll) {
-            card.updateNeedsTransformAnimation(false);
         }
     }
 
@@ -277,13 +308,17 @@ public class FCardPanel extends FDisplayObject {
         private static final float DURATION = 0.18f;
         private float progress = 0;
 
+        private void restart() {
+            progress = 0;
+            start();
+        }
+
         private void drawCard(Graphics g, CardView card, float x, float y, float w, float h, float edgeOffset) {
             float percentage = progress / DURATION;
             if (percentage < 0) {
                 percentage = 0;
             } else if (percentage > 1) {
                 percentage = 1;
-                progress = 0;
             }
             float angle = -90 + (percentage * 90);
             g.startRotateTransform(x + edgeOffset, y + h - edgeOffset, angle);
@@ -299,7 +334,6 @@ public class FCardPanel extends FDisplayObject {
 
         @Override
         protected void onEnd(boolean endingAll) {
-            card.updateNeedsUntapAnimation(false);
         }
     }
 
@@ -307,13 +341,17 @@ public class FCardPanel extends FDisplayObject {
         private static final float DURATION = 0.18f;
         private float progress = 0;
 
+        private void restart() {
+            progress = 0;
+            start();
+        }
+
         private void drawCard(Graphics g, CardView card, float x, float y, float w, float h, float edgeOffset, float angle) {
             float percentage = progress / DURATION;
             if (percentage < 0) {
                 percentage = 0;
             } else if (percentage > 1) {
                 percentage = 1;
-                progress = 0;
             }
             g.startRotateTransform(x + edgeOffset, y + h - edgeOffset, percentage * angle);
             CardRenderer.drawCardWithOverlays(g, card, x, y, w, h, getStackPosition());
@@ -328,7 +366,6 @@ public class FCardPanel extends FDisplayObject {
 
         @Override
         protected void onEnd(boolean endingAll) {
-            card.updateNeedsTapAnimation(false);
         }
     }
 

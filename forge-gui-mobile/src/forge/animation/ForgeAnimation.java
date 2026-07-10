@@ -12,6 +12,12 @@ public abstract class ForgeAnimation {
     // A guard against inspecting activeAnimations while it's in the process of being edited
     private static boolean changingActiveAnimations = false;
 
+    /** True while this animation is registered and advancing (used by GUIs that drive an animation
+     *  from an observed state transition instead of a persistent flag). */
+    public boolean isRunning() {
+        return activeAnimations.contains(this);
+    }
+
     public void start() {
         if (activeAnimations.contains(this)) { return; } //prevent starting the same animation multiple times
 

@@ -97,9 +97,8 @@ public enum TrackableProperty {
     PreparedSpell(TrackableTypes.CardViewType),
     WasDestroyed(TrackableTypes.BooleanType),
     CrackOverlay(TrackableTypes.IntegerType),
-    NeedsTransformAnimation(TrackableTypes.BooleanType, FreezeMode.IgnoresFreeze),
-    NeedsUntapAnimation(TrackableTypes.BooleanType, FreezeMode.IgnoresFreeze),
-    NeedsTapAnimation(TrackableTypes.BooleanType, FreezeMode.IgnoresFreeze),
+    // (NeedsTap/Untap/TransformAnimation removed: tap/untap/transform animation is now derived
+    //  GUI-locally from the observed Tapped / current-state transition, not a synced edge flag.)
     MarkedColors(TrackableTypes.ColorSetType),
 
     ImprintedCards(TrackableTypes.CardViewCollectionType),
