@@ -1,0 +1,5 @@
+# A/B test profile: only the "keep token engines out of the blocker pool" tuning DISABLED.
+# Player 1 (default) vs player 2 (this) isolates that tuning's win-rate effect.
+# (The companion Remand AITgts card-script change is global data and cannot be per-profile gated,
+#  so it is not part of this experiment.)
+KEEP_TOKEN_ENGINE_UNBLOCKED=false

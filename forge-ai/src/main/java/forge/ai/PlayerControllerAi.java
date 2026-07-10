@@ -828,17 +828,32 @@ public class PlayerControllerAi extends PlayerController {
 
     @Override
     public void declareAttackers(Player attacker, Combat combat) {
-        brains.declareAttackers(attacker, combat);
+        Player prev = ComputerUtilCard.pushAiDecisionPlayer(player);
+        try {
+            brains.declareAttackers(attacker, combat);
+        } finally {
+            ComputerUtilCard.popAiDecisionPlayer(prev);
+        }
     }
 
     @Override
     public void declareBlockers(Player defender, Combat combat) {
-        brains.declareBlockersFor(defender, combat);
+        Player prev = ComputerUtilCard.pushAiDecisionPlayer(player);
+        try {
+            brains.declareBlockersFor(defender, combat);
+        } finally {
+            ComputerUtilCard.popAiDecisionPlayer(prev);
+        }
     }
 
     @Override
     public List<SpellAbility> chooseSpellAbilityToPlay() {
-        return brains.chooseSpellAbilityToPlay();
+        Player prev = ComputerUtilCard.pushAiDecisionPlayer(player);
+        try {
+            return brains.chooseSpellAbilityToPlay();
+        } finally {
+            ComputerUtilCard.popAiDecisionPlayer(prev);
+        }
     }
 
     @Override

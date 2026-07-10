@@ -1004,7 +1004,9 @@ public class AiBlockController {
         // Mystic) from the blocker pool - they're worth far more alive generating tokens than as a
         // one-time blocker. Hard rule: only let them block if life is in serious danger. Runs here, before
         // assignment, so the AI plans around having fewer blockers. (Tokens themselves stay eligible.)
-        if (!ComputerUtilCombat.lifeInSeriousDanger(ai, combat)) {
+        // Gated per-profile so a baseline profile can A/B the tuning; off => original behavior.
+        if (AiProfileUtil.getBoolProperty(ai, AiProps.KEEP_TOKEN_ENGINE_UNBLOCKED)
+                && !ComputerUtilCombat.lifeInSeriousDanger(ai, combat)) {
             Iterator<Card> it = blockersLeft.iterator();
             while (it.hasNext()) {
                 Card b = it.next();

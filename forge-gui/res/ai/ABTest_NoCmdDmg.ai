@@ -1,0 +1,4 @@
+# A/B test profile: only the "block commanders on a lethal commander-damage trajectory" tuning
+# DISABLED (reverts to the lethal-this-swing-only rule). Player 1 (default) vs player 2 (this)
+# isolates that tuning's win-rate effect. Meaningful only in Commander games.
+BLOCK_COMMANDER_DAMAGE_TRAJECTORY=false
