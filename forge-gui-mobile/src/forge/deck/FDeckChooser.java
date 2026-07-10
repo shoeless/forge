@@ -258,6 +258,8 @@ public class FDeckChooser extends FScreen {
             }
         } else if (needRefreshOnActivate) {
             needRefreshOnActivate = false;
+            // Drop cached deck storage so edits (and iOS Files/iTunes-shared decks) are re-read from disk.
+            FModel.getDecks().invalidateDeckCaches();
             refreshDecksList(selectedDeckType, true, null);
             switch (lstDecks.getGameType()) {
                 case Commander:
