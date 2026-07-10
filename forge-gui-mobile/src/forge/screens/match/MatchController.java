@@ -591,9 +591,34 @@ public class MatchController extends NetworkGuiGame {
     public void afterGameEnd() {
         super.afterGameEnd();
         Forge.back(true);
-        if (Forge.disposeTextures)
+
+        // On match-over (returning to the menu) release the finished match's whole Java object
+        // graph. Nothing else nulls these singletons until the NEXT match starts (openView()
+        // recreates view; getHostedMatch() lazily recreates hostedMatch), so without this the
+        // last game's Cards / AI memory / completed-game logs / match UI stay pinned the entire
+        // time the user sits on the post-match menu — ~100-140MB on top of the static card DB,
+        // keeping the 4GB iPad near its jetsam ceiling. GameView.match is transient, so on a
+        // network client getHostedMatch() is null there; treat that as match-over too.
+        final boolean matchOver = getHostedMatch() == null || getHostedMatch().isMatchOver();
+
+        // Between games the Forge.disposeTextures preference governs whether to reclaim texture
+        // memory (some users keep it warm for faster reloads); on match-over always dispose,
+        // since we're leaving the match UI entirely.
+        if (matchOver || Forge.disposeTextures) {
             ImageCache.getInstance().disposeTextures();
-        //view = null;
+        }
+
+        if (matchOver) {
+            setGameView(null);
+            view = null;
+            hostedMatch = null;
+            // Collect twice: the 1st frees the just-released graph, the 2nd lets bdwgc unmap the
+            // now-cycle-old free blocks back to iOS (GC_force_unmap_on_gcollect is on). The
+            // per-game System.gc() lives in HostedMatch.endCurrentGame; this is the match-over
+            // unmap that the per-game pass can't do because the graph is still pinned then.
+            System.gc();
+            System.gc();
+        }
     }
 
     public void resetPlayerPanels() {
