@@ -352,6 +352,35 @@ public class EffectAi extends SpellAbilityAi {
                     }
                 }
                 return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+            } else if (logic.equals("DrawCombatDamage")) {
+                // e.g. Hunter's Insight: cast pre-combat on a creature likely to connect so its
+                // combat damage to a player draws cards. Prefer evasive, high-power attackers.
+                sa.resetTargets();
+                if (!phase.isPlayerTurn(ai) || !phase.is(PhaseType.MAIN1)) {
+                    return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+                }
+                List<Card> insightOptions = CardUtil.getValidCardsToTarget(sa);
+                insightOptions = CardLists.filterControlledBy(insightOptions, ai);
+                insightOptions = CardLists.filter(insightOptions, CardPredicates.CREATURES);
+                insightOptions = CardLists.filter(insightOptions, c -> CombatUtil.canAttack(c));
+                if (insightOptions.isEmpty()) {
+                    return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+                }
+                Player insightOpp = ai.getWeakestOpponent();
+                List<Card> evasive = new ArrayList<>();
+                if (insightOpp != null) {
+                    for (Card c : insightOptions) {
+                        if (!CombatUtil.canAttackerBeBlockedWithAmount(c, 1, insightOpp)) {
+                            evasive.add(c);
+                        }
+                    }
+                }
+                Card insightBest = ComputerUtilCard.getBestCreatureAI(evasive.isEmpty() ? insightOptions : evasive);
+                if (insightBest == null || insightBest.getNetPower() < 2) {
+                    return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+                }
+                sa.getTargets().add(insightBest);
+                return new AiAbilityDecision(100, AiPlayDecision.WillPlay);
             } else if (logic.equals("Burn")) {
                 SpellAbility burn = sa.getSubAbility();
                 return SpellApiToAi.Converter.get(burn).canPlayWithSubs(ai, burn).willingToPlay() ? new AiAbilityDecision(100, AiPlayDecision.WillPlay) : new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
