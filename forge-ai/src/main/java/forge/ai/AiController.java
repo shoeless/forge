@@ -90,6 +90,10 @@ import static java.lang.Math.max;
  * @version $Id$
  */
 public class AiController {
+    // Off by default; -Dforge.counterDebug traces why a counterspell was/wasn't held as a
+    // mana-reservation basis (the "MANA-RES"/"SAC-CTR" diagnostics).
+    private static final boolean DEBUG_COUNTER_RESERVATION = Boolean.getBoolean("forge.counterDebug");
+
     private final Player player;
     private final Game game;
     private final AiCardMemory memory;
@@ -933,7 +937,9 @@ public class AiController {
                     }
                     CardCollection wouldSac = ComputerUtil.chooseSacrificeType(player, sacCost.getType(), counter, null, false, sacAmount, null);
                     if (wouldSac == null || wouldSac.isEmpty()) {
-                        System.out.println("MANA-RES: skipping " + counter.getHostCard() + " as reservation basis (sac cost unpayable)");
+                        if (DEBUG_COUNTER_RESERVATION) {
+                            System.out.println("MANA-RES: skipping " + counter.getHostCard() + " as reservation basis (sac cost unpayable)");
+                        }
                         continue;
                     }
                     int sacValue = 0;
@@ -942,8 +948,10 @@ public class AiController {
                     }
                     if (threateningCommander != null
                             && ComputerUtilCard.evaluateCounterExchangeValue(threateningCommander) <= sacValue) {
-                        System.out.println("MANA-RES: skipping " + counter.getHostCard() + " as reservation basis (gate would decline vs "
-                                + threateningCommander + ": fodder " + sacValue + ")");
+                        if (DEBUG_COUNTER_RESERVATION) {
+                            System.out.println("MANA-RES: skipping " + counter.getHostCard() + " as reservation basis (gate would decline vs "
+                                    + threateningCommander + ": fodder " + sacValue + ")");
+                        }
                         continue;
                     }
                 }

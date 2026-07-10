@@ -254,20 +254,4 @@ public class ComputerUtilAbilityValue {
 
         return totalValue;
     }
-
-    /**
-     * Threshold for considering an ability "valuable" - used for AI decision making.
-     * Returns true if the ability value exceeds the threshold for copying/protecting.
-     */
-    public static boolean isAbilityValuable(SpellAbility sa) {
-        return evaluateSpellAbility(sa) >= 150;
-    }
-
-    /**
-     * Threshold for considering a card's abilities valuable enough to target
-     * with ability-removal effects like Darksteel Mutation.
-     */
-    public static boolean hasValuableAbilities(Card card) {
-        return evaluateCardAbilities(card) >= 150;
-    }
 }

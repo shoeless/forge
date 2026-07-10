@@ -134,9 +134,11 @@ public class CounterAi extends SpellAbilityAi {
                         sacValue = Math.max(sacValue, ComputerUtilCard.evaluateSacrificeCostValue(sacFodder));
                     }
                     int threatValue = evaluateCounterTargetThreat(topSA, tgtCMC);
-                    System.out.println("SAC-CTR: " + source + " vs " + topSA.getHostCard() + ": threat=" + threatValue
-                            + " sacValue=" + sacValue + " fodder=" + wouldSac
-                            + (threatValue > sacValue ? " -> counter" : " -> decline"));
+                    if (Boolean.getBoolean("forge.counterDebug")) {
+                        System.out.println("SAC-CTR: " + source + " vs " + topSA.getHostCard() + ": threat=" + threatValue
+                                + " sacValue=" + sacValue + " fodder=" + wouldSac
+                                + (threatValue > sacValue ? " -> counter" : " -> decline"));
+                    }
                     if (threatValue <= sacValue) {
                         return new AiAbilityDecision(0, AiPlayDecision.CostNotAcceptable);
                     }
