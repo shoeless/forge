@@ -128,9 +128,31 @@ public class PumpAllAi extends PumpAiBase {
             return result ? new AiAbilityDecision(100, AiPlayDecision.WillPlay) : new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
         }
 
-        boolean result = ai.getCreaturesInPlay().anyMatch(c -> c.isValid(valid, source.getController(), source, sa)
-                && ComputerUtilCard.shouldPumpCard(ai, sa, c, defense, power, keywords));
-        return result ? new AiAbilityDecision(100, AiPlayDecision.WillPlay) : new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+        // This streams shouldPumpCard over every creature, and for each one not already attacking,
+        // shouldPumpCard runs a full declareAttackers combat simulation (via
+        // ComputerUtilCard.doesSpecifiedCreatureAttackAI on the pumped copy). On a wide/token board
+        // that is O(creatures) whole-board combat sims back to back, which can exceed the AI decision
+        // timeout (Game.AI_TIMEOUT) and shows up as a visible freeze when watching a sped-up AI-vs-AI
+        // match. Open ONE combat-evaluation scope around the loop so those nested declareAttackers
+        // calls reuse the board-invariant memo (the all-cards replacement-effect scan is then computed
+        // once for the whole loop, not rebuilt per creature) instead of opening a fresh scope each
+        // call. Behavior-neutral: each pumped copy is a distinct Card with its own id so nothing aliases
+        // a cached entry, and the memo is the same proven-neutral cache, merely shared. Guarded so an
+        // already-open outer scope is reused rather than clobbered.
+        final boolean openedScope = ComputerUtilCombat.isCombatEvalCacheEnabled()
+                && !ComputerUtilCombat.isInCombatEvaluation();
+        if (openedScope) {
+            ComputerUtilCombat.beginCombatEvaluation(game);
+        }
+        try {
+            boolean result = ai.getCreaturesInPlay().anyMatch(c -> c.isValid(valid, source.getController(), source, sa)
+                    && ComputerUtilCard.shouldPumpCard(ai, sa, c, defense, power, keywords));
+            return result ? new AiAbilityDecision(100, AiPlayDecision.WillPlay) : new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+        } finally {
+            if (openedScope) {
+                ComputerUtilCombat.endCombatEvaluation();
+            }
+        }
     }
 
     @Override

@@ -103,7 +103,7 @@ public class ComputerUtilCombat {
     // AiCardSignature.boardHasDuplicateCreatures); null = the wrappers never compute a signature.
     private static final ThreadLocal<Map<String, Boolean>> cachedDestroyResults = new ThreadLocal<>();
 
-    static boolean isCombatEvalCacheEnabled() {
+    public static boolean isCombatEvalCacheEnabled() {
         return COMBAT_EVAL_CACHE;
     }
 
