@@ -200,6 +200,11 @@ public class Main extends IOSApplication.Delegate {
             // timeouts) and the jetsam memory ceiling. Set here, before any game/CardState class loads.
             System.setProperty("forge.staticMemo", "on");
 
+            // Enable the combat-evaluation memo (destroy/shouldAttack caches keyed by card identity +
+            // combat-state fingerprint). Proven bit-identical vs OFF over a seeded 10-game A/B run;
+            // biggest win on wide token boards where the AI re-evaluates identical tokens repeatedly.
+            System.setProperty("forge.combatEvalCache", "on");
+
             // Clear card cache when a new build is deployed. The cache stores
             // pre-parsed card rules for fast startup, but stale caches cause bugs
             // (e.g., duplicate triggers). Compare the app's CFBundleVersion to a
