@@ -3,6 +3,7 @@ package forge.ai.ability;
 import forge.ai.*;
 import forge.card.ColorSet;
 import forge.game.ability.AbilityUtils;
+import forge.game.ability.ApiType;
 import forge.game.card.Card;
 import forge.game.card.CardCollection;
 import forge.game.card.CardLists;
@@ -13,34 +14,63 @@ import forge.game.cost.CostPayLife;
 import forge.game.phase.PhaseHandler;
 import forge.game.phase.PhaseType;
 import forge.game.player.Player;
+import forge.game.spellability.AbilitySub;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
 import forge.util.collect.FCollectionView;
 
 public class TapAi extends TapAiBase {
 
+    /**
+     * Checks if this tap ability has an exile sub-ability whose condition is currently met
+     * (e.g. Dispatch with Metalcraft active). Such spells are effectively removal, not tempo.
+     */
+    private boolean hasActiveExileSubAbility(SpellAbility sa) {
+        final AbilitySub sub = sa.getSubAbility();
+        if (sub == null) {
+            return false;
+        }
+        if (sub.getApi() != ApiType.ChangeZone) {
+            return false;
+        }
+        if (!"Exile".equals(sub.getParam("Destination"))) {
+            return false;
+        }
+        // Check the sub-ability's condition (e.g. Metalcraft) is actually met right now
+        if (sub.getConditions() != null && !sub.getConditions().areMet(sub)) {
+            return false;
+        }
+        return true;
+    }
+
     @Override
     protected AiAbilityDecision checkApiLogic(Player ai, SpellAbility sa) {
-        final PhaseHandler phase = ai.getGame().getPhaseHandler();
-        final Player turn = phase.getPlayerTurn();
+        // When the exile rider is live (e.g. Dispatch with Metalcraft), this is removal -
+        // don't apply the tempo-oriented timing restrictions below
+        final boolean isEffectivelyRemoval = hasActiveExileSubAbility(sa);
 
-        if (turn.isOpponentOf(ai) && phase.getPhase().isBefore(PhaseType.COMBAT_DECLARE_ATTACKERS)) {
-            // Tap things down if it's Human's turn
-        } else if (turn.equals(ai)) {
-            if (isSorcerySpeed(sa, ai) && phase.getPhase().isBefore(PhaseType.COMBAT_BEGIN)) {
-                // Cast it if it's a sorcery.
-            } else if (phase.getPhase().isBefore(PhaseType.COMBAT_DECLARE_BLOCKERS)) {
-                // Aggro Brains are willing to use TapEffects aggressively instead of defensively
-                if (!AiProfileUtil.getBoolProperty(ai, AiProps.PLAY_AGGRO)) {
+        if (!isEffectivelyRemoval) {
+            final PhaseHandler phase = ai.getGame().getPhaseHandler();
+            final Player turn = phase.getPlayerTurn();
+
+            if (turn.isOpponentOf(ai) && phase.getPhase().isBefore(PhaseType.COMBAT_DECLARE_ATTACKERS)) {
+                // Tap things down if it's Human's turn
+            } else if (turn.equals(ai)) {
+                if (isSorcerySpeed(sa, ai) && phase.getPhase().isBefore(PhaseType.COMBAT_BEGIN)) {
+                    // Cast it if it's a sorcery.
+                } else if (phase.getPhase().isBefore(PhaseType.COMBAT_DECLARE_BLOCKERS)) {
+                    // Aggro Brains are willing to use TapEffects aggressively instead of defensively
+                    if (!AiProfileUtil.getBoolProperty(ai, AiProps.PLAY_AGGRO)) {
+                        return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
+                    }
+                } else {
+                    // Don't tap down after blockers
                     return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
                 }
-            } else {
-                // Don't tap down after blockers
+            } else if (!playReusable(ai, sa)) {
+                // Generally don't want to tap things with an Instant during Players turn outside of combat
                 return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
             }
-        } else if (!playReusable(ai, sa)) {
-            // Generally don't want to tap things with an Instant during Players turn outside of combat
-            return new AiAbilityDecision(0, AiPlayDecision.CantPlayAi);
         }
 
         final Card source = sa.getHostCard();
@@ -60,7 +90,8 @@ public class TapAi extends TapAiBase {
 
             sa.resetTargets();
             if (tapPrefTargeting(ai, source, sa, false)) {
-                return new AiAbilityDecision(100, AiPlayDecision.WillPlay);
+                // Removal-grade taps (exile rider active) get priority over plain tempo taps
+                return new AiAbilityDecision(isEffectivelyRemoval ? 150 : 100, AiPlayDecision.WillPlay);
             }
             return new AiAbilityDecision(0, AiPlayDecision.TargetingFailed);
         } else {

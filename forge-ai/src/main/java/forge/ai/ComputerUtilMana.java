@@ -1790,14 +1790,21 @@ public class ComputerUtilMana {
     public static List<SpellAbility> getAIPlayableMana(Card c) {
         final List<SpellAbility> res = new ArrayList<>();
         for (final SpellAbility a : c.getManaAbilities()) {
-            // if a mana ability has a mana cost the AI will miscalculate
             // if there is a parent ability the AI can't use it
-            final Cost cost = a.getPayCosts();
-            if (cost.hasManaCost() || (a.getApi() != ApiType.Mana && a.getApi() != ApiType.ManaReflected)) {
+            if (a.getApi() != ApiType.Mana && a.getApi() != ApiType.ManaReflected) {
                 continue;
             }
 
             if (a.getRestrictions() != null && a.getRestrictions().isInstantSpeed()) {
+                continue;
+            }
+
+            final Cost cost = a.getPayCosts();
+            // Allow mana abilities with generic-only mana costs (like signets: "1, T: Add RW")
+            // The mana cost is accounted for in payManaCost test mode to prevent miscalculation
+            // Abilities with colored mana costs (like filter lands) are still excluded because
+            // the test mode can't properly reserve colored mana for activation costs
+            if (cost.hasManaCost() && cost.getTotalMana().getColorProfile() != 0) {
                 continue;
             }
 
