@@ -1113,6 +1113,35 @@ public class ChangeZoneAi extends SpellAbilityAi {
             }
         }
 
+        // Refine exile target selection. Exiling an opponent's commander merely sends it to the
+        // command zone (poor removal), and when the exile hands each victim a replacement token
+        // (e.g. Curse of the Swine's 2/2 Boars) exiling a creature the token would match or beat is
+        // a wash. Drop those targets; if nothing worthwhile remains and we aren't forced to pick,
+        // decline the spell entirely.
+        if (destination.equals(ZoneType.Exile)) {
+            boolean tokenReplace = false;
+            for (SpellAbility sub = sa.getSubAbility(); sub != null; sub = sub.getSubAbility()) {
+                if (ApiType.Token.equals(sub.getApi()) || ApiType.RepeatEach.equals(sub.getApi())) {
+                    tokenReplace = true;
+                    break;
+                }
+            }
+            final boolean createsTokens = tokenReplace;
+            CardCollection worthwhile = CardLists.filter(list, c -> {
+                if (c.isCommander()) {
+                    return false;
+                }
+                return !(createsTokens && c.isCreature() && c.getNetPower() <= 2 && c.getNetToughness() <= 2);
+            });
+            if (!worthwhile.isEmpty()) {
+                list = worthwhile;
+            } else if (!mandatory) {
+                return false; // no worthwhile exile targets and not forced to choose
+            }
+            // If mandatory and the filter emptied the list, fall through with the original list so
+            // a forced cast still resolves against something.
+        }
+
         // Only care about combatants during combat
         if (game.getPhaseHandler().inCombat() && origin.contains(ZoneType.Battlefield)) {
             CardCollection newList = CardLists.getValidCards(list, "Card.attacking,Card.blocking", null, null, null);
