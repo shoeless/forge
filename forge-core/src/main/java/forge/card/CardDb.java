@@ -445,6 +445,18 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
                 return;
             }
         }
+        // Idempotency guard: loadCard is NOT idempotent -- addSetCard unconditionally increments the
+        // art index and appends a fresh PaperCard, so a redundant call for a (name, set) printing
+        // already present DUPLICATES the PaperCard in allCardsByName. Skip only when THIS exact
+        // (name, set) printing already exists. Do NOT guard on card-name presence alone: loadCard is
+        // also the "add a printing from a not-yet-loaded set" path (StaticData.getOrLoadCommonCard),
+        // where the card can already exist under other sets while the requested set's printing is
+        // still missing. When setCode is null/UNKNOWN guardEd is null/UNKNOWN and we fall through to
+        // the all-editions first-load path.
+        CardEdition guardEd = editions.get(setCode);
+        if (guardEd != null && !guardEd.equals(CardEdition.UNKNOWN) && hasPrintingInSet(cardName, guardEd)) {
+            return;
+        }
         boolean reIndexNecessary = false;
         CardEdition ed = editions.get(setCode);
         if (ed == null || ed.equals(CardEdition.UNKNOWN)) {
@@ -460,6 +472,20 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             rulesByPrimaryName.putIfAbsent(cardName, cr); //TODO: Cache alt names here too.
             reIndex();
         }
+    }
+
+    /** Side-effect-free check: is a printing of {@code cardName} from {@code edition} already loaded?
+     *  Mirrors the edition-code match {@link #getCardFromSet} uses, but without its image-lookup
+     *  side effects, so it is safe to call on the hot {@link #loadCard} path. */
+    private boolean hasPrintingInSet(String cardName, CardEdition edition) {
+        String code1 = edition.getCode(), code2 = edition.getCode2();
+        for (PaperCard pc : getAllCards(cardName)) {
+            String ed = pc.getEdition();
+            if (ed.equalsIgnoreCase(code1) || ed.equalsIgnoreCase(code2)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void initialize(boolean logMissingPerEdition, boolean logMissingSummary, boolean enableUnknownCards) {
