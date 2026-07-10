@@ -38,7 +38,9 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
  * @version $Id: CardRules.java 9708 2011-08-09 19:34:12Z jendave $
  */
 public final class CardRules implements ICardCharacteristics {
-    private String normalizedName;
+    // Package-private (not private) so CardRulesCache can populate them when
+    // reconstructing rules from the binary startup cache. See CardRulesCache.
+    String normalizedName;
     private CardSplitType splitType;
     private ICardFace mainPart;
     private ICardFace otherPart;
@@ -48,10 +50,10 @@ public final class CardRules implements ICardCharacteristics {
     private CardAiHints aiHints;
     private ColorSet colorIdentity;
     private ColorSet deckbuildingColors;
-    private String meldWith;
-    private String partnerWith;
-    private String partnerType;
-    private int setColorID;
+    String meldWith;
+    String partnerWith;
+    String partnerType;
+    int setColorID;
     private boolean custom;
     private boolean unsupported;
     private Map<Integer, String> placeholderFaces;
@@ -441,6 +443,10 @@ public final class CardRules implements ICardCharacteristics {
         return partnerWith;
     }
 
+    public String getPartnerType() {
+        return partnerType;
+    }
+
     public boolean getAddsWildCardColor() {
         return mainPart.getOracleText().contains(" is your commander, choose a color before the game begins.");
     }
@@ -451,10 +457,10 @@ public final class CardRules implements ICardCharacteristics {
     }
 
     // vanguard card fields, they don't use sides.
-    private int deltaHand;
-    private int deltaLife;
+    int deltaHand;
+    int deltaLife;
 
-    private List<String> tokens = Collections.emptyList();
+    List<String> tokens = Collections.emptyList();
 
     public List<String> getTokens() {
         return tokens;
@@ -471,7 +477,7 @@ public final class CardRules implements ICardCharacteristics {
         this.deltaLife = Integer.parseInt(TextUtil.fastReplace(pt.substring(slashPos+1), "+", ""));
     }
 
-    private Set<String> supportedFunctionalVariants;
+    Set<String> supportedFunctionalVariants;
     public boolean hasFunctionalVariants() {
         return this.supportedFunctionalVariants != null;
     }

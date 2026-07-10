@@ -228,6 +228,11 @@ public final class FModel {
 
         ForgePreferences.DEV_MODE = getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED);
 
+        // Enable the Tier-1 binary CardRules startup cache (skips re-parsing ~32k scripts on
+        // subsequent launches). Must be set before the first getMagicDb() call below, which
+        // builds StaticData and loads the card DB. See forge.card.CardRulesCache.
+        forge.card.CardRulesCache.setCacheDir(ForgeConstants.DB_DIR);
+
         getMagicDb().setStandardPredicate(getFormats().getStandard().getFilterRules());
         getMagicDb().setPioneerPredicate(getFormats().getPioneer().getFilterRules());
         getMagicDb().setModernPredicate(getFormats().getModern().getFilterRules());
