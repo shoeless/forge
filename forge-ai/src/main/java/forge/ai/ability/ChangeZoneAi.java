@@ -1601,7 +1601,11 @@ public class ChangeZoneAi extends SpellAbilityAi {
                     }
                 }
 
-                c = ComputerUtilCard.getWorstAI(fetchList);
+                if (origin.contains(ZoneType.Hand)) {
+                    c = ComputerUtilCard.getWorstCardInHand(decider, fetchList);
+                } else {
+                    c = ComputerUtilCard.getWorstAI(fetchList);
+                }
                 if (ComputerUtilAbility.getAbilitySourceName(sa).equals("Temur Sabertooth")) {
                     Card tobounce = canBouncePermanent(player, sa, fetchList);
                     if (tobounce != null) {
