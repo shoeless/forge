@@ -505,8 +505,15 @@ public class DeckBattler {
 
         boolean isCommander = deck1.has(DeckSection.Commander) || deck2.has(DeckSection.Commander);
 
-        final String name1 = deck1.getName();
-        final String name2 = deck2.getName();
+        // In a mirror match (same deck both seats, e.g. asymmetric-AI A/B) the two decks share a
+        // name, which breaks per-seat win attribution and the per-player card tracker (both key off
+        // the player name). Disambiguate the seats by name only in that case, so existing non-mirror
+        // gauntlet log labels are unchanged.
+        final String rawName1 = deck1.getName();
+        final String rawName2 = deck2.getName();
+        final boolean sameName = rawName1.equals(rawName2);
+        final String name1 = sameName ? rawName1 + " (P1)" : rawName1;
+        final String name2 = sameName ? rawName2 + " (P2)" : rawName2;
         int cards1 = deck1.getMain().countAll();
         int cards2 = deck2.getMain().countAll();
 
@@ -656,13 +663,27 @@ public class DeckBattler {
         Deck d1 = DeckSerializer.fromFile(deck1File);
         Deck d2 = DeckSerializer.fromFile(deck2File);
 
+        // Optional per-player AI profiles for asymmetric-AI A/B testing. Empty profile ("") uses the
+        // enum defaults (all tunings on); pass -Dforge.aiProfile2=ABTest_Baseline (etc.) to disable a
+        // tuning on one side and measure its win-rate contribution via mirror-match self-play.
+        LobbyPlayerAi lp1 = new LobbyPlayerAi(name1, null);
+        LobbyPlayerAi lp2 = new LobbyPlayerAi(name2, null);
+        String aiProfile1 = System.getProperty("forge.aiProfile1");
+        String aiProfile2 = System.getProperty("forge.aiProfile2");
+        if (aiProfile1 != null && !aiProfile1.isEmpty()) {
+            lp1.setAiProfile(aiProfile1);
+        }
+        if (aiProfile2 != null && !aiProfile2.isEmpty()) {
+            lp2.setAiProfile(aiProfile2);
+        }
+
         List<RegisteredPlayer> players = new ArrayList<RegisteredPlayer>();
         if (isCommander) {
-            players.add(RegisteredPlayer.forCommander(d1).setPlayer(new LobbyPlayerAi(name1, null)));
-            players.add(RegisteredPlayer.forCommander(d2).setPlayer(new LobbyPlayerAi(name2, null)));
+            players.add(RegisteredPlayer.forCommander(d1).setPlayer(lp1));
+            players.add(RegisteredPlayer.forCommander(d2).setPlayer(lp2));
         } else {
-            players.add(new RegisteredPlayer(d1).setPlayer(new LobbyPlayerAi(name1, null)));
-            players.add(new RegisteredPlayer(d2).setPlayer(new LobbyPlayerAi(name2, null)));
+            players.add(new RegisteredPlayer(d1).setPlayer(lp1));
+            players.add(new RegisteredPlayer(d2).setPlayer(lp2));
         }
 
         GameRules rules = new GameRules(GameType.Constructed);
