@@ -128,6 +128,10 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         super(game0, p, lp);
         inputProxy = new InputProxy(this);
         inputQueue = new InputQueue(game0.getView(), inputProxy);
+        // Initialize persistent full control flags from preferences
+        if (FModel.getPreferences().getPrefBoolean(FPref.UI_ALLOW_PAYMENT_START_WITH_MISSING_RESOURCES)) {
+            getFullControl().add(FullControlFlag.AllowPaymentStartWithMissingResources);
+        }
     }
 
     public PlayerControllerHuman(final Player p, final LobbyPlayer lp, final PlayerControllerHuman owner) {

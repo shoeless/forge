@@ -154,6 +154,7 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         UI_SELECT_FROM_CARD_DISPLAYS("true"),
         UI_SWITCH_STATES_DECKVIEW("Switch back on hover"),
         UI_ORDER_HAND("false"),
+        UI_ALLOW_PAYMENT_START_WITH_MISSING_RESOURCES("false"),
         UI_HAND_MAX_CARDS_PER_ROW("0"),
         UI_HAND_NO_OVERLAP("false"),
         UI_ZONE_TAB_NEW_COUNT("true"),

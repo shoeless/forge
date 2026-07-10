@@ -1721,6 +1721,12 @@ public final class CMatchUI
             } else {
                 controlFlags.add(flag);
             }
+            // Save persistent flags to preferences
+            if (flag == FullControlFlag.AllowPaymentStartWithMissingResources) {
+                FModel.getPreferences().setPref(FPref.UI_ALLOW_PAYMENT_START_WITH_MISSING_RESOURCES,
+                        String.valueOf(controlFlags.contains(flag)));
+                FModel.getPreferences().save();
+            }
         });
         menu.add(item);
     }
