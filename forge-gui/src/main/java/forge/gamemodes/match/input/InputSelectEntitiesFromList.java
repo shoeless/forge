@@ -13,6 +13,7 @@ import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.Zone;
 import forge.gui.FThreads;
+import forge.gui.GuiBase;
 import forge.player.PlayerControllerHuman;
 import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
@@ -64,7 +65,18 @@ public class InputSelectEntitiesFromList<T extends GameEntity> extends InputSele
         }
         FThreads.invokeInEdtNowOrLater(() -> {
             getController().getGui().updateZones(zonesToUpdate);
-            zonesShown = getController().getGui().tempShowZones(controller.getPlayer().getView(), zonesToUpdate);
+            // In network play, tempShowZones on a remote player's gui goes through
+            // RemoteClientGuiGame.syncAndSendAndWait(), blocking the server EDT for a
+            // network round trip. This delays showMessageInitial (which sends updateButtons
+            // to the client), leaving the client with highlighted cards but disabled
+            // OK/Cancel — a stuck selection UI under any latency. tempShowZones is a no-op
+            // on mobile (MatchScreen returns its input unchanged), so skip it in net play.
+            // zonesShown is still assigned for cleanup in onStop().
+            if (GuiBase.isNetPlay(getController().getGui())) {
+                zonesShown = zonesToUpdate;
+            } else {
+                zonesShown = getController().getGui().tempShowZones(controller.getPlayer().getView(), zonesToUpdate);
+            }
         });
     }
     
