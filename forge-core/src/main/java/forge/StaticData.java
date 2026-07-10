@@ -146,10 +146,13 @@ public class StaticData {
                 }
             }
 
-            // Startup diagnostic for the CardRules cache: card counts are identical between a
-            // cache-miss (parse) run and a cache-hit run (verified move-for-move via seeded sim).
-            System.out.println("[FORGE-TIMING] cardDB built: cacheHit=" + (cachedRules != null)
-                    + " regular=" + regularCards.size() + " variant=" + variantsCards.size());
+            // Startup diagnostic for the CardRules cache (off by default; -Dforge.timing): card
+            // counts are identical between a cache-miss (parse) and cache-hit run (verified
+            // move-for-move via seeded sim).
+            if (Boolean.getBoolean("forge.timing")) {
+                System.out.println("[FORGE-TIMING] cardDB built: cacheHit=" + (cachedRules != null)
+                        + " regular=" + regularCards.size() + " variant=" + variantsCards.size());
+            }
 
             commonCards = new CardDb(regularCards, editions, filtered);
             variantCards = new CardDb(variantsCards, editions, filtered);
