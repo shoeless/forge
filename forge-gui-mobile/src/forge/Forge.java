@@ -68,6 +68,7 @@ public class Forge implements ApplicationListener {
     private static IDeviceAdapter deviceAdapter;
     private static int screenWidth;
     private static int screenHeight;
+    private static int screenResizeVersion = 0; //increments on each resize so stale screenPos values can be detected
     private static Graphics graphics;
     private static FrameRate frameRate;
     private static FScreen currentScreen;
@@ -851,6 +852,10 @@ public class Forge implements ApplicationListener {
         return screenHeight;
     }
 
+    public static int getScreenResizeVersion() {
+        return screenResizeVersion;
+    }
+
     public static FScreen getCurrentScreen() {
         return currentScreen;
     }
@@ -945,7 +950,13 @@ public class Forge implements ApplicationListener {
             currentScreen = screen0;
             if (currentScreen != null) {
                 currentScreen.setSize(screenWidth, screenHeight);
+                // Force a full layout refresh: a screen that was sitting in the navigation stack (or
+                // shown as a sidebar) during a rotation kept its old-orientation layout; rebuild it
+                // for the current dimensions before it becomes active.
+                currentScreen.revalidate(true);
                 currentScreen.onActivate();
+                // Refresh screenPos for every element so touches map correctly immediately.
+                currentScreen.updateScreenPositions(0, 0);
             }
             else if(isMobileAdventureMode) {
                 switchToLast();
@@ -1095,13 +1106,44 @@ public class Forge implements ApplicationListener {
     @Override
     public void resize(int width, int height) {
         try {
+            // Dynamic orientation: an iOS device rotation (or a desktop window resize) delivers the new
+            // dimensions here. Update the cached screen size + orientation and refresh the projection
+            // matrix, GL viewport and every element's screenPos so the UI follows the device instead of
+            // staying stuck in its launch orientation. Android manages orientation via its manifest /
+            // setLandscapeMode, so leave its portrait flag alone.
+            screenWidth = width;
+            screenHeight = height;
+            if (!GuiBase.isAndroid()) {
+                isPortraitMode = height > width;
+                // Force the GL viewport to the new size so touch coordinates map correctly after a
+                // rotation. See https://github.com/libgdx/libgdx/issues/6514
+                com.badlogic.gdx.graphics.glutils.HdpiUtils.glViewport(0, 0, width, height);
+            }
+            screenResizeVersion++; //invalidate stale screenPos values until they're refreshed below
+            if (graphics != null) {
+                graphics.resize(width, height); //rebuild the projection matrix for the new dimensions
+            }
+
             if (currentScreen != null) {
                 currentScreen.setSize(width, height);
+                currentScreen.updateScreenPositions(0, 0); //refresh screenPos now so touches don't hit stale positions
             } else if (splashScreen != null) {
                 splashScreen.setSize(width, height);
+                splashScreen.updateScreenPositions(0, 0);
+            }
+            // Visible overlays (dialogs, menus) also need to follow the rotation.
+            for (FOverlay overlay : FOverlay.getOverlays()) {
+                if (overlay.isVisibleOnScreen(currentScreen)) {
+                    overlay.setSize(width, height);
+                    overlay.updateScreenPositions(0, 0);
+                }
             }
             if (currentScene != null)
                 currentScene.resize(width, height);
+
+            // Continuous rendering is opt-in, so a rotation on an otherwise-static screen would not
+            // redraw until the next input event; request one frame to draw the new layout immediately.
+            Gdx.graphics.requestRendering();
         } catch (Exception ex) {
             //graphics.end();
             //check if sentry is enabled, if not it will call the gui interface but here we end the graphics so we only send it via sentry..
