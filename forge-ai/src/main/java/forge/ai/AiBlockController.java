@@ -999,43 +999,6 @@ public class AiBlockController {
         attackersLeft = new ArrayList<>(attackers); // keeps track of all currently unblocked attackers
         blockersLeft = new ArrayList<>(possibleBlockers); // keeps track of all unassigned blockers
         blockedButUnkilled = new ArrayList<>(); // keeps track of all blocked attackers that currently wouldn't be destroyed
-
-        // Remove token-engine creatures (those whose triggers create tokens, like Talrand or Murmuring
-        // Mystic) from the blocker pool - they're worth far more alive generating tokens than as a
-        // one-time blocker. Hard rule: only let them block if life is in serious danger. Runs here, before
-        // assignment, so the AI plans around having fewer blockers. (Tokens themselves stay eligible.)
-        // Gated per-profile so a baseline profile can A/B the tuning; off => original behavior.
-        if (AiProfileUtil.getBoolProperty(ai, AiProps.KEEP_TOKEN_ENGINE_UNBLOCKED)
-                && !ComputerUtilCombat.lifeInSeriousDanger(ai, combat)) {
-            Iterator<Card> it = blockersLeft.iterator();
-            while (it.hasNext()) {
-                Card b = it.next();
-                if (b.isToken()) {
-                    continue;
-                }
-                boolean isTokenEngine = false;
-                for (Trigger t : b.getTriggers()) {
-                    SpellAbility tSa = t.ensureAbility();
-                    if (tSa == null) {
-                        continue;
-                    }
-                    SpellAbility cur = tSa;
-                    while (cur != null) {
-                        if (ApiType.Token.equals(cur.getApi())) {
-                            isTokenEngine = true;
-                            break;
-                        }
-                        cur = cur.getSubAbility();
-                    }
-                    if (isTokenEngine) {
-                        break;
-                    }
-                }
-                if (isTokenEngine) {
-                    it.remove();
-                }
-            }
-        }
     }
 
     /** Assigns blockers for the provided combat instance (in favor of player passes to ctor) */

@@ -1,7 +1,0 @@
-# A/B test profile: all iOS-branch directional AI tunings DISABLED.
-# Used with DeckBattler asymmetric self-play (player 1 = default/tuned, player 2 = this profile)
-# to measure the combined win-rate contribution of the three tunings. Every other AI parameter
-# falls back to the enum default, matching the default profile, so the tunings are isolated.
-EVAL_TOKEN_ENGINE_BONUS=false
-KEEP_TOKEN_ENGINE_UNBLOCKED=false
-BLOCK_COMMANDER_DAMAGE_TRAJECTORY=false

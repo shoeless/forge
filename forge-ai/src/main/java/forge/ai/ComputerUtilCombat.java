@@ -514,14 +514,7 @@ public class ComputerUtilCombat {
         for (Card c : combat.getAttackers()) {
             if (c.isCommander() && combat.isAttacking(c, ai)) {
                 int currentCommanderDamage = ai.getCommanderDamage(c);
-                int projectedDamage = damageIfUnblocked(c, ai, combat, false);
-                // Always flag a swing that would reach 21 this turn. The trajectory clauses
-                // (cumulative damage close to lethal) are the gated directional tuning: when
-                // BLOCK_COMMANDER_DAMAGE_TRAJECTORY is off the AI reverts to the lethal-only rule.
-                boolean trajectory = AiProfileUtil.getBoolProperty(ai, AiProps.BLOCK_COMMANDER_DAMAGE_TRAJECTORY)
-                        && (currentCommanderDamage >= 14
-                                || (currentCommanderDamage >= 10 && projectedDamage >= 4));
-                if (projectedDamage + currentCommanderDamage >= 21 || trajectory) {
+                if (damageIfUnblocked(c, ai, combat, false) + currentCommanderDamage >= 21) {
                     res.add(c);
                 }
             }

@@ -153,9 +153,7 @@ public enum AiProps {
     // iOS-branch directional AI tunings, gated per-profile so a baseline profile can A/B them via
     // asymmetric self-play. Default "true" preserves current (tuned) behavior; a test profile sets
     // them "false" to measure each tuning's win-rate contribution.
-    EVAL_TOKEN_ENGINE_BONUS("true"),           // +eval for creatures whose triggers make tokens
-    KEEP_TOKEN_ENGINE_UNBLOCKED("true"),       // keep token-engine creatures out of the blocker pool
-    BLOCK_COMMANDER_DAMAGE_TRAJECTORY("true");  // block commanders on a lethal cmd-damage trajectory
+    EVAL_TOKEN_ENGINE_BONUS("true");           // +eval for creatures whose triggers make tokens
     // Experimental features, must be promoted or removed after extensive testing and, ideally, defaulting
     // <-- There are no experimental options here -->
 
