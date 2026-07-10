@@ -54,7 +54,10 @@ public abstract class PreferencesStore<T extends Enum<T> & PreferencesStore.IPre
             final T pref = valueOf(split[0]);
 
             if (null == pref) {
-                System.out.println("unknown preference: " + line);
+                // Log only the unknown preference's NAME, never its value: this goes to stdout /
+                // os_log, and some values are sensitive (API keys, tokens). A removed/renamed pref
+                // that's still in a saved file would otherwise leak its value to device logs.
+                System.out.println("unknown preference: " + split[0]);
                 continue;
             }
 
