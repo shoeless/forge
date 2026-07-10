@@ -1911,6 +1911,14 @@ public class AiController {
         // in case of infinite loop reset below would not be reached
         timeoutReached = false;
 
+        // Per-call decline memo (gated behind -Dforge.combatEvalCache=on): identical token abilities
+        // the AI rejects collapse to a single canPlayAndPayFor evaluation. Only declines are cached (a
+        // WillPlay returns immediately and carries live mutated targets/X), so the loop's observable
+        // result is unchanged. Allocated only when duplicate tokens exist (else null => no signatures
+        // computed). Final so the FutureTask lambda below can capture it.
+        final Map<String, Boolean> declinedSigs =
+                ComputerUtilCombat.isCombatEvalCacheEnabled() && AiCardSignature.boardHasDuplicateTokens(game)
+                        ? new HashMap<>() : null;
         FutureTask<SpellAbility> future = new FutureTask<>(() -> {
             //avoid ComputerUtil.aiLifeInDanger in loops as it slows down a lot.. call this outside loops will generally be fast...
             boolean isLifeInDanger = useLivingEnd && ComputerUtil.aiLifeInDanger(player, true, 0);
@@ -1973,6 +1981,21 @@ public class AiController {
                 sa.setActivatingPlayer(player);
                 SpellAbility root = sa.getRootAbility();
 
+                // Identity signature (host identity + this SA's own identity) so N identical token
+                // abilities collapse to one evaluation, but two DIFFERENT abilities of one host never
+                // do. null => never cache. Checked here, before setLastState/opinion, so a cached
+                // decline is a clean no-op iteration.
+                String sig = null;
+                if (declinedSigs != null) {
+                    String hostSig = AiCardSignature.of(sa.getHostCard());
+                    if (hostSig != null) {
+                        sig = hostSig + "#" + sa.getApi() + "#" + (sa.usesTargeting() ? 1 : 0) + "#" + sa.toString();
+                        if (declinedSigs.containsKey(sig)) {
+                            continue; // already rejected an identical ability this call (declines just continue)
+                        }
+                    }
+                }
+
                 if (root.isSpell() || root.isTrigger() || root.isReplacementAbility()) {
                     sa.setLastStateBattlefield(game.getLastStateBattlefield());
                     sa.setLastStateGraveyard(game.getLastStateGraveyard());
@@ -1985,8 +2008,12 @@ public class AiController {
                 // PhaseHandler ph = game.getPhaseHandler();
                 // System.out.printf("Ai thinks '%s' of %s -> %s @ %s %s >>> \n", opinion, sa.getHostCard(), sa, Lang.getInstance().getPossesive(ph.getPlayerTurn().getName()), ph.getPhase());
 
-                if (opinion != AiPlayDecision.WillPlay)
+                if (opinion != AiPlayDecision.WillPlay) {
+                    if (sig != null) {
+                        declinedSigs.put(sig, Boolean.TRUE);
+                    }
                     continue;
+                }
 
                 // TODO could continue to try find another with higher rating (weighted by priority ordering)
                 return sa;

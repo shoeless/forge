@@ -6035,6 +6035,19 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         damageHistory = history;
     }
 
+    /** Diagnostic: total entries across all timestamp-keyed tables on this card. */
+    public int getTimestampTableSize() {
+        return changedCardTypesByText.size() + changedCardTypesCharacterDefining.size()
+                + changedCardTypes.size() + changedCardNames.size()
+                + changedCardKeywordsByText.size() + changedCardKeywords.size()
+                + changedCardTraitsByText.size() + changedCardTraits.size()
+                + changedCardColorsByText.size() + changedCardColorsCharacterDefining.size()
+                + changedCardColors.size() + changedCardManaCost.size()
+                + changedSVars.size()
+                + newPTText.size() + newPTCharacterDefining.size() + newPT.size()
+                + boostPT.size() + hiddenExtrinsicKeywords.size();
+    }
+
     public final boolean hasDealtDamageToOpponentThisTurn() {
         return getDamageHistory().getDamageDoneThisTurn(null, true, null, "Player.Opponent", this, getController(), null) > 0;
     }
@@ -6860,6 +6873,16 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         } else if (worldTimestamp == -1) {
             worldTimestamp = ts;
         }
+    }
+
+    /** Sorted, comma-joined originals of every keyword on this card (incl. granted ones with magnitudes). */
+    public String getKeywordKey() {
+        List<String> ability = new ArrayList<>();
+        for (final KeywordInterface inst : getKeywords()) {
+            ability.add(inst.getOriginal());
+        }
+        Collections.sort(ability);
+        return String.join(",", ability);
     }
 
     public Zone getZone() {

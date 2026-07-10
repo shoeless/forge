@@ -79,6 +79,12 @@ public class AiAttackController {
     private Player defendingOpponent;
 
     private int aiAggression = 0; // how aggressive the ai is attack will be depending on circumstances
+    // Per-declareAttackers identity caches: identical attackers (e.g. token swarms) reuse one
+    // evaluation in shouldAttack. Allocated in declareAttackers (only when -Dforge.combatEvalCache=on
+    // and duplicate creatures are present), nulled in its finally. Only read on the decision thread —
+    // shouldAttack runs after the parallel forced-attacker futures have joined.
+    private Map<String, Boolean> effAtkCache;
+    private Map<String, SpellAbilityFactors> safCache;
     private final boolean nextTurn; // include creature that can only attack/block next turn
     private final int timeOut;
     private final boolean canUseTimeout;
@@ -865,9 +871,19 @@ public class AiAttackController {
         if (openedScope) {
             ComputerUtilCombat.beginCombatEvaluation(ai.getGame());
         }
+        // Only allocate the attacker identity caches when the flag is on AND duplicate creatures are
+        // present (otherwise the per-call signature is pure overhead). null caches => shouldAttack
+        // computes directly.
+        if (ComputerUtilCombat.isCombatEvalCacheEnabled()
+                && AiCardSignature.boardHasDuplicateCreatures(ai.getGame())) {
+            effAtkCache = new HashMap<>();
+            safCache = new HashMap<>();
+        }
         try {
             return declareAttackersImpl(combat);
         } finally {
+            effAtkCache = null;
+            safCache = null;
             if (openedScope) {
                 ComputerUtilCombat.endCombatEvaluation();
             }
@@ -1649,13 +1665,44 @@ public class AiAttackController {
             }
         }
 
-        if (!isEffectiveAttacker(ai, attacker, combat, defender)) {
+        // Identity cache: identical attackers (e.g. token swarms) reuse one evaluation within this
+        // declareAttackers scope. The key folds in aiAggression (a calculate() input) for safety; a
+        // null signature (transformable/merged) bypasses the cache. The Exalted branch of
+        // isEffectiveAttacker reads combat.getAttackers() (flips once an attacker is committed), so
+        // that memo is gated OFF when an Exalted bonus is in play.
+        // Compute the signature ONLY when the caches are active (the gate allocated them because the
+        // board has duplicate creatures); otherwise it is pure overhead on an all-unique board.
+        // effAtkCache and safCache are allocated together, so checking one gates both.
+        String sig = null;
+        if (effAtkCache != null) {
+            final String baseSig = AiCardSignature.of(attacker);
+            sig = baseSig == null ? null : baseSig + "|" + aiAggression;
+        }
+
+        boolean effective;
+        if (sig != null && countExaltedBonus(ai) == 0 && effAtkCache.containsKey(sig)) {
+            effective = effAtkCache.get(sig);
+        } else {
+            effective = isEffectiveAttacker(ai, attacker, combat, defender);
+            if (sig != null && countExaltedBonus(ai) == 0) {
+                effAtkCache.put(sig, effective);
+            }
+        }
+        if (!effective) {
             return false;
         }
 
-        SpellAbilityFactors saf = new SpellAbilityFactors(attacker);
-        if (aiAggression != 5) {
-            saf.calculate(defenders, combat);
+        SpellAbilityFactors saf;
+        if (sig != null && safCache.containsKey(sig)) {
+            saf = safCache.get(sig);
+        } else {
+            saf = new SpellAbilityFactors(attacker);
+            if (aiAggression != 5) {
+                saf.calculate(defenders, combat);
+            }
+            if (sig != null) {
+                safCache.put(sig, saf);
+            }
         }
 
         // if the creature cannot block and can kill all opponents they might as

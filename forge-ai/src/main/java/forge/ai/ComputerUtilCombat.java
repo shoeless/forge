@@ -97,6 +97,11 @@ public class ComputerUtilCombat {
 
     private static final ThreadLocal<EnumSet<ReplacementType>> presentReplacementTypes = new ThreadLocal<>();
     private static final ThreadLocal<Map<Long, Integer>> cachedUnblockedDamage = new ThreadLocal<>();
+    // Per-scope memo of canDestroyAttacker/canDestroyBlocker results, keyed by
+    // (attacker identity | blocker identity | flags) so identical-token combats reuse one result.
+    // Allocated in beginCombatEvaluation only when the board has duplicate creatures (see
+    // AiCardSignature.boardHasDuplicateCreatures); null = the wrappers never compute a signature.
+    private static final ThreadLocal<Map<String, Boolean>> cachedDestroyResults = new ThreadLocal<>();
 
     static boolean isCombatEvalCacheEnabled() {
         return COMBAT_EVAL_CACHE;
@@ -133,11 +138,19 @@ public class ComputerUtilCombat {
         });
         presentReplacementTypes.set(present);
         cachedUnblockedDamage.set(new HashMap<>());
+        // Only engage the per-scope identity memo when duplicate creatures are present (token swarms
+        // / constructed dupes); otherwise it would just add signature overhead where nothing collapses.
+        if (AiCardSignature.boardHasDuplicateCreatures(game)) {
+            cachedDestroyResults.set(new HashMap<>());
+        } else {
+            cachedDestroyResults.remove();
+        }
     }
 
     public static void endCombatEvaluation() {
         presentReplacementTypes.remove();
         cachedUnblockedDamage.remove();
+        cachedDestroyResults.remove();
     }
 
     /** True if a beginCombatEvaluation() scope is currently open on this thread. */
@@ -1756,6 +1769,36 @@ public class ComputerUtilCombat {
     }
     public static boolean canDestroyAttacker(Player ai, Card attacker, Card blocker, final Combat combat,
             final boolean withoutAbilities, final boolean withoutAttackerStaticAbilities) {
+        // Per-scope identity memo (active only inside beginCombatEvaluation/endCombatEvaluation, and
+        // only when the board has duplicate creatures). Signatures are computed on the ORIGINAL cards;
+        // transformable/merged cards yield null and bypass the memo.
+        final Map<String, Boolean> cache = cachedDestroyResults.get();
+        String key = null;
+        if (cache != null) {
+            final String aSig = AiCardSignature.of(attacker);
+            final String bSig = AiCardSignature.of(blocker);
+            if (aSig != null && bSig != null) {
+                key = "A|" + aSig + "|" + bSig + "|" + (withoutAbilities ? 1 : 0) + "|" + (withoutAttackerStaticAbilities ? 1 : 0);
+                final Boolean hit = cache.get(key);
+                if (hit != null) {
+                    if (SIG_AUDIT) {
+                        boolean real = canDestroyAttackerUncached(ai, attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+                        if (real != hit.booleanValue()) {
+                            reportAuditMismatch("canDestroyAttacker", hit, real, key);
+                        }
+                    }
+                    return hit.booleanValue();
+                }
+            }
+        }
+        final boolean r = canDestroyAttackerUncached(ai, attacker, blocker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+        if (key != null) {
+            cache.put(key, r);
+        }
+        return r;
+    }
+    private static boolean canDestroyAttackerUncached(Player ai, Card attacker, Card blocker, final Combat combat,
+            final boolean withoutAbilities, final boolean withoutAttackerStaticAbilities) {
         // Can activate transform ability
         if (!withoutAbilities) {
             attacker = canTransform(attacker);
@@ -1985,6 +2028,34 @@ public class ComputerUtilCombat {
         return canDestroyBlocker(ai, blocker, attacker, combat, withoutAbilities, false);
     }
     public static boolean canDestroyBlocker(Player ai, Card blocker, Card attacker, final Combat combat,
+            final boolean withoutAbilities, final boolean withoutAttackerStaticAbilities) {
+        // Per-scope identity memo (active only inside beginCombatEvaluation/endCombatEvaluation).
+        final Map<String, Boolean> cache = cachedDestroyResults.get();
+        String key = null;
+        if (cache != null) {
+            final String bSig = AiCardSignature.of(blocker);
+            final String aSig = AiCardSignature.of(attacker);
+            if (bSig != null && aSig != null) {
+                key = "B|" + bSig + "|" + aSig + "|" + (withoutAbilities ? 1 : 0) + "|" + (withoutAttackerStaticAbilities ? 1 : 0);
+                final Boolean hit = cache.get(key);
+                if (hit != null) {
+                    if (SIG_AUDIT) {
+                        boolean real = canDestroyBlockerUncached(ai, blocker, attacker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+                        if (real != hit.booleanValue()) {
+                            reportAuditMismatch("canDestroyBlocker", hit, real, key);
+                        }
+                    }
+                    return hit.booleanValue();
+                }
+            }
+        }
+        final boolean r = canDestroyBlockerUncached(ai, blocker, attacker, combat, withoutAbilities, withoutAttackerStaticAbilities);
+        if (key != null) {
+            cache.put(key, r);
+        }
+        return r;
+    }
+    private static boolean canDestroyBlockerUncached(Player ai, Card blocker, Card attacker, final Combat combat,
             final boolean withoutAbilities, final boolean withoutAttackerStaticAbilities) {
         // Can activate transform ability
         if (!withoutAbilities) {
