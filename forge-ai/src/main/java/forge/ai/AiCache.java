@@ -24,7 +24,17 @@ public class AiCache {
     // for that you can pass Functions that compare the args
     public static <T> T getCached(String key, Supplier<T> func, List<BiFunction<Object, Object, Boolean>> argsCheck, Object... args) {
         // TODO would like a good strategy to derive default key, but there's no clean way to obtain the method name
-        for (List<Object> cached : dataMap.get(key)) {
+        // dataMap is a Guava synchronizedMultimap: its collection views (get(key)) must be iterated while
+        // holding the map's own lock, otherwise a concurrent put() below (e.g. from parallel DeckBattler
+        // games sharing this global cache) mutates the backing collection mid-iteration -> CME. Snapshot
+        // the view under the lock, then iterate/compute lock-free. func.get() is NOT run under the lock
+        // (it can be expensive and re-enter getCached); a lost-update race just recomputes + double-inserts,
+        // which the argsCheck read path tolerates.
+        List<List<Object>> snapshot;
+        synchronized (dataMap) {
+            snapshot = Lists.newArrayList(dataMap.get(key));
+        }
+        for (List<Object> cached : snapshot) {
             boolean hit = true;
             for (int i = 0; i < args.length; i++) {
                 BiFunction<Object, Object, Boolean> checker = argsCheck == null ? Object::equals : argsCheck.get(i);
@@ -40,7 +50,9 @@ public class AiCache {
         T result = func.get();
         List<Object> cached = Lists.newArrayList(result);
         cached.addAll(Arrays.asList(args));
-        dataMap.put(key, cached);
+        synchronized (dataMap) {
+            dataMap.put(key, cached);
+        }
         return result;
     }
 
