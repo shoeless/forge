@@ -63,6 +63,34 @@ public class SplashScreen extends FContainer {
 
     @Override
     protected void doLayout(float width, float height) {
+        // Reposition the mode-selection buttons on a size change (e.g. an orientation rotation while
+        // the selector is showing). The button bounds are otherwise set once in showSelector(); this
+        // recomputes them from the same background-fit math so they track the new dimensions.
+        if (btnHome != null && btnAdventure != null && splashTexture != null) {
+            float x, y, w, h;
+            float backgroundRatio = (float) splashTexture.getRegionWidth() / splashTexture.getRegionHeight();
+            float screenRatio = width / height;
+            if (backgroundRatio > screenRatio) {
+                x = 0;
+                w = width;
+                h = width * backgroundRatio;
+                y = (height - h) / 2;
+            } else {
+                y = 0;
+                h = height;
+                w = height / backgroundRatio;
+                x = (width - w) / 2;
+            }
+            y += h * 295f / 450f;
+            float padding = 20f / 450f * w;
+            float btnHeight = 57f / 450f * h;
+            float btn_w = (w - 2 * padding);
+            float btn_x = x + padding;
+            float multiplier = Forge.isLandscapeMode() ? 1 : 1.2f;
+            float btn_y = (y + padding) * multiplier;
+            btnHome.setBounds(btn_x, btn_y, btn_w, btnHeight);
+            btnAdventure.setBounds(btn_x, btn_y + btnHeight + padding / 2, btn_w, btnHeight);
+        }
     }
 
     //prepare for showing dialogs on top of splash screen if needed

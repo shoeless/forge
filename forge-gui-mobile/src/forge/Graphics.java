@@ -63,8 +63,22 @@ public class Graphics {
 
     private Texture dummyTexture = null;
 
+    private final Matrix4 projectionMatrix = new Matrix4();
+
     public Graphics() {
         ShaderProgram.pedantic = false;
+    }
+
+    /**
+     * Rebuilds the orthographic projection matrix for new screen dimensions. Must be called when the
+     * screen size changes (e.g. an iOS device orientation rotation); without it the batch/shape
+     * renderer keep the launch dimensions and everything draws stretched/distorted after a rotation.
+     */
+    public void resize(int width, int height) {
+        // libGDX uses a y-up coordinate system with origin at bottom-left.
+        projectionMatrix.setToOrtho2D(0, 0, width, height);
+        batch.setProjectionMatrix(projectionMatrix);
+        shapeRenderer.setProjectionMatrix(projectionMatrix);
     }
 
     public ShaderProgram getShaderOutline() {
@@ -209,6 +223,7 @@ public class Graphics {
         } else {
             displayObj.screenPos.set(bounds);
         }
+        displayObj.markScreenPosUpdated(); //stamp with the current resize version so touch dispatch treats it as fresh
 
         Rectangle intersection = Utils.getIntersection(bounds, visibleBounds);
         if (intersection != null) { //avoid drawing object if it's not within visible region
