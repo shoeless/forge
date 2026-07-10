@@ -72,7 +72,14 @@ public class ControlWinLose {
                 MatchController.getHostedMatch().subGameCount--;
             }
             MatchController.getHostedMatch().endCurrentGame();
-        } catch (NullPointerException e) {}
+        } catch (NullPointerException e) {
+            // Network guest: no HostedMatch exists locally, so getHostedMatch() is null and the
+            // subGameCount/endCurrentGame calls above NPE. Manually trigger match cleanup so the
+            // guest navigates back to the lobby instead of being stranded on the win/lose screen.
+            // afterGameEnd() is null-safe for network clients (treats a null HostedMatch as
+            // match-over), so this is the intended teardown path for a guest's local quit.
+            MatchController.instance.afterGameEnd();
+        }
         view.hide();
         if (openHomeScreen || humancount == 0)
             Forge.openHomeScreen(Forge.lastButtonIndex, Forge.getCurrentScreen());
