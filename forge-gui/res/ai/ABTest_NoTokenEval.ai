@@ -1,3 +1,0 @@
-# A/B test profile: only the token-engine creature-eval bonus DISABLED (other tunings left on).
-# Player 1 (default) vs player 2 (this) isolates the +50 token-engine eval tuning's win-rate effect.
-EVAL_TOKEN_ENGINE_BONUS=false

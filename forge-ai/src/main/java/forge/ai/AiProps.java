@@ -148,12 +148,7 @@ public enum AiProps {
     SIDEBOARDING_CHANCE_ON_WIN("0"),
     SIDEBOARDING_IN_LIMITED_FORMATS("false"),
     SIDEBOARDING_SHARED_TYPE_ONLY("false"),
-    SIDEBOARDING_PLANESWALKER_EQ_CREATURE("false"),
-
-    // iOS-branch directional AI tunings, gated per-profile so a baseline profile can A/B them via
-    // asymmetric self-play. Default "true" preserves current (tuned) behavior; a test profile sets
-    // them "false" to measure each tuning's win-rate contribution.
-    EVAL_TOKEN_ENGINE_BONUS("true");           // +eval for creatures whose triggers make tokens
+    SIDEBOARDING_PLANESWALKER_EQ_CREATURE("false");
     // Experimental features, must be promoted or removed after extensive testing and, ideally, defaulting
     // <-- There are no experimental options here -->
 

@@ -772,35 +772,6 @@ public class ComputerUtilCard {
     private static final CreatureEvaluator creatureEvaluator = new CreatureEvaluator();
     private static final LandEvaluator landEvaluator = new LandEvaluator();
 
-    // The static creatureEvaluator has no player context, but some directional eval tunings are
-    // gated per AI profile (see AiProps). AI decision entry points (PlayerControllerAi combat/spell
-    // methods) publish the deciding player here so the evaluator can consult that player's profile.
-    // Unset (null) => no A/B context, so the tuned default applies -- production behavior unchanged.
-    private static final ThreadLocal<Player> AI_DECISION_PLAYER = new ThreadLocal<>();
-
-    /** Publishes the AI player currently making a decision so the static evaluator can read its
-     *  profile; returns the previous value so callers can restore it in a finally (nesting-safe). */
-    public static Player pushAiDecisionPlayer(final Player p) {
-        Player prev = AI_DECISION_PLAYER.get();
-        AI_DECISION_PLAYER.set(p);
-        return prev;
-    }
-
-    /** Restores the AI decision player to a value previously returned by {@link #pushAiDecisionPlayer}. */
-    public static void popAiDecisionPlayer(final Player prev) {
-        if (prev == null) {
-            AI_DECISION_PLAYER.remove();
-        } else {
-            AI_DECISION_PLAYER.set(prev);
-        }
-    }
-
-    /** True when the current AI decider's profile enables the token-engine eval bonus (default on). */
-    public static boolean tokenEngineEvalEnabled() {
-        final Player d = AI_DECISION_PLAYER.get();
-        return d == null || AiProfileUtil.getBoolProperty(d, AiProps.EVAL_TOKEN_ENGINE_BONUS);
-    }
-
     /**
      * <p>
      * evaluateCreature.
