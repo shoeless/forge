@@ -19,13 +19,17 @@ import forge.gui.FThreads;
 import forge.gui.interfaces.ILobbyView;
 import forge.gui.util.SOptionPane;
 import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgeNetPreferences;
 import forge.localinstance.skin.FSkinProp;
+import forge.model.FModel;
 import forge.screens.LoadingOverlay;
 import forge.screens.constructed.LobbyScreen;
 import forge.screens.online.OnlineMenu.OnlineScreen;
 import forge.toolbox.FButton;
 import forge.toolbox.FLabel;
+import forge.toolbox.FOptionPane;
 import forge.util.Utils;
+import forge.util.WaitCallback;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +47,7 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
     private final FButton btnHost;
     private final FButton btnJoin;
     private final FLabel lblDiscoveredHeader;
+    private final FLabel lblTailscaleSetup;
     private final List<FButton> discoveredButtons = new ArrayList<>();
     private ServerDiscovery discovery;
 
@@ -84,6 +89,13 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
                 .font(FSkinFont.get(14)).align(Align.center).build();
         lblDiscoveredHeader.setVisible(false);
         add(lblDiscoveredHeader);
+
+        lblTailscaleSetup = new FLabel.Builder()
+                .text(Forge.getLocalizer().getMessageorUseDefault("lblTailscaleSetup", "Tailscale Setup"))
+                .font(FSkinFont.get(14)).align(Align.center)
+                .textColor(FSkinColor.get(FSkinColor.Colors.CLR_ACTIVE))
+                .command(e -> activateTailscaleSetup()).build();
+        add(lblTailscaleSetup);
     }
 
     private static GameLobby gameLobby;
@@ -266,6 +278,11 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
             } else {
                 lblDiscoveredHeader.setVisible(false);
             }
+
+            // Tailscale setup link (credential for cross-network discovery)
+            labelHeight = lblTailscaleSetup.getAutoSizeBounds().height + padding;
+            lblTailscaleSetup.setBounds(padding, y, width - 2 * padding, labelHeight);
+            lblTailscaleSetup.setVisible(true);
         } else {
             lblTitle.setVisible(false);
             lblWarning.setVisible(false);
@@ -274,6 +291,7 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
             btnHost.setVisible(false);
             btnJoin.setVisible(false);
             lblDiscoveredHeader.setVisible(false);
+            lblTailscaleSetup.setVisible(false);
             for (final FButton btn : discoveredButtons) {
                 btn.setVisible(false);
             }
@@ -386,6 +404,67 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
         return ForgeConstants.CLOSE_CONN_COMMAND.equals(message)
                 || ForgeConstants.INVALID_HOST_COMMAND.equals(message)
                 || (message != null && message.startsWith(ForgeConstants.CONN_ERROR_PREFIX));
+    }
+
+    /**
+     * Prompts for the Tailscale OAuth client credential used to auto-discover games across
+     * networks when hosting. Runs on a background thread because the input dialogs block.
+     */
+    private void activateTailscaleSetup() {
+        FThreads.invokeInBackgroundThread(() -> {
+            final String curId = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.TAILSCALE_OAUTH_CLIENT_ID);
+            final String curSecret = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.TAILSCALE_OAUTH_CLIENT_SECRET);
+            final boolean configured = curSecret != null && !curSecret.isEmpty();
+            final String title = Forge.getLocalizer().getMessageorUseDefault("lblTailscaleSetup", "Tailscale Setup");
+
+            String idPrompt = Forge.getLocalizer().getMessageorUseDefault("lblTailscaleClientIdPrompt",
+                    "Cross-network game discovery uses a Tailscale OAuth client.\n\n"
+                    + "Create one in the Tailscale admin console under Settings > OAuth clients "
+                    + "with the 'devices' READ scope, then enter its Client ID here.\n\n"
+                    + "(Legacy tskey-api access tokens also work: leave the Client ID blank "
+                    + "and paste the token as the secret. Note they expire within 90 days.)");
+            if (configured) {
+                idPrompt += "\n\nA credential is already saved. Leave the NEXT prompt blank to clear it.";
+            }
+
+            final String newId = SOptionPane.showInputDialog(idPrompt, title, null, curId == null ? "" : curId);
+            if (newId == null) {
+                return; // cancelled
+            }
+
+            final String secretPrompt = Forge.getLocalizer().getMessageorUseDefault("lblTailscaleClientSecretPrompt",
+                    "Enter the OAuth Client Secret (or a legacy tskey-api token).\n"
+                    + (configured ? "Leave blank to CLEAR the saved credential." : "Leave blank to cancel."));
+            // Masked input (bullets) — the secret is long-lived and grants tailnet device
+            // enumeration, so don't render it on screen while it's typed.
+            final String newSecret = new WaitCallback<String>() {
+                @Override
+                public void run() {
+                    FOptionPane.showInputDialog(secretPrompt, title, "", null, this, false, true);
+                }
+            }.invokeAndWait();
+            if (newSecret == null) {
+                return; // cancelled
+            }
+
+            if (newSecret.trim().isEmpty()) {
+                if (configured) {
+                    FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.TAILSCALE_OAUTH_CLIENT_ID, "");
+                    FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.TAILSCALE_OAUTH_CLIENT_SECRET, "");
+                    FModel.getNetPreferences().save();
+                    SOptionPane.showMessageDialog(Forge.getLocalizer().getMessageorUseDefault(
+                            "lblTailscaleCredentialCleared", "Tailscale credential cleared."));
+                }
+                return;
+            }
+
+            FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.TAILSCALE_OAUTH_CLIENT_ID, newId.trim());
+            FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.TAILSCALE_OAUTH_CLIENT_SECRET, newSecret.trim());
+            FModel.getNetPreferences().save();
+            SOptionPane.showMessageDialog(Forge.getLocalizer().getMessageorUseDefault(
+                    "lblTailscaleCredentialSaved",
+                    "Tailscale credential saved. Guests on your tailnet will auto-discover games you host."));
+        });
     }
 
 }

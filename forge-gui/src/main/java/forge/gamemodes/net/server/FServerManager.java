@@ -224,6 +224,12 @@ public final class FServerManager implements IHasForgeLog {
                 playerName = "Host";
             }
             broadcaster = new ServerBroadcaster(playerName, port, 4);
+            final String tsClientId = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.TAILSCALE_OAUTH_CLIENT_ID);
+            final String tsClientSecret = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.TAILSCALE_OAUTH_CLIENT_SECRET);
+            if (tsClientSecret != null && !tsClientSecret.isEmpty()) {
+                broadcaster.setTailscaleCredentials(tsClientId, tsClientSecret);
+                netLog.info("ServerBroadcaster: Tailscale credential configured for cross-network discovery");
+            }
             broadcaster.start();
         } catch (final Throwable t) {
             broadcaster = null;

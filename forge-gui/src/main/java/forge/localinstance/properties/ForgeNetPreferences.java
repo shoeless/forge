@@ -30,7 +30,11 @@ public class ForgeNetPreferences extends PreferencesStore<ForgeNetPreferences.FN
         NET_BANDWIDTH_LOGGING("false"),
         NET_LOG_CLEANUP_ENABLED("true"),
         NET_AFK_TIMEOUT("5"),
-        NET_LAST_COPIED_URL("");
+        NET_LAST_COPIED_URL(""),
+        // Tailscale cross-network discovery credential: an OAuth client (id + secret, devices Read
+        // scope — never expires), or a legacy tskey-api token stored in SECRET with a blank ID.
+        TAILSCALE_OAUTH_CLIENT_ID(""),
+        TAILSCALE_OAUTH_CLIENT_SECRET("");
 
         private final String strDefaultVal;
 
