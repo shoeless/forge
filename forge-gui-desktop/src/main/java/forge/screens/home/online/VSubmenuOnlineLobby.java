@@ -255,7 +255,7 @@ public enum VSubmenuOnlineLobby implements IVSubmenu<CSubmenuOnlineLobby>, IOnli
 
     @Override
     public void closeConn(String msg) {
-        // Clean up connection state
+        // Clean up connection state (safe off-EDT)
         if (client != null) {
             client.close();
             client = null;
@@ -264,15 +264,17 @@ public enum VSubmenuOnlineLobby implements IVSubmenu<CSubmenuOnlineLobby>, IOnli
         if (server.isHosting()) {
             server.stopServer();
         }
-        FNetOverlay.SINGLETON_INSTANCE.reset();
-
-        // Clear lobby and repopulate
         this.lobby = null;
-        populate();
 
-        // Show error message if provided
-        if (msg != null && !msg.isEmpty()) {
-            SOptionPane.showErrorDialog(msg, Localizer.getInstance().getMessage("lblConnectionError"));
-        }
+        // closeConn is invoked from the netty event-loop thread on disconnect; Swing component
+        // mutation (overlay reset, lobby repopulate) and the modal error dialog must run on the
+        // EDT — off-EDT Swing is undefined behavior, and the modal would block the network thread.
+        forge.gui.FThreads.invokeInEdtNowOrLater(() -> {
+            FNetOverlay.SINGLETON_INSTANCE.reset();
+            populate();
+            if (msg != null && !msg.isEmpty()) {
+                SOptionPane.showErrorDialog(msg, Localizer.getInstance().getMessage("lblConnectionError"));
+            }
+        });
     }
 }

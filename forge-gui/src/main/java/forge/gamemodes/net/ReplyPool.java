@@ -21,7 +21,13 @@ public class ReplyPool {
 
     public void complete(final int index, final Object value) {
         synchronized (pool) {
-            pool.get(index).set(value);
+            final CompletableFuture future = pool.get(index);
+            if (future == null) {
+                // Entry cleared by cancelAll (disconnect/AFK teardown) before the reply arrived —
+                // drop it rather than NPE on the netty thread.
+                return;
+            }
+            future.set(value);
         }
     }
 
@@ -29,6 +35,11 @@ public class ReplyPool {
         final CompletableFuture future;
         synchronized (pool) {
             future = pool.get(index);
+        }
+        if (future == null) {
+            // Entry cleared by cancelAll (disconnect teardown) between initialize and get —
+            // treat as a cancelled reply rather than NPE.
+            return null;
         }
         try {
             return future.get();

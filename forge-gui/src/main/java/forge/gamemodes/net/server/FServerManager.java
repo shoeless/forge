@@ -69,6 +69,11 @@ import java.util.function.Predicate;
 public final class FServerManager implements IHasForgeLog {
 
     static final int HEARTBEAT_TIMEOUT_SECONDS = Integer.getInteger("forge.net.heartbeatTimeout", 45);
+    /** Same property/value as FGameClient's heartbeat interval: heartbeats are now SYMMETRIC.
+     *  The server also sends them when otherwise silent, so a guest can detect a host that died
+     *  without a TCP close (killed app, dropped cellular) — previously the guest had no signal
+     *  and sat frozen in a dead match forever. */
+    static final int HEARTBEAT_INTERVAL_SECONDS = Integer.getInteger("forge.net.heartbeatInterval", 15);
 
     private static final int OUTBOUND_BUFFER_LOW_WATER = 64 * 1024;
     private static final int OUTBOUND_BUFFER_HIGH_WATER = 1024 * 1024;
@@ -179,9 +184,12 @@ public final class FServerManager implements IHasForgeLog {
                                     new WriteBufferWaterMark(OUTBOUND_BUFFER_LOW_WATER, OUTBOUND_BUFFER_HIGH_WATER));
                             final ChannelPipeline p = ch.pipeline();
                             p.addLast(
+                                    // HEAD-side of the frame decoder so raw (partial-frame) reads
+                                    // reset the read timer — a client uploading a large frame
+                                    // slowly must not be timed out as silent. Mirrors the client.
+                                    new IdleStateHandler(HEARTBEAT_TIMEOUT_SECONDS, HEARTBEAT_INTERVAL_SECONDS, 0, TimeUnit.SECONDS),
                                     new CompatibleObjectEncoder(byteTracker),
                                     new CompatibleObjectDecoder(9766 * 1024, ClassResolvers.cacheDisabled(null)),
-                                    new IdleStateHandler(HEARTBEAT_TIMEOUT_SECONDS, 0, 0, TimeUnit.SECONDS),
                                     new MessageHandler(),
                                     new SaturationLoggingHandler(),
                                     new RegisterClientHandler(),
@@ -1222,6 +1230,13 @@ public final class FServerManager implements IHasForgeLog {
                 netLog.warn(msg);
                 broadcast(MessageEvent.warning(msg));
                 ctx.close();
+                return;
+            }
+            if (evt instanceof IdleStateEvent ise && ise.state() == IdleState.WRITER_IDLE) {
+                // Keep the pipe warm toward the guest when the game is quiet, so the guest's
+                // reader-idle detection (mirror of ours) doesn't false-positive on a healthy
+                // host, and a dead host is detectable by heartbeat silence.
+                ctx.writeAndFlush(new HeartbeatEvent());
                 return;
             }
             super.userEventTriggered(ctx, evt);

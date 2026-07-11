@@ -24,6 +24,7 @@ import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.screens.LoadingOverlay;
 import forge.screens.constructed.LobbyScreen;
+import forge.screens.match.MatchController;
 import forge.screens.online.OnlineMenu.OnlineScreen;
 import forge.toolbox.FButton;
 import forge.toolbox.FLabel;
@@ -126,7 +127,19 @@ public class OnlineLobbyScreen extends LobbyScreen implements IOnlineLobby {
     @Override
     public void closeConn(String msg) {
         clearGameLobby();
-        Forge.back();
+        // closeConn is invoked from the netty event-loop thread on disconnect; screen-stack
+        // navigation must happen on the EDT/render thread. If the host died mid-game, run the
+        // same teardown a normal game end performs (MatchController.afterGameEnd: navigation
+        // plus releasing the ~100-140MB match graph/textures — it treats a null HostedMatch as
+        // match-over, i.e. exactly the network-client case); a bare back() would leave the dead
+        // game pinned until the next match.
+        FThreads.invokeInEdtNowOrLater(() -> {
+            if (MatchController.instance.getGameView() != null) {
+                MatchController.instance.afterGameEnd();
+            } else {
+                Forge.back();
+            }
+        });
         if (msg.length() > 0) {
             FThreads.invokeInBackgroundThread(() -> {
                 final boolean callBackAlwaysTrue = SOptionPane.showOptionDialog(msg, Forge.getLocalizer().getMessage("lblError"), FSkinProp.ICO_WARNING, List.of(Forge.getLocalizer().getMessage("lblOK")), 1) == 0;
