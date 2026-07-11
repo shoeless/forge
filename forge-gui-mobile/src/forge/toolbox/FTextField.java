@@ -52,7 +52,7 @@ public class FTextField extends FDisplayObject implements ITextField {
     protected FSkinFont font, renderedFont;
     private int alignment;
     private int selStart, selLength;
-    private boolean isEditing, readOnly, isNumeric;
+    private boolean isEditing, readOnly, isNumeric, isPassword;
 
     private final FPopupMenu contextMenu = new FPopupMenu() {
         @Override
@@ -162,8 +162,28 @@ public class FTextField extends FDisplayObject implements ITextField {
     public void setIsNumeric(boolean isNumeric0) {
         isNumeric = isNumeric0;
     }
+    /** Renders the field's content as bullets (for secrets); getText() still returns the real value. */
+    public void setIsPassword(boolean isPassword0) {
+        isPassword = isPassword0;
+    }
     public void setReadOnly(boolean readOnly0) {
         readOnly = readOnly0;
+    }
+
+    /**
+     * The string actually rendered/measured: the real text, or an equal-length run of bullets
+     * when in password mode. Same length means selection/cursor offsets stay valid; using it for
+     * BOTH measurement and drawing keeps the cursor aligned with the masked glyphs.
+     */
+    private String displayText() {
+        if (!isPassword || text.isEmpty()) {
+            return text;
+        }
+        final StringBuilder sb = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            sb.append('•');
+        }
+        return sb.toString();
     }
 
     public FEventHandler getChangedHandler() {
@@ -416,14 +436,16 @@ public class FTextField extends FDisplayObject implements ITextField {
         }
 
         //determine actual rendered font so selection logic is accurate
+        //(measure the DISPLAYED text — bullets in password mode — so cursor/selection align with the rendered glyphs)
+        final String shownText = displayText();
         renderedFont = font;
         float availableTextWidth = w - getLeftPadding() - getRightPadding();
-        TextBounds textBounds = renderedFont.getMultiLineBounds(text);
+        TextBounds textBounds = renderedFont.getMultiLineBounds(shownText);
         while (textBounds.width > availableTextWidth || textBounds.height > h) {
             if (renderedFont.canShrink()) { //shrink font to fit if possible
                 renderedFont = renderedFont.shrink();
                 availableTextWidth = w - getLeftPadding() - getRightPadding();
-                textBounds = renderedFont.getMultiLineBounds(text);
+                textBounds = renderedFont.getMultiLineBounds(shownText);
             }
             else {
                 break;
@@ -434,7 +456,7 @@ public class FTextField extends FDisplayObject implements ITextField {
         if (isEditing || contextMenu.isVisible()) {
             float selLeft = getTextLeft();
             if (selStart > 0) {
-                selLeft += renderedFont.getBounds(text.substring(0, selStart)).width;
+                selLeft += renderedFont.getBounds(shownText.substring(0, selStart)).width;
             }
             float selTop = PADDING;
             float selHeight = h - 2 * PADDING;
@@ -443,7 +465,7 @@ public class FTextField extends FDisplayObject implements ITextField {
                 g.drawLine(BORDER_THICKNESS, getForeColor(), selLeft, selTop, selLeft, selTop + selHeight);
             }
             else if (selStart == 0 && selLength == text.length()) {
-                float selWidth = renderedFont.getBounds(text.substring(selStart, selStart + selLength)).width;
+                float selWidth = renderedFont.getBounds(shownText.substring(selStart, selStart + selLength)).width;
                 g.fillRect(getSelColor(), selLeft, selTop, selWidth, selHeight);
                 drawText(g, w, h); //draw text in front of selection background
             }
@@ -463,7 +485,7 @@ public class FTextField extends FDisplayObject implements ITextField {
             h++; //if odd difference between height and font height, increment height so text favors displaying closer to bottom
         }
         if (!text.isEmpty()) {
-            g.drawText(text, renderedFont, getForeColor(), getLeftPadding(), 0, w - getLeftPadding() - getRightPadding(), h, false, alignment, true);
+            g.drawText(displayText(), renderedFont, getForeColor(), getLeftPadding(), 0, w - getLeftPadding() - getRightPadding(), h, false, alignment, true);
         }
         else if (!ghostText.isEmpty()) {
             g.drawText(ghostText, renderedFont, getGhostTextColor(), getLeftPadding(), 0, w - getLeftPadding() - getRightPadding(), h, false, alignment, true);

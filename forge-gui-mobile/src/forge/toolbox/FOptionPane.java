@@ -144,12 +144,16 @@ public class FOptionPane extends FDialog {
         showInputDialog(null, title, initialInput, null, callback, false);
     }
     public static <T> void showInputDialog(final String message, final String title, final T initialInput, final List<T> inputOptions, final Consumer<T> callback, final boolean isNumeric) {
+        showInputDialog(message, title, initialInput, inputOptions, callback, isNumeric, false);
+    }
+    public static <T> void showInputDialog(final String message, final String title, final T initialInput, final List<T> inputOptions, final Consumer<T> callback, final boolean isNumeric, final boolean isPassword) {
         final FDisplayObject inputField;
         final FTextField txtInput;
         final FComboBox<T> cbInput;
         if (inputOptions == null) {
             txtInput = new FTextField(initialInput.toString());
             txtInput.setIsNumeric(isNumeric);
+            txtInput.setIsPassword(isPassword);
             cbInput = null;
             inputField = txtInput;
         }
