@@ -971,12 +971,20 @@ public class AiAttackController {
 
         // Attackers that don't really have a choice
         final AtomicInteger numForcedAttackers = new AtomicInteger(0);
+        // Set once the forced-attacker parallel checks time out (completeOnTimeout below). A worker
+        // still running on the common pool after that point must NOT mutate the shared combat -- a
+        // post-decision addAttacker into live combat corrupts the declaration. Gate its effect here.
+        final java.util.concurrent.atomic.AtomicBoolean forcedTimedOut = new java.util.concurrent.atomic.AtomicBoolean(false);
         // nextTurn is now only used by effect from Oracle en-Vec, which can skip check must attack,
         // because creatures not chosen can't attack.
         if (!nextTurn) {
             for (final Card attacker : this.attackers) {
                 final GameEntity finalDefender = defender;
                 final java.util.function.Supplier<Integer> forcedAttackCheck = () -> {
+                    // Bail early if this (possibly leaked) worker outlived the decision deadline.
+                    if (Thread.currentThread().isInterrupted() || AiDeadline.shouldAbort()) {
+                        return 0;
+                    }
                     GameEntity mustAttackDef = null;
                     if (attacker.getSVar("MustAttack").equals("True")) {
                         mustAttackDef = finalDefender;
@@ -1028,10 +1036,14 @@ public class AiAttackController {
                         // multimap is not thread-safe; unsynchronized addAttacker calls
                         // collide (ConcurrentModificationException, dropped attackers)
                         synchronized (combat) {
-                            combat.addAttacker(attacker, mustAttackDef);
+                            // Drop the mutation entirely if the decision already timed out: a late
+                            // worker adding an attacker after the AI moved on corrupts the combat.
+                            if (!forcedTimedOut.get()) {
+                                combat.addAttacker(attacker, mustAttackDef);
+                                attackersLeft.remove(attacker);
+                                numForcedAttackers.incrementAndGet();
+                            }
                         }
-                        attackersLeft.remove(attacker);
-                        numForcedAttackers.incrementAndGet();
                     }
                     return 0;
                 };
@@ -1063,10 +1075,17 @@ public class AiAttackController {
                 }
             }
             CompletableFuture<?>[] futuresArray = futures.toArray(new CompletableFuture<?>[0]);
-            if (canUseTimeout)
+            if (canUseTimeout) {
                 CompletableFuture.allOf(futuresArray).completeOnTimeout(null, timeOut, TimeUnit.SECONDS).join();
-            else
+                // Past the timeout: block any straggler worker from mutating combat, and ask them to
+                // cancel (best-effort; a worker mid-eval finishes its current uninterruptible call).
+                forcedTimedOut.set(true);
+                for (CompletableFuture<?> f : futuresArray) {
+                    f.cancel(true);
+                }
+            } else {
                 CompletableFuture.allOf(futuresArray).join();
+            }
             futures.clear();
             if (attackersLeft.isEmpty()) {
                 return aiAggression;

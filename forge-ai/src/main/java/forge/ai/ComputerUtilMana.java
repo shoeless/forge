@@ -690,6 +690,14 @@ public class ComputerUtilMana {
 
         // Loop over mana needed
         while (!cost.isPaid()) {
+            // Under the AI deadline, abandon a TEST-mode payment search. Gated on test==true: a real
+            // (test==false) payment has already tapped/mutated sources and the unpaid refund at line
+            // 877 only returns floating mana, so bailing it would leave partial state. A test bail
+            // falls through to that refund/reset path -> returns null -> canPayManaCost false ->
+            // candidate treated as unaffordable (legal decline). Always false under a seed.
+            if (test && AiDeadline.shouldAbort()) {
+                break;
+            }
             while (!cost.isPaid() && !manapool.isEmpty()) {
                 boolean found = false;
                 for (byte color : ManaAtom.MANATYPES) {
@@ -1803,6 +1811,12 @@ public class ComputerUtilMana {
             max = Math.min(max, AbilityUtils.calculateAmount(sa.getHostCard(), sa.getParam("AIXMax"), sa));
         }
         for (int i = 1; i <= max; i++) {
+            // Bound the X probe (up to `max` full canPayManaCost tests) under the AI deadline;
+            // i-1 is the largest X already proven payable = a conservative smaller cast, never
+            // illegal. Always false under a seed, so seeded evaluation is unchanged.
+            if (AiDeadline.shouldAbort()) {
+                return i - 1;
+            }
             if (!canPayManaCost(sa.getRootAbility(), player, i, effect)) {
                 return i - 1;
             }
@@ -1829,6 +1843,10 @@ public class ComputerUtilMana {
 
         String shardSurplus = shardColor;
         for (int i = 1; i < 100; i++) {
+            // Bound the shard-surplus probe under the AI deadline (see the other overload).
+            if (AiDeadline.shouldAbort()) {
+                return i - 1;
+            }
             ManaCost extra = new ManaCost(shardSurplus);
             if (!canPayManaCost(new ManaCostBeingPaid(ManaCost.combine(origCost, extra)), sa, player, effect)) {
                 return i - 1;
