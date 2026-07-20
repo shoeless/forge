@@ -373,7 +373,12 @@ public class CardCopyService {
 
         newCopy.setPlotted(copyFrom.isPlotted());
 
-        newCopy.setPrepared(copyFrom.getPrepared());
+        // Only call setPrepared when there is actually a prepared spell to copy: a fresh copy
+        // already has a null preparedEffect, and setPrepared(null) needlessly rebuilds the
+        // (display-only) ability text on every LKI/throwaway copy — a hot path on wide boards.
+        if (copyFrom.getPrepared() != null) {
+            newCopy.setPrepared(copyFrom.getPrepared());
+        }
 
         newCopy.setMeldedWith(getLKICopy(copyFrom.getMeldedWith(), cachedMap));
 

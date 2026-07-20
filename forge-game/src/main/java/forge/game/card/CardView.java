@@ -32,6 +32,13 @@ import java.util.*;
 public class CardView extends GameEntityView {
     private static final long serialVersionUID = -3624090829028979255L;
 
+    // Ability text (TrackableProperty.AbilityText) is a display-only rules-text string. LKI copies
+    // are transient rules snapshots that are (almost) never rendered, yet building this string on
+    // every copy is a top CPU leaf on wide token/treasure boards (see getLKICopy). When enabled,
+    // skip the eager build for LKI copies. Proven move-for-move identical via the seeded A/B before
+    // being defaulted on; toggle off with -Dforge.lkiSkipText=off.
+    private static final boolean LKI_SKIP_TEXT = !"off".equals(System.getProperty("forge.lkiSkipText", "on"));
+
     public static CardView get(Card c) {
         return c == null ? null : c.getView();
     }
@@ -1590,6 +1597,10 @@ public class CardView extends GameEntityView {
             return get(TrackableProperty.AbilityText);
         }
         void updateAbilityText(Card c, CardState state) {
+            // Skip the expensive display-only rules-text build for transient LKI snapshots.
+            if (LKI_SKIP_TEXT && c.isLKI()) {
+                return;
+            }
             set(TrackableProperty.AbilityText, c.getAbilityText(state));
         }
         void updateKeywords(Card c, CardState state) {
