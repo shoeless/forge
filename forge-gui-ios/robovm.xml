@@ -68,6 +68,8 @@
     <pattern>java.io.ObjectStreamField</pattern>
     <!-- AI decision-cache identity key (referenced by AiController/ComputerUtilCombat/AiAttackController) -->
     <pattern>forge.ai.AiCardSignature</pattern>
+    <pattern>forge.ai.AiDeadline</pattern>
+    <pattern>forge.ai.AiDeadline$*</pattern>
     <!-- LZ4 compression for multiplayer networking -->
     <pattern>net.jpountz.lz4.**</pattern>
     <pattern>net.jpountz.xxhash.**</pattern>

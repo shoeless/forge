@@ -1928,6 +1928,16 @@ public class AiController {
                 ComputerUtilCombat.isCombatEvalCacheEnabled() && AiCardSignature.boardHasDuplicateTokens(game)
                         ? new HashMap<>() : null;
         FutureTask<SpellAbility> future = new FutureTask<>(() -> {
+            // Self-imposed deadline (~0.9x the game thread's future.get timeout) so this eval thread
+            // bails and returns BEFORE the game thread times out and reaches the RoboVM-no-op
+            // t.stop() - eliminating the leaked-compute-thread freeze at its source. Long.MAX_VALUE
+            // in deterministic-sim mode (canUseTimeout()==false) keeps evaluation move-for-move
+            // identical; the picker also takes the no-timeout future.get() branch there, so the
+            // thread is never interrupted and shouldAbort() is provably always false under a seed.
+            final long prevDeadline = AiDeadline.beginDecision(game.canUseTimeout()
+                    ? System.nanoTime() + (long) (0.9 * game.getAITimeout() * 1_000_000_000.0)
+                    : Long.MAX_VALUE);
+            try {
             //avoid ComputerUtil.aiLifeInDanger in loops as it slows down a lot.. call this outside loops will generally be fast...
             boolean isLifeInDanger = useLivingEnd && ComputerUtil.aiLifeInDanger(player, true, 0);
             for (final SpellAbility sa : ComputerUtilAbility.getOriginalAndAltCostAbilities(all, player)) {
@@ -1936,7 +1946,7 @@ public class AiController {
                     continue;
                 }
 
-                if (timeoutReached || Thread.currentThread().isInterrupted()) {
+                if (timeoutReached || AiDeadline.shouldAbort()) {
                     timeoutReached = false;
                     break;
                 }
@@ -2033,6 +2043,9 @@ public class AiController {
             }
 
             return null;
+            } finally {
+                AiDeadline.endDecision(prevDeadline);
+            }
         });
 
         Thread t = new Thread(future, "Game AI Eval");

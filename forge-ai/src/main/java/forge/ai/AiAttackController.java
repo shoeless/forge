@@ -879,9 +879,18 @@ public class AiAttackController {
             effAtkCache = new HashMap<>();
             safCache = new HashMap<>();
         }
+        // Cooperative-cancellation deadline for the attack decision (see AiDeadline). Real attack
+        // declaration runs INLINE on the game thread with nothing to interrupt it; a self-imposed
+        // nanoTime deadline bounds a wide-board attacker search and stops it hard-hanging the UI.
+        // min-inherit keeps a tighter picker deadline when nested in predictive combat; Long.MAX
+        // under deterministic-sim mode keeps attacks move-for-move identical.
+        final long prevDeadline = AiDeadline.beginDecision(canUseTimeout
+                ? System.nanoTime() + (long) (timeOut * 1_000_000_000.0)
+                : Long.MAX_VALUE);
         try {
             return declareAttackersImpl(combat);
         } finally {
+            AiDeadline.endDecision(prevDeadline);
             effAtkCache = null;
             safCache = null;
             if (openedScope) {
@@ -1440,8 +1449,17 @@ public class AiAttackController {
         possibleDefenders.addAll(defendingOpponent.getPlaneswalkersInPlay());
 
         while (!left.isEmpty()) {
+            // Bound the attacker-assignment search under the deadline (always false under a seed);
+            // attackers already added via combat.addAttacker stay and validateAttackers backstops
+            // any missing mandatory attacker, so the declared combat stays legal.
+            if (AiDeadline.shouldAbort()) {
+                break;
+            }
             CardCollection attackersAssigned = new CardCollection();
             for (int i = 0; i < left.size(); i++) {
+                if (AiDeadline.shouldAbort()) {
+                    break;
+                }
                 final Card attacker = left.get(i);
                 if (aiAggression < 5 && !attacker.hasFirstStrike() && !attacker.hasDoubleStrike()
                         && ComputerUtilCombat.getTotalFirstStrikeBlockPower(attacker, defendingOpponent)

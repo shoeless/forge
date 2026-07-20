@@ -188,6 +188,11 @@ public class AiBlockController {
         List<Card> currentAttackers = new ArrayList<>(attackersLeft);
 
         for (final Card attacker : attackersLeft) {
+            // Bound the good-blocks search (attackers x 3 blocker scans) under the deadline; commits
+            // blocks assigned so far, leaves the rest for later stages. Always false under a seed.
+            if (AiDeadline.shouldAbort()) {
+                break;
+            }
             if (CombatUtil.getMinNumBlockersForAttacker(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1) {
                 continue;
             }
@@ -371,6 +376,11 @@ public class AiBlockController {
 
         // Try to block an attacker without first strike with a gang of first strikers
         for (final Card attacker : attackersLeft) {
+            // Bound this O(attackers x blockers^2) gang search under the deadline (always false
+            // under a seed); blocks already assigned stay, remaining attackers handled later.
+            if (AiDeadline.shouldAbort()) {
+                break;
+            }
             if (ComputerUtilCombat.combatantCantBeDestroyed(ai, attacker)) {
                 // don't bother with gang blocking if the attacker will regenerate or is indestructible
                 continue;
@@ -418,6 +428,9 @@ public class AiBlockController {
 
         // Try to block an attacker with two blockers of which only one will die
         for (final Card attacker : attackersLeft) {
+            if (AiDeadline.shouldAbort()) {
+                break;
+            }
             if (ComputerUtilCombat.combatantCantBeDestroyed(ai, attacker)) {
                 // don't bother with gang blocking if the attacker will regenerate or is indestructible
                 continue;
@@ -1056,9 +1069,18 @@ public class AiBlockController {
         if (openedScope) {
             ComputerUtilCombat.beginCombatEvaluation(ai.getGame());
         }
+        // Cooperative-cancellation deadline for the block decision (see AiDeadline). Real block
+        // declaration runs INLINE on the game thread with nothing to interrupt it, so a self-imposed
+        // nanoTime deadline is the only way to bound a wide-board block search and stop it from
+        // hard-hanging the UI. Long.MAX_VALUE under deterministic-sim mode keeps blocks identical;
+        // min-inherit keeps the tighter picker deadline when this runs nested in predictive combat.
+        final long prevDeadline = AiDeadline.beginDecision(ai.getGame().canUseTimeout()
+                ? System.nanoTime() + (long) (ai.getGame().getAICombatTimeout() * 1_000_000_000.0)
+                : Long.MAX_VALUE);
         try {
             assignBlockersImpl(combat, possibleBlockers);
         } finally {
+            AiDeadline.endDecision(prevDeadline);
             if (openedScope) {
                 ComputerUtilCombat.endCombatEvaluation();
             }
@@ -1128,7 +1150,11 @@ public class AiBlockController {
             }
 
             // == 2. If the AI life would still be in danger make a safer approach ==
-            if (lifeInDanger) {
+            // Skip the expensive full re-run (3x the whole make* pipeline) once past the block
+            // deadline, keeping the stage-1 assignment. Guard is BEFORE clearBlockers so we never
+            // leave a reset-but-unrebuilt (zero-block) combat; makeRequiredBlocks + the validity
+            // sweep below still run. Always false under a seed, so seeded blocks are unchanged.
+            if (lifeInDanger && !AiDeadline.shouldAbort()) {
                 clearBlockers(combat, possibleBlockers); // reset every block assignment
                 makeTradeBlocks(combat);
                 makeGoodBlocks(combat);
@@ -1147,7 +1173,7 @@ public class AiBlockController {
             }
 
             // == 3. If the AI life would be in serious danger make an even safer approach ==
-            if (lifeInDanger && ComputerUtilCombat.lifeInSeriousDanger(ai, combat)) {
+            if (lifeInDanger && !AiDeadline.shouldAbort() && ComputerUtilCombat.lifeInSeriousDanger(ai, combat)) {
                 clearBlockers(combat, possibleBlockers);
                 makeChumpBlocks(combat);
 
