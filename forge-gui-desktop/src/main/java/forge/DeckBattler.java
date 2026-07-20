@@ -48,6 +48,15 @@ import java.util.function.Function;
  */
 public class DeckBattler {
 
+    // Periodic full GC to cap the headless sim's heap high-water mark. The GUI/iPad path
+    // (HostedMatch.endCurrentGame) collects after every game, but DeckBattler runs Match
+    // directly and never GCs between games, so garbage accumulates toward -Xmx and RSS climbs
+    // to several GB over a long gauntlet -- eventually risking OS memory pressure / swap-thrash
+    // (the likely cause of the late-run slowdown seen on multi-hour runs). Collecting every N
+    // completed games (not every game, which would cost ~40% throughput) keeps RSS bounded with
+    // negligible slowdown. -Dforge.simGcInterval=0 disables.
+    private static final int SIM_GC_INTERVAL = Integer.getInteger("forge.simGcInterval", 25);
+
     /**
      * A PrintStream wrapper that prepends a per-thread game tag to output.
      * This allows filtering log output by game number (e.g., grep "[G042]")
@@ -599,6 +608,12 @@ public class DeckBattler {
                     taggedErr.underlying.print("\r  [" + completed + "/" + numGames + "] "
                             + name1 + ": " + wins1 + "  " + name2 + ": " + wins2
                             + "  (" + String.format("%.1f", gamesPerSec) + " games/s)    ");
+                }
+
+                // Reclaim per-game garbage periodically so the headless sim's RSS stays bounded
+                // over long gauntlets (DeckBattler bypasses HostedMatch's per-game GC).
+                if (SIM_GC_INTERVAL > 0 && completed % SIM_GC_INTERVAL == 0) {
+                    System.gc();
                 }
             } catch (Exception e) {
                 int completed = gamesCompleted.incrementAndGet();
