@@ -586,8 +586,9 @@ public class CardProperty {
         } else if (property.startsWith("TopGraveyard")) {
             final CardCollection cards = new CardCollection(card.getOwner().getCardsIn(ZoneType.Graveyard));
             Collections.reverse(cards);
-            if (property.substring(12).matches("[0-9][0-9]?")) {
-                int n = Integer.parseInt(property.substring(12));
+            final String suffix = property.substring(12);
+            if (suffix.matches("[0-9][0-9]?")) {
+                int n = Integer.parseInt(suffix);
                 int num = Math.min(n, cards.size());
                 final CardCollection newlist = new CardCollection();
                 for (int i = 0; i < num; i++) {
@@ -1016,10 +1017,11 @@ public class CardProperty {
             }
         } else if (property.startsWith("with")) {
             // ... Card keywords
-            if (property.startsWith("without") && card.hasStartOfUnHiddenKeyword(property.substring(7))) {
+            final boolean without = property.startsWith("without");
+            if (without && card.hasStartOfUnHiddenKeyword(property.substring(7))) {
                 return false;
             }
-            if (!property.startsWith("without") && !card.hasStartOfUnHiddenKeyword(property.substring(4))) {
+            if (!without && !card.hasStartOfUnHiddenKeyword(property.substring(4))) {
                 return false;
             }
         } else if (property.startsWith("activated")) {

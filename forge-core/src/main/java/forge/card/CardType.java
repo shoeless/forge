@@ -382,10 +382,14 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
 
     @Override
     public boolean hasSubtype(final String subtype) {
-        if (hasCreatureType(subtype)) {
+        // (subtypes.contains || hasCreatureType) is a side-effect-free OR, so it is commutative;
+        // check the cheap exact match first. Canonical queries (isAura/isSaga/isVehicle,
+        // hasSubtype("Treasure"), ...) then short-circuit before the hasCreatureType -> toMixedCase
+        // normalization (a JFR hot path) whenever the subtype is stored as-is.
+        if (subtypes.contains(subtype)) {
             return true;
         }
-        return subtypes.contains(subtype);
+        return hasCreatureType(subtype);
     }
 
     @Override

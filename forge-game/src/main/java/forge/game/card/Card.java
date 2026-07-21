@@ -7137,8 +7137,13 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
 
     public final FCollectionView<StaticAbility> getHiddenStaticAbilities() {
+        final boolean suspected = this.isInPlay() && this.isSuspected();
+        // common case: no suspected-static and no counter-keyword statics -> shared empty (callers are read-only)
+        if (!suspected && this.counterTypeKeywordStatic.isEmpty()) {
+            return FCollection.getEmpty();
+        }
         FCollection<StaticAbility> result = new FCollection<>();
-        if (this.isInPlay() && this.isSuspected()) {
+        if (suspected) {
             result.add(suspectedStatic);
         }
         for (Map.Entry<CounterType, StaticAbility> e : this.counterTypeKeywordStatic.entrySet()) {

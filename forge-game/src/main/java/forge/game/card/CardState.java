@@ -674,6 +674,31 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     }
 
     public final FCollectionView<Trigger> getTriggers() {
+        return getTriggers(TRIG_MEMO);
+    }
+    public final FCollectionView<Trigger> getTriggers(boolean useMemo) {
+        if (!useMemo) {
+            return buildTriggers();
+        }
+        final long ver = card.getContEffVersion();
+        if (cachedTriggers != null && cachedTriggersVersion == ver) {
+            if (ASSERT_MEMO) {
+                FCollection<Trigger> fresh = buildTriggers();
+                if (!sameTriggers(cachedTriggers, fresh)) {
+                    MEMO_STALE.incrementAndGet();
+                    System.out.println("[TRIGMEMO][STALE] " + card + " state=" + getStateName()
+                            + " ver=" + ver + " cachedN=" + cachedTriggers.size()
+                            + " freshN=" + fresh.size());
+                }
+            }
+            return cachedTriggers;
+        }
+        FCollection<Trigger> result = buildTriggers();
+        cachedTriggers = result;
+        cachedTriggersVersion = ver;
+        return result;
+    }
+    private FCollection<Trigger> buildTriggers() {
         FCollection<Trigger> result = new FCollection<>(triggers);
         if (getStateName().equals(CardStateName.Original)) {
             if (getCard().hasState(CardStateName.LeftSplit))
@@ -712,12 +737,18 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     private static final boolean STATIC_MEMO = "on".equals(System.getProperty("forge.staticMemo", "off"));
     private static final boolean REP_MEMO = "on".equals(System.getProperty("forge.repMemo",
             System.getProperty("forge.staticMemo", "off")));
+    // Trigger memo: own flag, defaults OFF (NOT following forge.staticMemo) until validated 0-stale
+    // by the assert oracle across diverse decks, exactly as the static/replacement memo was. getTriggers()
+    // shares contEffVersion with them and adds only the intrinsic `triggers` field as an extra source.
+    private static final boolean TRIG_MEMO = "on".equals(System.getProperty("forge.trigMemo", "off"));
     private static final boolean ASSERT_MEMO = System.getProperty("forge.assertStaticMemo") != null;
     private static final AtomicLong MEMO_STALE = new AtomicLong();
     private transient FCollection<StaticAbility> cachedStaticAbilities;
     private transient long cachedStaticAbilitiesVersion = -1L;
     private transient FCollection<ReplacementEffect> cachedReplacementEffects;
     private transient long cachedReplacementEffectsVersion = -1L;
+    private transient FCollection<Trigger> cachedTriggers;
+    private transient long cachedTriggersVersion = -1L;
 
     public final FCollectionView<StaticAbility> getStaticAbilities() {
         return getStaticAbilities(STATIC_MEMO);
@@ -775,6 +806,19 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         }
         Iterator<ReplacementEffect> ia = a.iterator();
         Iterator<ReplacementEffect> ib = b.iterator();
+        while (ia.hasNext()) {
+            if (ia.next() != ib.next()) {
+                return false;
+            }
+        }
+        return true;
+    }
+    private static boolean sameTriggers(FCollection<Trigger> a, FCollection<Trigger> b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        Iterator<Trigger> ia = a.iterator();
+        Iterator<Trigger> ib = b.iterator();
         while (ia.hasNext()) {
             if (ia.next() != ib.next()) {
                 return false;

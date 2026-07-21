@@ -125,6 +125,12 @@ public class Main extends IOSApplication.Delegate {
             // biggest win on wide token boards where the AI re-evaluates identical tokens repeatedly.
             System.setProperty("forge.combatEvalCache", "on");
 
+            // Enable the trigger memo (getTriggers() cached by contEffVersion, like the static/replacement
+            // memo above). getTriggers rebuilt a fresh FCollection every call — a top residual allocator in
+            // the memo-ON profile. Proven 0-stale by the assert oracle over ~94 games across diverse decks
+            // (tokens/enchant/spellslinger/superfriends) and move-for-move identical. Set before CardState loads.
+            System.setProperty("forge.trigMemo", "on");
+
             // Clear card cache when a new build is deployed. The cache stores
             // pre-parsed card rules for fast startup, but stale caches cause bugs
             // (e.g., duplicate triggers). Compare the app's CFBundleVersion to a
