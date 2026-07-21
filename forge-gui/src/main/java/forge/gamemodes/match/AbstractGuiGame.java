@@ -434,6 +434,11 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
 
     public void setGameSpeed(PlaybackSpeed speed) {
         playbackSpeed = speed;
+        // Suppress sound effects at any sped-up speed: at 30x/50x the per-event SFX flood the audio
+        // pipeline (~30ms per AudioQueue start) and starve the render thread, causing the visuals to
+        // congest then burst. NORMAL restores them. (Complements the animation suppression in
+        // FCardPanel.) This setter is the only writer of playbackSpeed, so it catches all platforms.
+        forge.sound.SoundSystem.instance.setSpeedSuppressed(speed != PlaybackSpeed.NORMAL);
     }
 
     public void pauseMatch() {

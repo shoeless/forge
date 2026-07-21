@@ -33,6 +33,12 @@ public class SoundSystem {
     private boolean shouldPlayMusic = true;
     private boolean hasWindowFocus = true;
     private boolean ignorePlayRequests = false;
+    // Suppress sound effects while the game is running at a sped-up playback speed. At 30x/50x the
+    // engine fires a sound per card event (damage/destroy/zone-change/tap) far faster than the audio
+    // pipeline can start an AudioQueue (~30ms each), flooding it and starving the render thread ->
+    // visuals congest then burst. Set from AbstractGuiGame.setGameSpeed (separate from
+    // ignorePlayRequests, which is the snapshot-restore mute).
+    private boolean speedSuppressed = false;
 
     private SoundSystem() {
         this.visualizer = new EventVisualizer(GamePlayerUtil.getGuiPlayer());
@@ -109,7 +115,7 @@ public class SoundSystem {
      * ("synchronized" with other sounds of the same kind means: only one can play at a time).
      */
     public void play(final String resourceFileName, final boolean isSynchronized) {
-        if (ignorePlayRequests) {
+        if (ignorePlayRequests || speedSuppressed) {
             return;
         }
 
@@ -131,7 +137,7 @@ public class SoundSystem {
      * Play the sound associated with the Sounds enumeration element.
      */
     public void play(final SoundEffectType type, final boolean isSynchronized) {
-        if (ignorePlayRequests) {
+        if (ignorePlayRequests || speedSuppressed) {
             return;
         }
 
@@ -480,5 +486,10 @@ public class SoundSystem {
 
     public void setIgnorePlayRequests(boolean ignorePlayRequests) {
         this.ignorePlayRequests = ignorePlayRequests;
+    }
+
+    /** Suppress sound effects while playback is sped up (set from AbstractGuiGame.setGameSpeed). */
+    public void setSpeedSuppressed(boolean speedSuppressed) {
+        this.speedSuppressed = speedSuppressed;
     }
 }
