@@ -59,4 +59,16 @@ public final class AiDeadline {
     public static boolean shouldAbort() {
         return Thread.currentThread().isInterrupted() || System.nanoTime() > DEADLINE.get();
     }
+
+    /** Milliseconds remaining until the active decision deadline, clamped to >= 0, or
+     *  {@link Long#MAX_VALUE} when no deadline is set. Use to bound a blocking wait (e.g. a
+     *  CompletableFuture join) so a nested combat search never outlives the picker's budget. */
+    public static long remainingMillis() {
+        long dl = DEADLINE.get();
+        if (dl == Long.MAX_VALUE) {
+            return Long.MAX_VALUE;
+        }
+        long remain = (dl - System.nanoTime()) / 1_000_000L;
+        return remain > 0 ? remain : 0L;
+    }
 }

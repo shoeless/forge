@@ -1076,7 +1076,15 @@ public class AiAttackController {
             }
             CompletableFuture<?>[] futuresArray = futures.toArray(new CompletableFuture<?>[0]);
             if (canUseTimeout) {
-                CompletableFuture.allOf(futuresArray).completeOnTimeout(null, timeOut, TimeUnit.SECONDS).join();
+                // Bound the join by whichever is TIGHTER: this combat search's own timeOut, or the
+                // time left on any enclosing decision deadline (e.g. the ~4.5s spell picker when this
+                // runs as a predictive combat inside a Pump/attack evaluation). Without this the join
+                // waits the full combat timeout (10s) and blows the picker's 5s budget -> the eval
+                // thread times out PARKED here and LEAKS on RoboVM (t.stop is a no-op); repeated at
+                // 50x it saturates the CPU and stalls the game. remainingMillis()==MAX_VALUE when no
+                // enclosing deadline, so a top-level combat decision still gets the full timeOut.
+                long joinMs = Math.min(timeOut * 1000L, AiDeadline.remainingMillis());
+                CompletableFuture.allOf(futuresArray).completeOnTimeout(null, joinMs, TimeUnit.MILLISECONDS).join();
                 // Past the timeout: block any straggler worker from mutating combat, and ask them to
                 // cancel (best-effort; a worker mid-eval finishes its current uninterruptible call).
                 forcedTimedOut.set(true);

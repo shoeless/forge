@@ -433,7 +433,6 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
     }
 
     public void setGameSpeed(PlaybackSpeed speed) {
-        System.out.println("[SPEEDDBG] AbstractGuiGame.setGameSpeed=" + speed + " on " + getClass().getSimpleName()); // TEMP diagnostic
         playbackSpeed = speed;
         // Suppress sound effects at any sped-up speed: at 30x/50x the per-event SFX flood the audio
         // pipeline (~30ms per AudioQueue start) and starve the render thread, causing the visuals to

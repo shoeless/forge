@@ -206,7 +206,6 @@ public class FControlGamePlayback extends IGameEventVisitor.Base<Void> {
         // only present when humanCount==0 -> AI-vs-AI / spectator) drives this setter, so it always
         // runs even when the client-side AbstractGuiGame.setGameSpeed path does not reach the
         // display gui. At 30x/50x the per-event SFX flood the audio pipeline; NORMAL restores them.
-        System.out.println("[SPEEDDBG] FControlGamePlayback.setSpeed=" + speed); // TEMP diagnostic
         forge.sound.SoundSystem.instance.setSpeedSuppressed(speed != PlaybackSpeed.NORMAL);
     }
 }
