@@ -885,7 +885,7 @@ public class AiAttackController {
         // min-inherit keeps a tighter picker deadline when nested in predictive combat; Long.MAX
         // under deterministic-sim mode keeps attacks move-for-move identical.
         final long prevDeadline = AiDeadline.beginDecision(canUseTimeout
-                ? System.nanoTime() + AiDeadline.budgetNanos((long) (timeOut * 1_000_000_000.0))
+                ? System.nanoTime() + (long) (timeOut * 1_000_000_000.0)
                 : Long.MAX_VALUE);
         try {
             return declareAttackersImpl(combat);
@@ -971,7 +971,7 @@ public class AiAttackController {
 
         // Attackers that don't really have a choice
         final AtomicInteger numForcedAttackers = new AtomicInteger(0);
-        // Set once the forced-attacker parallel checks time out (completeOnTimeout below). A worker
+        // Set once the forced-attacker parallel checks time out (the bounded get() below). A worker
         // still running on the common pool after that point must NOT mutate the shared combat -- a
         // post-decision addAttacker into live combat corrupts the declaration. Gate its effect here.
         final java.util.concurrent.atomic.AtomicBoolean forcedTimedOut = new java.util.concurrent.atomic.AtomicBoolean(false);
