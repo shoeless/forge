@@ -128,7 +128,12 @@ public class FCardPanel extends FDisplayObject {
             return;
         }
 
-        boolean noAnimate = !animate || MatchController.instance.getGameSpeed() == PlaybackSpeed.FAST
+        // Disable card animations at ANY sped-up playback (FAST/FASTER/FASTEST), not just FAST.
+        // Above 10x the engine fires state changes far faster than a fixed-duration animation can
+        // play, so leaving animations on at 30x/50x floods the render loop with overlapping
+        // animations: the visuals congest (frame rate craters) and then burst when the backlog
+        // drains. Only NORMAL speed animates.
+        boolean noAnimate = !animate || MatchController.instance.getGameSpeed() != PlaybackSpeed.NORMAL
                 || (MatchController.instance.getGameView() != null && MatchController.instance.getGameView().isMatchOver());
 
         // Derive tap/untap/transform animations from observed transitions of the synced level state,
