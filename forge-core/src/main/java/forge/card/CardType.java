@@ -407,6 +407,13 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
         if (s.isEmpty()) {
             return s;
         }
+        // Hot path (called on every hasCreatureType query): the overwhelming majority of type names
+        // have no hyphen, in which case the split/StringBuilder below reduces to capitalize(s). Fast-
+        // path it to avoid the regex split, String[] and StringBuilder allocation. Behavior-identical:
+        // a hyphen-free string splits into a single element that is simply capitalized.
+        if (s.indexOf('-') < 0) {
+            return StringUtils.capitalize(s);
+        }
         final StringBuilder sb = new StringBuilder();
         // to handle hyphenated Types
         // TODO checkout WordUtils for this

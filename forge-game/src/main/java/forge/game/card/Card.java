@@ -3428,8 +3428,20 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
 
     public boolean hasRemoveIntrinsic() {
-        // only Layer 4 are affected, and it's never intrinsic
-        return changedCardTypes.values().stream().anyMatch(ICardChangedType::isRemoveLandTypes);
+        // only Layer 4 are affected, and it's never intrinsic.
+        // Hot path: called ~5x per static/replacement rebuild per card (CardState.getStaticAbilities/
+        // getReplacementEffects). changedCardTypes is empty for the overwhelming majority of cards, so
+        // guard on isEmpty() and iterate directly instead of allocating a Stream pipeline (values-view
+        // + Spliterator + ReferencePipeline + MatchOps + lambda) over zero or a few elements every call.
+        if (changedCardTypes.isEmpty()) {
+            return false;
+        }
+        for (final ICardChangedType ct : changedCardTypes.values()) {
+            if (ct.isRemoveLandTypes()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean hasNoAbilities() {
@@ -4984,9 +4996,19 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
 
     public Iterable<ICardTraitChanges> getChangedCardTraitsList(CardState state) {
+        final ICardTraitChanges land = state.getLandTraitChanges(); // Layer 4, always present
+        // Hot path: called once per updateStaticAbilities/updateReplacementEffects/updateTriggers
+        // rebuild. For the overwhelming majority of cards both the Layer-3 (by-text) and Layer-6
+        // trait tables are empty, leaving only the single Layer-4 land trait change. Return a
+        // singleton in that case instead of allocating the Iterables.concat wrapper + varargs array
+        // + two empty values-views. Behavior-identical: the concat over two empty collections plus a
+        // singleton iterates exactly that one element, in the same order.
+        if (changedCardTraitsByText.isEmpty() && changedCardTraits.isEmpty()) {
+            return Collections.singletonList(land);
+        }
         return Iterables.<ICardTraitChanges>concat(
             changedCardTraitsByText.values(), // Layer 3
-            ImmutableList.of(state.getLandTraitChanges()), // Layer 4
+            ImmutableList.of(land), // Layer 4
             changedCardTraits.values() // Layer 6
         );
     }
