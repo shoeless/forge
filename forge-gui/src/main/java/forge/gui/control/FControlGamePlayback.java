@@ -207,5 +207,16 @@ public class FControlGamePlayback extends IGameEventVisitor.Base<Void> {
         // runs even when the client-side AbstractGuiGame.setGameSpeed path does not reach the
         // display gui. At 30x/50x the per-event SFX flood the audio pipeline; NORMAL restores them.
         forge.sound.SoundSystem.instance.setSpeedSuppressed(speed != PlaybackSpeed.NORMAL);
+        // Cap AI thinking time while fast-forwarding so the game plays out smoothly instead of
+        // pausing seconds per decision on a wide board (see AiDeadline.spedUpBudgetMs). A weaker but
+        // near-instant decision is what the user wants at 10x/30x/50x. 0 = normal (full 5s/10s).
+        long aiBudgetMs;
+        switch (speed) {
+            case FAST:    aiBudgetMs = 1000; break;
+            case FASTER:  aiBudgetMs = 500;  break;
+            case FASTEST: aiBudgetMs = 300;  break;
+            default:      aiBudgetMs = 0;    break; // NORMAL
+        }
+        forge.ai.AiDeadline.spedUpBudgetMs = aiBudgetMs;
     }
 }

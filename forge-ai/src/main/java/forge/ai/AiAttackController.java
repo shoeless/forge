@@ -885,7 +885,7 @@ public class AiAttackController {
         // min-inherit keeps a tighter picker deadline when nested in predictive combat; Long.MAX
         // under deterministic-sim mode keeps attacks move-for-move identical.
         final long prevDeadline = AiDeadline.beginDecision(canUseTimeout
-                ? System.nanoTime() + (long) (timeOut * 1_000_000_000.0)
+                ? System.nanoTime() + AiDeadline.budgetNanos((long) (timeOut * 1_000_000_000.0))
                 : Long.MAX_VALUE);
         try {
             return declareAttackersImpl(combat);
@@ -1084,9 +1084,25 @@ public class AiAttackController {
                 // 50x it saturates the CPU and stalls the game. remainingMillis()==MAX_VALUE when no
                 // enclosing deadline, so a top-level combat decision still gets the full timeOut.
                 long joinMs = Math.min(timeOut * 1000L, AiDeadline.remainingMillis());
-                CompletableFuture.allOf(futuresArray).completeOnTimeout(null, joinMs, TimeUnit.MILLISECONDS).join();
-                // Past the timeout: block any straggler worker from mutating combat, and ask them to
-                // cancel (best-effort; a worker mid-eval finishes its current uninterruptible call).
+                if (joinMs < 0) {
+                    joinMs = 0;
+                }
+                // Use Future.get(timeout) rather than completeOnTimeout().join(): the RoboVM /
+                // streamsupport CompletableFuture backport does NOT honor completeOnTimeout on device
+                // (the join blocked past the deadline and the enclosing picker leaked its eval thread,
+                // stalling the game at 50x). get(timeout) is a core blocking wait that reliably
+                // returns at the deadline.
+                try {
+                    CompletableFuture.allOf(futuresArray).get(joinMs, TimeUnit.MILLISECONDS);
+                } catch (Exception waitEnded) {
+                    // Deadline reached / interrupted / a future threw -> proceed with the attackers
+                    // assigned so far (CombatUtil.validateAttackers backstops any missing mandatory).
+                    if (waitEnded instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                // Block any straggler worker from mutating combat, and ask them to cancel
+                // (best-effort; a worker mid-eval finishes its current uninterruptible call).
                 forcedTimedOut.set(true);
                 for (CompletableFuture<?> f : futuresArray) {
                     f.cancel(true);

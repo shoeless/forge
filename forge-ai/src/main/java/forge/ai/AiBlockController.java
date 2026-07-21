@@ -1075,7 +1075,7 @@ public class AiBlockController {
         // hard-hanging the UI. Long.MAX_VALUE under deterministic-sim mode keeps blocks identical;
         // min-inherit keeps the tighter picker deadline when this runs nested in predictive combat.
         final long prevDeadline = AiDeadline.beginDecision(ai.getGame().canUseTimeout()
-                ? System.nanoTime() + (long) (ai.getGame().getAICombatTimeout() * 1_000_000_000.0)
+                ? System.nanoTime() + AiDeadline.budgetNanos((long) (ai.getGame().getAICombatTimeout() * 1_000_000_000.0))
                 : Long.MAX_VALUE);
         try {
             assignBlockersImpl(combat, possibleBlockers);

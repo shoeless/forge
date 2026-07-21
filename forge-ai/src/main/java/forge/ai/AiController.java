@@ -1935,7 +1935,7 @@ public class AiController {
             // identical; the picker also takes the no-timeout future.get() branch there, so the
             // thread is never interrupted and shouldAbort() is provably always false under a seed.
             final long prevDeadline = AiDeadline.beginDecision(game.canUseTimeout()
-                    ? System.nanoTime() + (long) (0.9 * game.getAITimeout() * 1_000_000_000.0)
+                    ? System.nanoTime() + AiDeadline.budgetNanos((long) (0.9 * game.getAITimeout() * 1_000_000_000.0))
                     : Long.MAX_VALUE);
             try {
             //avoid ComputerUtil.aiLifeInDanger in loops as it slows down a lot.. call this outside loops will generally be fast...

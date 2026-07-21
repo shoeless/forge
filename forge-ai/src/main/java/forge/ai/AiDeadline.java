@@ -60,6 +60,20 @@ public final class AiDeadline {
         return Thread.currentThread().isInterrupted() || System.nanoTime() > DEADLINE.get();
     }
 
+    // When the game is running at a sped-up playback speed, the user is fast-forwarding and wants
+    // the game to PLAY OUT quickly, not wait multiple seconds for a strong AI decision on a wide
+    // board. Set (in ms) from FControlGamePlayback.setSpeed to cap every AI decision at this budget
+    // instead of the full 5s/10s timeouts; 0 means normal speed (use the full timeouts). A shorter
+    // budget makes weaker-but-instant decisions -> smooth fast-forward. Always 0 under a seed
+    // (deterministic sims never speed up), so seeded evaluation is unchanged.
+    public static volatile long spedUpBudgetMs = 0;
+
+    /** The decision-deadline offset in nanoseconds: the sped-up budget when set, else defaultNanos. */
+    public static long budgetNanos(final long defaultNanos) {
+        final long b = spedUpBudgetMs;
+        return b > 0 ? Math.min(b * 1_000_000L, defaultNanos) : defaultNanos;
+    }
+
     /** Milliseconds remaining until the active decision deadline, clamped to >= 0, or
      *  {@link Long#MAX_VALUE} when no deadline is set. Use to bound a blocking wait (e.g. a
      *  CompletableFuture join) so a nested combat search never outlives the picker's budget. */
