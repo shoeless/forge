@@ -429,11 +429,26 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
 
     @Override
     public boolean hasABasicLandType() {
-        return this.subtypes.stream().anyMatch(CardType::isABasicLandType);
+        // Plain loop avoids the per-call Stream allocation on this hot type-check path.
+        for (final String t : this.subtypes) {
+            if (isABasicLandType(t)) {
+                return true;
+            }
+        }
+        return false;
     }
     @Override
     public boolean hasANonBasicLandType() {
-        return !Collections.disjoint(this.subtypes, getNonBasicTypes());
+        // Iterate the (typically small) subtypes against LAND_TYPES directly instead of
+        // !Collections.disjoint(subtypes, getNonBasicTypes()): the latter allocates an
+        // unmodifiableCollection wrapper each call and, because subtypes is a Set, iterates
+        // the entire LAND_TYPES set rather than the small subtypes set.
+        for (final String t : this.subtypes) {
+            if (Constant.LAND_TYPES.contains(t)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

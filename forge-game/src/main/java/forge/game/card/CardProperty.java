@@ -1097,6 +1097,7 @@ public class CardProperty {
                 def = AbilityUtils.getDefinedCards(source, prop.substring(1), spellAbility);
             }
             boolean found = false;
+            String[] propRestrictions = null;
             for (Pair<Integer, Boolean> p : card.getDamageReceivedThisTurn()) {
                 Card dmgSource = game.getDamageLKI(p).getLeft();
                 if (def != null) {
@@ -1108,8 +1109,14 @@ public class CardProperty {
                 }
                 else if (prop.isEmpty() && dmgSource.equalsWithGameTimestamp(source)) {
                     found = true;
-                } else if (dmgSource.isValid(prop.split(";"), sourceController, source, spellAbility)) {
-                    found = true;
+                } else {
+                    // prop.split(";") is loop-invariant; compute once on first use (matches lazy reach of original)
+                    if (propRestrictions == null) {
+                        propRestrictions = prop.split(";");
+                    }
+                    if (dmgSource.isValid(propRestrictions, sourceController, source, spellAbility)) {
+                        found = true;
+                    }
                 }
                 if (found) {
                     break;

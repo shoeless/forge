@@ -1558,7 +1558,8 @@ public class AbilityUtils {
     public static int xCount(Card c, final String s, final CardTraitBase ctb) {
         final String s2 = applyAbilityTextChangeEffects(s, ctb);
         final String[] l = s2.split("/");
-        final String expr = CardFactoryUtil.extractOperators(s2);
+        // extractOperators(s2) would re-split s2 on "/"; reuse the split we already computed
+        final String expr = l.length > 1 ? l[1] : null;
 
         Player player = null;
         if (ctb != null) {
