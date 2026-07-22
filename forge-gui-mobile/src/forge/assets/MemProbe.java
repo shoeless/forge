@@ -18,7 +18,7 @@ public final class MemProbe {
     // iOS-only bdwgc getters, resolved reflectively so desktop/Android still compile (class absent there).
     // getHeapSize() ~= the native heap bdwgc holds (an RSS proxy); getUnmappedBytes() = bytes returned to the OS.
     private static boolean gcProbed = false;
-    private static Method mHeapSize, mUnmapped;
+    private static Method mHeapSize, mUnmapped, mCount, mDivisor;
 
     private MemProbe() { }
 
@@ -28,9 +28,24 @@ public final class MemProbe {
             Class<?> c = Class.forName("org.robovm.rt.GC");
             mHeapSize = c.getMethod("getHeapSize");
             mUnmapped = c.getMethod("getUnmappedBytes");
+            mCount = c.getMethod("getCount");
+            mDivisor = c.getMethod("getFreeSpaceDivisor");
         } catch (Throwable t) {
             mHeapSize = null;
             mUnmapped = null;
+            mCount = null;
+            mDivisor = null;
+        }
+    }
+
+    private static long callRaw(Method m) {
+        if (m == null) {
+            return -1;
+        }
+        try {
+            return ((Number) m.invoke(null)).longValue();
+        } catch (Throwable t) {
+            return -1;
         }
     }
 
@@ -67,6 +82,8 @@ public final class MemProbe {
             System.out.println("[MEMLOG] javaHeapMB=" + heapMB
                     + " gcHeapMB=" + callMB(mHeapSize)
                     + " unmappedMB=" + callMB(mUnmapped)
+                    + " gcCount=" + callRaw(mCount)
+                    + " gcDivisor=" + callRaw(mDivisor)
                     + " dlTex=" + ic.getDownloadedTextureCount() + "/" + ImageCache.getDownloadedTextureCacheMax()
                     + " dlNativeMB=" + dlNativeMB
                     + " cardsLoaded=" + ic.getCardsLoadedCount()

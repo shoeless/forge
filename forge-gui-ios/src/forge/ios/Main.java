@@ -139,6 +139,19 @@ public class Main extends IOSApplication.Delegate {
             // move-for-move identical. Cuts GC-pause stutters at high playback speed. Before CardState loads.
             System.setProperty("forge.zoneCache", "on");
 
+            // Let bdwgc grow the heap ~1.5x further between collections (divisor 3 -> 2) so the automatic
+            // GC fires roughly HALF as often DURING a game -> fewer stop-the-world stutters at high playback
+            // speed. DEVICE-VERIFIED safe: at divisor=2 the peak bdwgc heap on a wide 50x board was only
+            // ~819 MB (+27 MB vs divisor=3) against a ~2.7-3 GB jetsam ceiling, while the in-game GC rate
+            // dropped ~1.86 -> ~1.0/sec. The memos + allocation cuts shrank the footprint enough that the
+            // larger heap stays well clear; the per-game System.gc() in HostedMatch still hard-reclaims at
+            // each game boundary. (Set forge.memLog=on + read [MEMLOG] to re-measure. iOS-only class.)
+            try {
+                org.robovm.rt.GC.setFreeSpaceDivisor(2);
+            } catch (Throwable ignored) {
+                // never let a GC-tuning call block startup
+            }
+
             // Clear card cache when a new build is deployed. The cache stores
             // pre-parsed card rules for fast startup, but stale caches cause bugs
             // (e.g., duplicate triggers). Compare the app's CFBundleVersion to a
