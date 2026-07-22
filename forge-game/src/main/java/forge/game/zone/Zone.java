@@ -83,6 +83,9 @@ public class Zone implements java.io.Serializable, Iterable<Card> {
     public final void reorder(final Card c, final int index) {
         cardList.remove(c);
         cardList.add(index, c);
+        if (zoneType == ZoneType.Battlefield) {
+            game.bumpBattlefieldCacheEpoch(); // order change invalidates the getCardsIn(Battlefield) cache
+        }
     }
 
     public final void add(final Card c) {

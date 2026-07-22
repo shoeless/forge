@@ -131,6 +131,14 @@ public class Main extends IOSApplication.Delegate {
             // (tokens/enchant/spellslinger/superfriends) and move-for-move identical. Set before CardState loads.
             System.setProperty("forge.trigMemo", "on");
 
+            // Enable the getCardsIn(Battlefield) epoch cache. Battlefield static-ability scans
+            // (anyWithFlash / anyTurnPhaseReversed / alternativeCosts / ...) re-allocated the whole
+            // battlefield CardCollection hundreds of times per AI decision on a stable board — the #1
+            // residual allocator (~21%). Cached, keyed on a board epoch bumped on add/remove/reorder/
+            // phase. Proven 0-stale by the assert oracle over ~86 games incl. 28 phasing games, and
+            // move-for-move identical. Cuts GC-pause stutters at high playback speed. Before CardState loads.
+            System.setProperty("forge.zoneCache", "on");
+
             // Clear card cache when a new build is deployed. The cache stores
             // pre-parsed card rules for fast startup, but stale caches cause bugs
             // (e.g., duplicate triggers). Compare the app's CFBundleVersion to a

@@ -86,6 +86,9 @@ public class PlayerZone extends Zone {
         if (getZoneType() == ZoneType.Hand && player.getController().isOrderedZone()) {
             sort();
         }
+        if (getZoneType() == ZoneType.Battlefield) {
+            game.bumpBattlefieldCacheEpoch(); // invalidate the getCardsIn(Battlefield) cache on add/remove/setCards
+        }
         player.updateZoneForView(this);
     }
 

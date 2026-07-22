@@ -611,9 +611,59 @@ public class Game {
         return card == null ? null : card.getLastKnownZone();
     }
 
+    // getCardsIn(Battlefield) epoch cache — the hot static-ability-scan path (anyWithFlash,
+    // anyTurnPhaseReversed, alternativeCosts, hasStaticAbilityAffectingZone, ...). During an AI decision
+    // the battlefield is stable, yet these full-battlefield scans re-allocate the same CardCollection
+    // hundreds of times. Cache it, keyed on an epoch bumped whenever the battlefield's membership / order /
+    // phasing changes (PlayerZone.onChanged for add/remove/setCards, Zone.reorder, Card.setPhasedOut).
+    // Gated + oracle-validated like the static/replacement/trigger memos; Battlefield-only to avoid the
+    // Sideboard cast-to-mutable caller (RemoveFromMatchEffect). The cached view is a read-only snapshot;
+    // every mutating caller already copies via new CardCollection(...).
+    private static final boolean ZONE_CACHE = "on".equals(System.getProperty("forge.zoneCache", "off"));
+    private static final boolean ZONE_CACHE_ASSERT = System.getProperty("forge.assertStaticMemo") != null;
+    private long battlefieldCacheEpoch = 0L;
+    private transient CardCollectionView cachedBattlefieldCards;
+    private transient long cachedBattlefieldEpoch = -1L;
+
+    /** Invalidate the getCardsIn(Battlefield) cache. Cheap (a long bump); called from every mutator that
+     *  can change which cards the battlefield scan returns. */
+    public final void bumpBattlefieldCacheEpoch() {
+        battlefieldCacheEpoch++;
+    }
+
+    private static boolean sameCardList(final CardCollectionView a, final CardCollectionView b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        final Iterator<Card> ia = a.iterator();
+        final Iterator<Card> ib = b.iterator();
+        while (ia.hasNext()) {
+            if (ia.next() != ib.next()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public synchronized CardCollectionView getCardsIn(final ZoneType zone) {
         if (zone == ZoneType.Stack) {
             return getStackZone().getCards();
+        }
+        if (ZONE_CACHE && zone == ZoneType.Battlefield) {
+            if (cachedBattlefieldCards != null && cachedBattlefieldEpoch == battlefieldCacheEpoch) {
+                if (ZONE_CACHE_ASSERT) {
+                    final CardCollectionView fresh = getPlayers().getCardsIn(zone);
+                    if (!sameCardList(cachedBattlefieldCards, fresh)) {
+                        System.out.println("[ZONECACHE][STALE] epoch=" + battlefieldCacheEpoch
+                                + " cachedN=" + cachedBattlefieldCards.size() + " freshN=" + fresh.size());
+                    }
+                }
+                return cachedBattlefieldCards;
+            }
+            final CardCollectionView fresh = getPlayers().getCardsIn(zone);
+            cachedBattlefieldCards = fresh;
+            cachedBattlefieldEpoch = battlefieldCacheEpoch;
+            return fresh;
         }
         return getPlayers().getCardsIn(zone);
     }

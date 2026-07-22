@@ -5679,6 +5679,10 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public final void setPhasedOut(final Player phasedOut0) {
         if (phasedOut == phasedOut0) { return; }
         phasedOut = phasedOut0;
+        // Battlefield getCardsIn filters out phased-out cards, so a phase toggle changes that result.
+        if (getGame() != null) {
+            getGame().bumpBattlefieldCacheEpoch();
+        }
         view.updatePhasedOut(this);
     }
 
