@@ -392,9 +392,16 @@ public class AiController {
                 }
 
                 if (exSA instanceof AbilitySub && !doTrigger(exSA, false)) {
-                    // AI would not run this chapter if given the chance
-                    // TODO eventually we'll want to consider playing it anyway, especially if Read ahead would still allow an immediate benefit
-                    return false;
+                    // Only bail if this first chapter is MANDATORY. When it's an OPTIONAL up-to-N
+                    // targeted ability (min targets 0 -- e.g. There and Back Again's "up to one target
+                    // creature can't block"), declining it is harmless and the Saga is still worth
+                    // casting for its later chapters; the AI just runs chapter I with no target.
+                    // Without this the AI never casts such Sagas (they sit dead in hand).
+                    // TODO eventually we'll want to consider playing it anyway even for mandatory
+                    // chapters, especially if Read ahead would still allow an immediate benefit.
+                    if (!(exSA.usesTargeting() && exSA.getMinTargets() == 0)) {
+                        return false;
+                    }
                 }
 
                 // usually later chapters make use of an earlier one
