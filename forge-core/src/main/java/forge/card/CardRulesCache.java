@@ -46,9 +46,11 @@ public class CardRulesCache {
     private static final int FORMAT_VERSION = 7;
 
     private static String cacheDir;
+    private static String appVersion = "";
 
-    public static void setCacheDir(String dir) {
+    public static void setCacheDir(String dir, String appVersion0) {
         cacheDir = dir;
+        appVersion = appVersion0 != null ? appVersion0 : "";
     }
 
     // ========== Tier 1: CardRules Cache ==========
@@ -725,6 +727,7 @@ public class CardRulesCache {
         }
         // cardSourceTimestamp (cardsfolder.zip mtime) invalidates the cache when a card body is
         // edited without changing the edition/card counts — otherwise the stale parse is served.
-        return FORMAT_VERSION + ":" + editionCount + ":" + totalCards + ":" + cardSourceTimestamp;
+        // appVersion: a new app build invalidates the cache even when the card data is unchanged
+        return FORMAT_VERSION + ":" + appVersion + ":" + editionCount + ":" + totalCards + ":" + cardSourceTimestamp;
     }
 }

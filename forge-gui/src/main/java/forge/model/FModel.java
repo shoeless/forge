@@ -45,6 +45,7 @@ import forge.gamemodes.quest.QuestWorld;
 import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.tournament.TournamentData;
 import forge.gui.FThreads;
+import forge.gui.GuiBase;
 import forge.gui.card.CardPreferences;
 import forge.gui.interfaces.IProgressBar;
 import forge.item.PaperCard;
@@ -231,7 +232,7 @@ public final class FModel {
         // Enable the Tier-1 binary CardRules startup cache (skips re-parsing ~32k scripts on
         // subsequent launches). Must be set before the first getMagicDb() call below, which
         // builds StaticData and loads the card DB. See forge.card.CardRulesCache.
-        forge.card.CardRulesCache.setCacheDir(ForgeConstants.DB_DIR);
+        forge.card.CardRulesCache.setCacheDir(ForgeConstants.DB_DIR, GuiBase.getInterface().getCurrentVersion());
 
         getMagicDb().setStandardPredicate(getFormats().getStandard().getFilterRules());
         getMagicDb().setPioneerPredicate(getFormats().getPioneer().getFilterRules());
