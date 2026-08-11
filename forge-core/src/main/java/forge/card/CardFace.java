@@ -163,7 +163,18 @@ final class CardFace implements ICardFace, Cloneable {
     }
 
     
-    void assignMissingFields() { // Most scripts do not specify color explicitly
+    void assignMissingFields() {
+        normalizeMissingFields();
+        if(this.functionalVariants != null) {
+            //Copy fields to undefined ones in functional variants
+            for (CardFace variant : this.functionalVariants.values()) {
+                assignMissingFieldsToVariant(variant);
+            }
+        }
+    }
+
+    /** Null-field defaults only, no variant merge — safe to re-run on an already-finalized face. */
+    void normalizeMissingFields() { // Most scripts do not specify color explicitly
         if ( null == oracleText ) { System.err.println(name + " has no Oracle text."); oracleText = ""; }
         if ( manaCost == null && color == null ) System.err.println(name + " has neither ManaCost nor Color");
         if ( manaCost == null ) manaCost = ManaCost.NO_COST;
@@ -177,13 +188,6 @@ final class CardFace implements ICardFace, Cloneable {
         if ( variables == null ) variables = emptyMap;
         if ( null == nonAbilityText ) nonAbilityText = "";
         if ( attractionLights == null) attractionLights = emptySet;
-
-        if(this.functionalVariants != null) {
-            //Copy fields to undefined ones in functional variants
-            for (CardFace variant : this.functionalVariants.values()) {
-                assignMissingFieldsToVariant(variant);
-            }
-        }
     }
 
     void assignMissingFieldsToVariant(CardFace variant) {

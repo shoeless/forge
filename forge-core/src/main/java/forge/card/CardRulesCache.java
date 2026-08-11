@@ -265,14 +265,17 @@ public class CardRulesCache {
             faces[6] = readNullableCardFace(in);
         }
 
-        // Assign missing fields to faces
-        faces[0].assignMissingFields();
-        if (faces[1] != null) faces[1].assignMissingFields();
-        if (faces[2] != null) faces[2].assignMissingFields();
-        if (faces[3] != null) faces[3].assignMissingFields();
-        if (faces[4] != null) faces[4].assignMissingFields();
-        if (faces[5] != null) faces[5].assignMissingFields();
-        if (faces[6] != null) faces[6].assignMissingFields();
+        // Normalize null fields only. assignMissingFields would also re-merge the base lists
+        // into the functional variants, which were serialized already merged — doubling them.
+        for (CardFace f : faces) {
+            if (f == null) continue;
+            f.normalizeMissingFields();
+            if (f.hasFunctionalVariants()) {
+                for (ICardFace v : f.getFunctionalVariants().values()) {
+                    ((CardFace) v).normalizeMissingFields();
+                }
+            }
+        }
 
         // Construct CardRules
         CardRules result = new CardRules(faces, splitType, aiHints);
