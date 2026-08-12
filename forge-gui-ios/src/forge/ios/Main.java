@@ -267,6 +267,13 @@ public class Main extends IOSApplication.Delegate {
             try {
                 long deviceRamMB = NSProcessInfo.getSharedProcessInfo().getPhysicalMemory() / (1024L * 1024L);
                 log("Physical device RAM: " + deviceRamMB + " MB");
+                if (deviceRamMB >= 3000) {
+                    // Defer bdwgc across the card-DB build (FModel.initialize): ~85 collections
+                    // otherwise fire during it. Bounded by measurement: the build allocates well
+                    // under 1GB, so the ungated heap peak stays ~2GB clear of the jetsam ceiling
+                    // on >=3GB devices.
+                    System.setProperty("forge.bootGcDefer", "true");
+                }
             } catch (Throwable t) {
                 log("Could not read physical memory: " + t.getMessage());
             }

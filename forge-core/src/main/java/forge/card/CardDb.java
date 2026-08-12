@@ -487,6 +487,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         CardEdition upcomingSet = null;
         Date today = new Date();
 
+        long tAllCards = 0, tLookup = 0, tAdd = 0;
         for (CardEdition e : editions.getOrderedEditions()) {
             boolean coreOrExpSet = e.getType() == CardEdition.Type.CORE || e.getType() == CardEdition.Type.EXPANSION;
             boolean isCoreExpSet = coreOrExpSet || e.getType() == CardEdition.Type.REPRINT;
@@ -497,10 +498,19 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
                 upcomingSet = e;
             }
 
-            for (CardEdition.EditionEntry cis : e.getAllCardsInSet()) {
+            long t0 = timing ? System.nanoTime() : 0;
+            List<CardEdition.EditionEntry> cardsInSet = e.getAllCardsInSet();
+            if (timing) {
+                tAllCards += System.nanoTime() - t0;
+            }
+            for (CardEdition.EditionEntry cis : cardsInSet) {
+                t0 = timing ? System.nanoTime() : 0;
                 CardRules cr = rulesByPrimaryName.get(cis.name());
                 if (cr == null)
                     cr = rulesByAltName.get(cis.name()); //Entry written using a flavor name
+                if (timing) {
+                    tLookup += System.nanoTime() - t0;
+                }
                 if (cr == null) {
                     missingCards.add(cis.name());
                     continue;
@@ -514,7 +524,11 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
                         continue;
                     }
                 }
+                t0 = timing ? System.nanoTime() : 0;
                 addSetCard(e, cis, cr);
+                if (timing) {
+                    tAdd += System.nanoTime() - t0;
+                }
             }
             if (isCoreExpSet && logMissingPerEdition) {
                 if (missingCards.isEmpty()) {
@@ -532,7 +546,9 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         }
 
         if (timing) {
-            System.out.println("[FORGE-TIMING]   initialize: edition loop +" + (System.currentTimeMillis() - tPhase) + "ms " + gcStats());
+            System.out.println("[FORGE-TIMING]   initialize: edition loop +" + (System.currentTimeMillis() - tPhase) + "ms " + gcStats()
+                    + " [getAllCardsInSet=" + (tAllCards / 1000000L) + "ms lookup=" + (tLookup / 1000000L)
+                    + "ms addSetCard=" + (tAdd / 1000000L) + "ms]");
             tPhase = System.currentTimeMillis();
         }
 
