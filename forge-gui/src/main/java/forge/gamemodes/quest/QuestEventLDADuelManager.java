@@ -48,6 +48,7 @@ public class QuestEventLDADuelManager implements QuestEventDuelManagerInterface 
 
     public QuestEventLDADuelManager(GameFormat baseFormat){
         this.baseFormat = baseFormat;
+        FModel.isdeckGenMatrixLoaded(); // blocks until the background deck-gen matrix load completes
         archetypes = CardArchetypeLDAGenerator.ldaArchetypes.get(baseFormat.getName());
         assembleDuelDifficultyLists();
     }
