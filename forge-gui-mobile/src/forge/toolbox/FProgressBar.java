@@ -65,6 +65,7 @@ public class FProgressBar extends FDisplayObject implements IProgressBar {
     public void setDescription(final String s0) {
         desc = s0;
         message = s0;
+        startTime = new Date().getTime(); // new phase - restart the ETA rate baseline
     }
 
     /** Increments bar. */

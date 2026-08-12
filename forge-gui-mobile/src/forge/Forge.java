@@ -513,6 +513,8 @@ public class Forge implements ApplicationListener {
                             System.gc();
                             System.gc();
                             MemProbe.tick();
+                            // Deferred from FModel.initialize - see startDeckGenMatrixLoad.
+                            FModel.startDeckGenMatrixLoad();
                         });
                     }, takeScreenshot(), false, false, true, false));
                 });

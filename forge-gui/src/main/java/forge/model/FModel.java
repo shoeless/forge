@@ -285,30 +285,42 @@ public final class FModel {
         AiProfileUtil.setAiSideboardingMode(AiProfileUtil.AISideboardingMode.normalizedValueOf(getPreferences().getPref(FPref.MATCH_AI_SIDEBOARDING_MODE)));
         tPhase = timingPhase("AI profiles", tPhase);
 
-        // Generate Deck Gen matrix on a background thread - it only serves the cardgen deck
-        // options and takes ~27s on older iPads, so keep it off the splash-to-home critical
-        // path. isdeckGenMatrixLoaded() blocks until the load completes, so consumers (all
-        // reached via deck-chooser UI navigation) still see the final answer, never a
-        // transient false.
+        // The deck-gen matrix only serves the cardgen deck options yet took ~27s of the boot
+        // path on older iPads. Load it on a background thread instead; isdeckGenMatrixLoaded()
+        // blocks until the load completes, so consumers (all reached via deck-chooser UI
+        // navigation) still see the final answer, never a transient false. On libGDX ports the
+        // thread starts from the post-home-screen runnable (Forge.java), not here - started any
+        // earlier it starves the splash critical path on low-core devices.
         if(getPreferences().getPrefBoolean(FPref.DECKGEN_CARDBASED)) {
-            final CountDownLatch latch = new CountDownLatch(1);
-            deckGenMatrixLatch = latch;
-            final Thread loader = new Thread(() -> {
-                final long tGen = System.currentTimeMillis();
-                try {
-                    boolean commanderDeckGenMatrixLoaded = CardRelationMatrixGenerator.initialize();
-                    deckGenMatrixLoaded = CardArchetypeLDAGenerator.initialize() && commanderDeckGenMatrixLoaded;
-                } finally {
-                    latch.countDown();
-                    timingPhase("deck-gen matrix (background)", tGen);
-                }
-            }, "DeckGenMatrixLoader");
-            loader.setDaemon(true);
-            loader.start();
+            deckGenMatrixLatch = new CountDownLatch(1);
+            if (!GuiBase.getInterface().isLibgdxPort()) {
+                startDeckGenMatrixLoad();
+            }
         }
     }
 
+    public static void startDeckGenMatrixLoad() {
+        final CountDownLatch latch = deckGenMatrixLatch;
+        if (latch == null || deckGenMatrixStarted) {
+            return;
+        }
+        deckGenMatrixStarted = true;
+        final Thread loader = new Thread(() -> {
+            final long tGen = System.currentTimeMillis();
+            try {
+                boolean commanderDeckGenMatrixLoaded = CardRelationMatrixGenerator.initialize();
+                deckGenMatrixLoaded = CardArchetypeLDAGenerator.initialize() && commanderDeckGenMatrixLoaded;
+            } finally {
+                latch.countDown();
+                timingPhase("deck-gen matrix (background)", tGen);
+            }
+        }, "DeckGenMatrixLoader");
+        loader.setDaemon(true);
+        loader.start();
+    }
+
     private static volatile boolean deckGenMatrixLoaded = false;
+    private static volatile boolean deckGenMatrixStarted = false;
     private static volatile CountDownLatch deckGenMatrixLatch = null;
 
     public static boolean isdeckGenMatrixLoaded(){

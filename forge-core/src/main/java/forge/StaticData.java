@@ -154,6 +154,11 @@ public class StaticData {
                         + " regular=" + regularCards.size() + " variant=" + variantsCards.size());
             }
 
+            // The CardDb build below is the longest silent stretch of boot (~55s on older
+            // iPads) - name it on the splash so the bar isn't stuck at the previous phase's 100%.
+            cardReader.getProgressObserver().setOperationName(forge.util.Localizer.getInstance()
+                    .getMessageorUseDefault("lblPrepareDatabase", "Preparing database..."), false);
+
             long tPhase = System.currentTimeMillis();
             commonCards = new CardDb(regularCards, editions, filtered);
             variantCards = new CardDb(variantsCards, editions, filtered);
