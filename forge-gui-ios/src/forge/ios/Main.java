@@ -201,6 +201,10 @@ public class Main extends IOSApplication.Delegate {
             // timeouts) and the jetsam memory ceiling. Set here, before any game/CardState class loads.
             System.setProperty("forge.staticMemo", "on");
 
+            // Startup [FORGE-TIMING] diagnostics (splash-to-home breakdown via os_log). A few
+            // printlns on the boot path; kept on for device benchmarking.
+            System.setProperty("forge.timing", "true");
+
             final IOSApplicationConfiguration config = new IOSApplicationConfiguration();
             config.useAccelerometer = false;
             config.useCompass = false;
@@ -527,16 +531,26 @@ public class Main extends IOSApplication.Delegate {
         }
     }
 
+    private static String versionString;
+
     private static String getVersionString() {
         // RoboVM AOT-links everything into one native binary with no runtime JAR manifest, so
         // BuildInfo.getVersionString() (manifest Implementation-Version) resolves to "GIT" on iOS.
         // Read the app bundle's own version instead — the iOS analog of Android's PackageManager
         // versionName. CFBundleShortVersionString is the marketing version; CFBundleVersion is the
-        // (monotonic, per-upload) App Store build number.
+        // (monotonic, per-upload) App Store build number. Memoized: the splash redraws this every
+        // frame, and the per-frame NSBundle lookup can transiently return an empty version.
+        if (versionString != null) {
+            return versionString;
+        }
         try {
             NSBundle b = NSBundle.getMainBundle();
             String version = b.getInfoDictionaryObject("CFBundleShortVersionString").toString();
             String build = b.getInfoDictionaryObject("CFBundleVersion").toString();
+            if (!version.isEmpty()) {
+                versionString = version + " (" + build + ")";
+                return versionString;
+            }
             return version + " (" + build + ")";
         } catch (Exception e) {
             return "0.0";
