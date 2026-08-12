@@ -106,7 +106,7 @@ public class StaticData {
             // ones (getPreInitName()==getName() and isVariant() agree once faces are populated).
             // See forge.card.CardRulesCache. Disabled (no-op) until setCacheDir() is called.
             final String cardCacheVersion = CardRulesCache.computeCacheVersion(editions, cardReader.getCardSourceTimestamp());
-            final Map<String, CardRules> cachedRules = CardRulesCache.loadRules(cardCacheVersion);
+            final Map<String, CardRules> cachedRules = CardRulesCache.loadRules(cardCacheVersion, cardReader.getProgressObserver());
             final Iterable<CardRules> builtinCards = cachedRules != null ? cachedRules.values() : cardReader.loadCards();
             // On a miss, collect the built-in rules to persist AFTER the CardDb below resolves
             // placeholder faces (supplyPlaceholderFaces) — a rule with a deferred main face has a

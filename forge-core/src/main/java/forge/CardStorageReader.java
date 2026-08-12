@@ -64,6 +64,10 @@ public class CardStorageReader {
 
     private final ProgressObserver progressObserver;
 
+    public ProgressObserver getProgressObserver() {
+        return progressObserver;
+    }
+
     private final boolean loadingTokens;
     private transient File cardsfolder;
 

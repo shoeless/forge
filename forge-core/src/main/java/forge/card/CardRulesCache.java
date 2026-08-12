@@ -17,9 +17,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import forge.CardStorageReader;
 import forge.card.CardType.CoreType;
 import forge.card.CardType.Supertype;
 import forge.card.mana.ManaCost;
+import forge.util.Localizer;
 
 /**
  * Tier-1 binary cache for parsed {@link CardRules}.
@@ -60,10 +62,11 @@ public class CardRulesCache {
      * @param expectedVersion version string for cache invalidation
      * @return map of name -> CardRules (case-insensitive TreeMap), or null if cache is invalid/missing
      */
-    public static Map<String, CardRules> loadRules(String expectedVersion) {
+    public static Map<String, CardRules> loadRules(String expectedVersion, CardStorageReader.ProgressObserver observer) {
         if (cacheDir == null) return null;
         File cacheFile = new File(cacheDir, "cardcache.bin");
         if (!cacheFile.exists()) return null;
+        if (observer == null) observer = CardStorageReader.ProgressObserver.emptyObserver;
 
         DataInputStream in = null;
         try {
@@ -76,6 +79,9 @@ public class CardRulesCache {
             if (!expectedVersion.equals(cachedVersion)) return null;
 
             int count = in.readInt();
+            observer.setOperationName(Localizer.getInstance().getMessageorUseDefault(
+                    "splash.loading.cards-cache", "Loading card database"), true);
+            observer.report(0, count);
             // Keep TreeMap (case-insensitive) to preserve card-DB iteration order — see class doc.
             Map<String, CardRules> result = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             for (int i = 0; i < count; i++) {
@@ -83,7 +89,11 @@ public class CardRulesCache {
                 if (rules != null) {
                     result.put(rules.getName(), rules);
                 }
+                if ((i & 511) == 511) {
+                    observer.report(i + 1, count);
+                }
             }
+            observer.report(count, count);
             return result;
         } catch (Exception e) {
             System.err.println("FORGE: Failed to read card rules cache: " + e.getMessage());
