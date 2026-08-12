@@ -462,14 +462,16 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         }
     }
 
-    // Cumulative bdwgc collection count (iOS only; -1 elsewhere) - attributes slow boot
-    // phases to GC churn vs plain CPU when read alongside the [FORGE-TIMING] deltas.
-    private static long gcCount() {
+    // Cumulative bdwgc collection count + allocated MB (iOS only; -1 elsewhere) - attributes
+    // slow boot phases to GC churn vs plain CPU when read alongside the [FORGE-TIMING] deltas.
+    private static String gcStats() {
         try {
             Class<?> c = Class.forName("org.robovm.rt.GC");
-            return ((Number) c.getMethod("getCount").invoke(null)).longValue();
+            long count = ((Number) c.getMethod("getCount").invoke(null)).longValue();
+            long totalMB = ((Number) c.getMethod("getTotalBytes").invoke(null)).longValue() / (1024L * 1024L);
+            return "gcCount=" + count + " allocTotalMB=" + totalMB;
         } catch (Throwable t) {
-            return -1;
+            return "gcCount=-1";
         }
     }
 
@@ -477,7 +479,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         final boolean timing = Boolean.getBoolean("forge.timing");
         long tPhase = System.currentTimeMillis();
         if (timing) {
-            System.out.println("[FORGE-TIMING]   initialize: start gcCount=" + gcCount());
+            System.out.println("[FORGE-TIMING]   initialize: start " + gcStats());
         }
         Set<String> allMissingCards = new LinkedHashSet<>();
         List<String> missingCards = new ArrayList<>();
@@ -529,7 +531,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         }
 
         if (timing) {
-            System.out.println("[FORGE-TIMING]   initialize: edition loop +" + (System.currentTimeMillis() - tPhase) + "ms gcCount=" + gcCount());
+            System.out.println("[FORGE-TIMING]   initialize: edition loop +" + (System.currentTimeMillis() - tPhase) + "ms " + gcStats());
             tPhase = System.currentTimeMillis();
         }
 

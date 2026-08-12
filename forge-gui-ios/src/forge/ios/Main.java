@@ -205,13 +205,13 @@ public class Main extends IOSApplication.Delegate {
             // printlns on the boot path; kept on for device benchmarking.
             System.setProperty("forge.timing", "true");
 
-            // Let bdwgc grow the heap ~1.5x further between collections (divisor 3 -> 2) so the
-            // automatic GC fires roughly half as often - fewer stop-the-world pauses both during
-            // the allocation-heavy boot and in-game. DEVICE-VERIFIED safe on the old branch: peak
-            // heap +27 MB vs a ~2.7-3 GB jetsam ceiling; the post-load and per-game System.gc()
-            // still hard-reclaim at the boundaries.
+            // Boot with the most permissive bdwgc growth policy (divisor=1: collect only once
+            // bytes-since-GC exceed the whole heap size) - the allocation-heavy card-DB boot
+            // otherwise spends most of its time in stop-the-world collections (82 during the
+            // edition loop at divisor=2). The post-home runnable restores divisor=2 (the
+            // device-verified in-game setting) and hard-reclaims with System.gc().
             try {
-                org.robovm.rt.GC.setFreeSpaceDivisor(2);
+                org.robovm.rt.GC.setFreeSpaceDivisor(1);
             } catch (Throwable ignored) {
                 // never let a GC-tuning call block startup
             }
