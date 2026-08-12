@@ -463,6 +463,8 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     }
 
     public void initialize(boolean logMissingPerEdition, boolean logMissingSummary, boolean enableUnknownCards) {
+        final boolean timing = Boolean.getBoolean("forge.timing");
+        long tPhase = System.currentTimeMillis();
         Set<String> allMissingCards = new LinkedHashSet<>();
         List<String> missingCards = new ArrayList<>();
         CardEdition upcomingSet = null;
@@ -512,6 +514,11 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             artIds.clear();
         }
 
+        if (timing) {
+            System.out.println("[FORGE-TIMING]   initialize: edition loop +" + (System.currentTimeMillis() - tPhase) + "ms");
+            tPhase = System.currentTimeMillis();
+        }
+
         if (logMissingSummary) {
             System.out.printf("Totally %d cards not implemented: %s\n", allMissingCards.size(), StringUtils.join(allMissingCards, " | "));
         }
@@ -536,7 +543,16 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             }
         }
 
+        if (timing) {
+            System.out.println("[FORGE-TIMING]   initialize: unassigned sweep +" + (System.currentTimeMillis() - tPhase) + "ms");
+            tPhase = System.currentTimeMillis();
+        }
+
         reIndex();
+
+        if (timing) {
+            System.out.println("[FORGE-TIMING]   initialize: reIndex +" + (System.currentTimeMillis() - tPhase) + "ms");
+        }
     }
 
     public void addCard(PaperCard paperCard) {
@@ -557,8 +573,12 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
 
         List<ICardFace> allFaces = paperCard.getAllFaces();
         Set<String> namesToAdd = new HashSet<>();
-        allFaces.stream().map(ICardCharacteristics::getName).forEach(namesToAdd::add);
-        allFaces.stream().map(ICardFace::getFlavorName).filter(Objects::nonNull).forEach(namesToAdd::add);
+        for (ICardFace face : allFaces) {
+            namesToAdd.add(face.getName());
+            if (face.getFlavorName() != null) {
+                namesToAdd.add(face.getFlavorName());
+            }
+        }
         namesToAdd.remove(mainName);
         for(String name : namesToAdd)
             allCardsByName.put(name, paperCard);
@@ -581,11 +601,27 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     }
 
     private PaperCard getBestUniquePrint(final Collection<PaperCard> cards) {
-        return cards.stream()
-                .filter(pc -> !pc.getRarity().equals(CardRarity.Special))
-                .min(Comparator.comparing((PaperCard pc) -> editions.get(pc.getEdition()), defaultCardArtPreference)
-                        .thenComparing(PaperCard::getCollectorNumber))
-                .orElseGet(() -> cards.iterator().next());
+        // Plain loop - this runs once per unique card at startup and a stream pipeline
+        // per call is measurably slow on the iOS (AOT) build.
+        PaperCard best = null;
+        CardEdition bestEdition = null;
+        for (PaperCard pc : cards) {
+            if (pc.getRarity().equals(CardRarity.Special)) {
+                continue;
+            }
+            CardEdition edition = editions.get(pc.getEdition());
+            if (best == null) {
+                best = pc;
+                bestEdition = edition;
+                continue;
+            }
+            int cmp = defaultCardArtPreference.compare(edition, bestEdition);
+            if (cmp < 0 || (cmp == 0 && pc.getCollectorNumber().compareTo(best.getCollectorNumber()) < 0)) {
+                best = pc;
+                bestEdition = edition;
+            }
+        }
+        return best != null ? best : cards.iterator().next();
     }
 
     public boolean setPreferredArt(String cardName, String setCode, int artIndex) {
