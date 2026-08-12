@@ -205,6 +205,17 @@ public class Main extends IOSApplication.Delegate {
             // printlns on the boot path; kept on for device benchmarking.
             System.setProperty("forge.timing", "true");
 
+            // Let bdwgc grow the heap ~1.5x further between collections (divisor 3 -> 2) so the
+            // automatic GC fires roughly half as often - fewer stop-the-world pauses both during
+            // the allocation-heavy boot and in-game. DEVICE-VERIFIED safe on the old branch: peak
+            // heap +27 MB vs a ~2.7-3 GB jetsam ceiling; the post-load and per-game System.gc()
+            // still hard-reclaim at the boundaries.
+            try {
+                org.robovm.rt.GC.setFreeSpaceDivisor(2);
+            } catch (Throwable ignored) {
+                // never let a GC-tuning call block startup
+            }
+
             final IOSApplicationConfiguration config = new IOSApplicationConfiguration();
             config.useAccelerometer = false;
             config.useCompass = false;

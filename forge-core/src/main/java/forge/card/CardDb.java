@@ -462,9 +462,23 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         }
     }
 
+    // Cumulative bdwgc collection count (iOS only; -1 elsewhere) - attributes slow boot
+    // phases to GC churn vs plain CPU when read alongside the [FORGE-TIMING] deltas.
+    private static long gcCount() {
+        try {
+            Class<?> c = Class.forName("org.robovm.rt.GC");
+            return ((Number) c.getMethod("getCount").invoke(null)).longValue();
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
     public void initialize(boolean logMissingPerEdition, boolean logMissingSummary, boolean enableUnknownCards) {
         final boolean timing = Boolean.getBoolean("forge.timing");
         long tPhase = System.currentTimeMillis();
+        if (timing) {
+            System.out.println("[FORGE-TIMING]   initialize: start gcCount=" + gcCount());
+        }
         Set<String> allMissingCards = new LinkedHashSet<>();
         List<String> missingCards = new ArrayList<>();
         CardEdition upcomingSet = null;
@@ -515,7 +529,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         }
 
         if (timing) {
-            System.out.println("[FORGE-TIMING]   initialize: edition loop +" + (System.currentTimeMillis() - tPhase) + "ms");
+            System.out.println("[FORGE-TIMING]   initialize: edition loop +" + (System.currentTimeMillis() - tPhase) + "ms gcCount=" + gcCount());
             tPhase = System.currentTimeMillis();
         }
 
