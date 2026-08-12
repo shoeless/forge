@@ -145,17 +145,6 @@ public final class FModel {
     private static final Supplier<ItemPool<PaperCard>> attractionPool = Suppliers.memoize(() -> ItemPool.createFrom(getMagicDb().getVariantCards().getAllCards(PaperCardPredicates.fromRules(CardRulesPredicates.IS_ATTRACTION)), PaperCard.class));
     private static final Supplier<ItemPool<PaperCard>> contraptionPool = Suppliers.memoize(() -> ItemPool.createFrom(getMagicDb().getVariantCards().getAllCards(PaperCardPredicates.fromRules(CardRulesPredicates.IS_CONTRAPTION)), PaperCard.class));
 
-    private static void bootGc(final boolean enabled) {
-        if (!Boolean.getBoolean("forge.bootGcDefer")) {
-            return;
-        }
-        try {
-            Class<?> c = Class.forName("org.robovm.rt.GC");
-            c.getMethod(enabled ? "enable" : "disable").invoke(null);
-        } catch (Throwable ignored) {
-        }
-    }
-
     // FORGE-TIMING phase deltas within initialize(); enabled with -Dforge.timing.
     private static long timingPhase(final String name, final long since) {
         final long now = System.currentTimeMillis();
@@ -260,15 +249,7 @@ public final class FModel {
         // builds StaticData and loads the card DB. See forge.card.CardRulesCache.
         forge.card.CardRulesCache.setCacheDir(ForgeConstants.DB_DIR, GuiBase.getInterface().getCurrentVersion());
 
-        // With forge.bootGcDefer (iOS, >=3GB devices) the collector is paused across the DB
-        // build - dozens of stop-the-world collections otherwise fire inside it. The heap
-        // growth is bounded (<1GB measured) and the post-home System.gc() reclaims the spike.
-        bootGc(false);
-        try {
-            getMagicDb(); // first call builds StaticData (card + token DB)
-        } finally {
-            bootGc(true);
-        }
+        getMagicDb(); // first call builds StaticData (card + token DB)
         tPhase = timingPhase("StaticData (card+token DB)", tPhase);
         getFormats();
         tPhase = timingPhase("formats load", tPhase);

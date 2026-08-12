@@ -107,7 +107,17 @@ public class StaticData {
             // ones (getPreInitName()==getName() and isVariant() agree once faces are populated).
             // See forge.card.CardRulesCache. Disabled (no-op) until setCacheDir() is called.
             final String cardCacheVersion = CardRulesCache.computeCacheVersion(editions, cardReader.getCardSourceTimestamp());
-            final Map<String, CardRules> cachedRules = CardRulesCache.loadRules(cardCacheVersion, cardReader.getProgressObserver());
+            // Pause the collector across the cache read (forge.bootGcDefer; iOS >=3GB devices):
+            // deserializing the permanent 33k-CardRules graph otherwise fires a collection every
+            // few MB of growth (device-measured 24s -> 6s). Deferring any longer is a net loss -
+            // bdwgc's expand-instead-of-collect allocation path slows the non-GC-bound phases.
+            bootGc(false);
+            final Map<String, CardRules> cachedRules;
+            try {
+                cachedRules = CardRulesCache.loadRules(cardCacheVersion, cardReader.getProgressObserver());
+            } finally {
+                bootGc(true);
+            }
             final Iterable<CardRules> builtinCards = cachedRules != null ? cachedRules.values() : cardReader.loadCards();
             // On a miss, collect the built-in rules to persist AFTER the CardDb below resolves
             // placeholder faces (supplyPlaceholderFaces) — a rule with a deferred main face has a
@@ -214,6 +224,17 @@ public class StaticData {
                     setLookup.put(f.getName().replace(".txt",""), FileUtil.readFile(f));
                 }
             }
+        }
+    }
+
+    private static void bootGc(final boolean enabled) {
+        if (!Boolean.getBoolean("forge.bootGcDefer")) {
+            return;
+        }
+        try {
+            Class<?> c = Class.forName("org.robovm.rt.GC");
+            c.getMethod(enabled ? "enable" : "disable").invoke(null);
+        } catch (Throwable ignored) {
         }
     }
 
