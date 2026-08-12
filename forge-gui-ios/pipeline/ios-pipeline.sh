@@ -503,6 +503,17 @@ device() {
     APP="$ROOT/forge-gui-ios/target/robovm.tmp/$APP_EXEC.app"
     [ -f "$APP/$APP_EXEC" ] || { echo "DEVICE BINARY MISSING - build failed"; exit 1; }
 
+    echo "=== compile icon asset catalog ==="
+    # RoboVM's actool run emits the legacy loose AppIcon PNGs + the CFBundleIconName
+    # plist key but no compiled Assets.car, so surfaces that resolve the icon by that
+    # key (app switcher, dock, backgrounded home-screen refresh) find nothing and fall
+    # back to a placeholder. Compile the catalog into the bundle before signing.
+    xcrun actool --compile "$APP" \
+        --platform iphoneos --minimum-deployment-target 13.0 \
+        --app-icon AppIcon --output-partial-info-plist /tmp/forge-icons-partial.plist \
+        "$ROOT/forge-gui-ios/resources/Assets.xcassets" >/dev/null 2>&1 || true
+    [ -f "$APP/Assets.car" ] && echo "Assets.car compiled" || echo "WARNING: no Assets.car produced"
+
     echo "=== sign ==="
     cp "$PROFILE" "$APP/embedded.mobileprovision"
     cat > /tmp/forge-entitlements.plist <<EOF
