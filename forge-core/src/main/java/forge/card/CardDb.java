@@ -17,6 +17,7 @@
  */
 package forge.card;
 
+import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.*;
 import forge.ImageKeys;
 import forge.StaticData;
@@ -41,22 +42,22 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
     public final static char NameSetSeparator = '|';
     public final static String FlagPrefix = "#";
     public static final String FlagSeparator = "\t";
-    public static final Comparator<CardRules> CARD_RULES_NAME_COMPARATOR = Comparator.comparing(CardRules::getPreInitName, String.CASE_INSENSITIVE_ORDER);
+    public static final Comparator<CardRules> CARD_RULES_NAME_COMPARATOR = Comparator.comparing(CardRules::getPreInitName, CaseInsensitiveOrder.INSTANCE);
 
     // need this to obtain cardReference by name+set+artindex
-    private final ListMultimap<String, PaperCard> allCardsByName = Multimaps.newListMultimap(new TreeMap<>(String.CASE_INSENSITIVE_ORDER), Lists::newArrayList);
+    private final ListMultimap<String, PaperCard> allCardsByName = Multimaps.newListMultimap(new TreeMap<>(CaseInsensitiveOrder.INSTANCE), Lists::newArrayList);
     private final Map<String, CardRules> rulesByPrimaryName;
-    private final Map<String, CardRules> rulesByAltName = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    private final Map<String, CardRules> rulesByAltName = Maps.newTreeMap(CaseInsensitiveOrder.INSTANCE);
     private final ListMultimap<CardRules, PaperCard> allCardsByRules = Multimaps.newListMultimap(new TreeMap<>(CARD_RULES_NAME_COMPARATOR), Lists::newArrayList);
     private final Map<CardRules, PaperCard> uniqueCardsByRules = Maps.newTreeMap(CARD_RULES_NAME_COMPARATOR);
-    private final Map<String, ICardFace> facesByName = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
-    private final Map<String, String> normalizedNames = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    private final Map<String, ICardFace> facesByName = Maps.newTreeMap(CaseInsensitiveOrder.INSTANCE);
+    private final Map<String, String> normalizedNames = Maps.newTreeMap(CaseInsensitiveOrder.INSTANCE);
     private static final Map<String, String> artPrefs = Maps.newHashMap();
     /**
      * Map of flavor names to the identifier of the functional variant on which they appear in their respective card rules.
      */
     private final Map<String, String> flavorNameMappings = Maps.newHashMap();
-    private final Map<String, PaperCard> uniqueCardsByFlavorName = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    private final Map<String, PaperCard> uniqueCardsByFlavorName = Maps.newTreeMap(CaseInsensitiveOrder.INSTANCE);
 
     private final Map<String, Integer> artIds = Maps.newHashMap();
 

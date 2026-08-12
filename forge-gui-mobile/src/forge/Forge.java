@@ -502,9 +502,6 @@ public class Forge implements ApplicationListener {
                         // they don't sit on the splash-to-home critical path.
                         Gdx.app.postRunnable(() -> {
                             FSkin.loadDeferred();
-                            // Boot runs with the permissive bdwgc divisor=1 (iOS Main);
-                            // restore the device-verified in-game setting before reclaiming.
-                            MemProbe.setGcFreeSpaceDivisor(2);
                             // POST-LOAD memory reclaim. Booting parses ~32k card rules + builds
                             // ~103k PaperCards + loads skin assets - a large transient allocation
                             // spike that leaves freed-but-unmapped bytes held in the GC heap

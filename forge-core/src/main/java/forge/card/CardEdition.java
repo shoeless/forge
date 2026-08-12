@@ -17,6 +17,7 @@
  */
 package forge.card;
 
+import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.*;
 
 import forge.StaticData;
@@ -322,7 +323,7 @@ public final class CardEdition implements Comparable<CardEdition> {
             Multimaps.toMultimap(
                 e -> e.name,
                 e -> e,
-                MultimapBuilder.treeKeys(String.CASE_INSENSITIVE_ORDER).arrayListValues()::build
+                MultimapBuilder.treeKeys(CaseInsensitiveOrder.INSTANCE).arrayListValues()::build
             )
         );
         this.tokenMap = tokens;
@@ -635,7 +636,7 @@ public final class CardEdition implements Comparable<CardEdition> {
 
         protected Map<String, CardEdition> createMap() {
             // Create our own map to make it case-insensitive for set codes.
-            return new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            return new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
         }
 
         @Override
@@ -869,7 +870,7 @@ public final class CardEdition implements Comparable<CardEdition> {
     }
 
     public static class Collection extends StorageBase<CardEdition> {
-        private final Map<String, CardEdition> aliasToEdition = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        private final Map<String, CardEdition> aliasToEdition = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
         private boolean lock = false; //Lock once custom content has been added.
         public Collection(IItemReader<CardEdition> reader) {
             super("Card editions", reader);
@@ -947,7 +948,7 @@ public final class CardEdition implements Comparable<CardEdition> {
             return new StorageReaderBase<>(null) {
                 @Override
                 public Map<String, SealedTemplate> readAll() {
-                    Map<String, SealedTemplate> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                    Map<String, SealedTemplate> map = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
                     for (CardEdition ce : Collection.this) {
                         List<String> boosterTypes = Lists.newArrayList(ce.getAvailableBoosterTypes());
                         for (String type : boosterTypes) {

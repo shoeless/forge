@@ -17,6 +17,7 @@
  */
 package forge;
 
+import forge.util.CaseInsensitiveOrder;
 import com.google.common.io.Files;
 import forge.card.CardRules;
 import forge.util.BuildInfo;
@@ -246,7 +247,7 @@ public class CardStorageReader {
         // Report relevant numbers to progress monitor model.
 
         final Set<CardRules> result;
-        result = new TreeSet<>(Comparator.comparing(CardRules::getNormalizedName, String.CASE_INSENSITIVE_ORDER));
+        result = new TreeSet<>(Comparator.comparing(CardRules::getNormalizedName, CaseInsensitiveOrder.INSTANCE));
 
         if (loadCardsLazily) {
             return result;

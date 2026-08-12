@@ -205,15 +205,33 @@ public class Main extends IOSApplication.Delegate {
             // printlns on the boot path; kept on for device benchmarking.
             System.setProperty("forge.timing", "true");
 
-            // Boot with the most permissive bdwgc growth policy (divisor=1: collect only once
-            // bytes-since-GC exceed the whole heap size) - the allocation-heavy card-DB boot
-            // otherwise spends most of its time in stop-the-world collections (82 during the
-            // edition loop at divisor=2). The post-home runnable restores divisor=2 (the
-            // device-verified in-game setting) and hard-reclaims with System.gc().
+            // Let bdwgc grow the heap further between collections (divisor 3 -> 2): fewer
+            // stop-the-world pauses in-game. DEVICE-VERIFIED sizing: peak heap +27 MB against a
+            // ~2.7-3 GB jetsam ceiling. (Boot-time GC counts proved insensitive to the divisor -
+            // divisor=1 fired the same ~85 collections - so no special boot value is used.)
             try {
-                org.robovm.rt.GC.setFreeSpaceDivisor(1);
+                org.robovm.rt.GC.setFreeSpaceDivisor(2);
             } catch (Throwable ignored) {
                 // never let a GC-tuning call block startup
+            }
+
+            // One-shot comparator microbenchmark (temporary boot diagnostic): times 100k
+            // case-insensitive compares of case-differing strings, JDK vs forge fast path.
+            {
+                String a = "lightning bolt of the sword";
+                String b = "LIGHTNING BOLT OF THE SWORe";
+                long t0 = System.nanoTime();
+                int acc = 0;
+                for (int i = 0; i < 100000; i++) {
+                    acc += String.CASE_INSENSITIVE_ORDER.compare(a, b);
+                }
+                long jdkMs = (System.nanoTime() - t0) / 1000000L;
+                t0 = System.nanoTime();
+                for (int i = 0; i < 100000; i++) {
+                    acc += forge.util.CaseInsensitiveOrder.INSTANCE.compare(a, b);
+                }
+                long fastMs = (System.nanoTime() - t0) / 1000000L;
+                System.out.println("[FORGE-TIMING] CI-compare 100k: jdk=" + jdkMs + "ms fast=" + fastMs + "ms (" + acc + ")");
             }
 
             final IOSApplicationConfiguration config = new IOSApplicationConfiguration();

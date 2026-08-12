@@ -17,6 +17,7 @@
  */
 package forge.deck;
 
+import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.Lists;
 import forge.StaticData;
 import forge.card.CardDb;
@@ -54,7 +55,7 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
     public static final int DEFAULT_SLEEVE_OFFSET = 500;
 
     private final Map<DeckSection, CardPool> parts = new EnumMap<>(DeckSection.class);
-    private final Set<String> tags = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    private final Set<String> tags = new TreeSet<>(CaseInsensitiveOrder.INSTANCE);
     // Supports deferring loading a deck until we actually need its contents. This works in conjunction with
     // the lazy card load feature to ensure we don't need to load all cards on start up.
     private final Set<String> aiHints = new TreeSet<>();
@@ -344,7 +345,7 @@ public class Deck extends DeckBase implements Iterable<Entry<DeckSection, CardPo
          before copying into `this.parts`. This sanitization is applied because of the
          validation schema introduced in DeckSections.
          */
-        Map<String, List<String>> validatedSections = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        Map<String, List<String>> validatedSections = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
         for (Entry<String, List<String>> s : this.deferredSections.entrySet()) {
             final DeckSection deckSection = DeckSection.smartValueOf(s.getKey());
             if (deckSection == null) {

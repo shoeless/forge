@@ -1,5 +1,6 @@
 package forge;
 
+import forge.util.CaseInsensitiveOrder;
 import forge.card.CardDb;
 import forge.card.CardEdition;
 import forge.card.CardRules;
@@ -82,8 +83,8 @@ public class StaticData {
         editions.append(new CardEdition.Collection(new CardEdition.Reader(new File(customEditionsFolder), true)));
 
         {
-            final Map<String, CardRules> regularCards = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            final Map<String, CardRules> variantsCards = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            final Map<String, CardRules> regularCards = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
+            final Map<String, CardRules> variantsCards = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
 
             if (!loadNonLegalCards) {
                 for (CardEdition e : editions) {
@@ -176,7 +177,7 @@ public class StaticData {
             // constructors have run supplyPlaceholderFaces (all faces resolved; mainPart non-null).
             // These are the same objects collected above, mutated in place during resolution.
             if (builtinRulesForCache != null) {
-                final Map<String, CardRules> toCache = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                final Map<String, CardRules> toCache = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
                 for (CardRules c : builtinRulesForCache) {
                     toCache.put(c.getName(), c);
                 }
@@ -187,7 +188,7 @@ public class StaticData {
 
         final long tokenStartMs = System.currentTimeMillis();
         if (this.tokenReader != null) {
-            final Map<String, CardRules> tokens = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            final Map<String, CardRules> tokens = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
 
             for (CardRules card : this.tokenReader.loadCards()) {
                 if (null == card) continue;

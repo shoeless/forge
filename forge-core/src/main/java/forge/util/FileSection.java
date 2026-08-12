@@ -39,7 +39,7 @@ public class FileSection {
      * Instantiates a new file section.
      */
     protected FileSection() {
-        lines = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        lines = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
     }
 
     public static final Pattern DOLLAR_SIGN_KV_SEPARATOR = Pattern.compile(Pattern.quote("$"));
@@ -63,7 +63,7 @@ public class FileSection {
             return cached;
         }
 
-        Map<String, String> result = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        Map<String, String> result = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
         if (!StringUtils.isEmpty(line)) {
             for (final String dd : line.split(BAR_PAIR_SPLITTER)) {
                 final String[] v = kvSeparator.split(dd, 2);

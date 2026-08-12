@@ -22,15 +22,6 @@ public final class MemProbe {
 
     private MemProbe() { }
 
-    /** Restores the in-game bdwgc growth policy after the permissive boot setting (no-op off iOS). */
-    public static void setGcFreeSpaceDivisor(long divisor) {
-        try {
-            Class<?> c = Class.forName("org.robovm.rt.GC");
-            c.getMethod("setFreeSpaceDivisor", long.class).invoke(null, divisor);
-        } catch (Throwable ignored) {
-        }
-    }
-
     private static void initGcGetters() {
         gcProbed = true;
         try {

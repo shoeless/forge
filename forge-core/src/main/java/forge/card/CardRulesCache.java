@@ -1,5 +1,6 @@
 package forge.card;
 
+import forge.util.CaseInsensitiveOrder;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
@@ -83,7 +84,7 @@ public class CardRulesCache {
                     "splash.loading.cards-cache", "Loading card database"), true);
             observer.report(0, count);
             // Keep TreeMap (case-insensitive) to preserve card-DB iteration order — see class doc.
-            Map<String, CardRules> result = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            Map<String, CardRules> result = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
             for (int i = 0; i < count; i++) {
                 CardRules rules = readCardRules(in);
                 if (rules != null) {

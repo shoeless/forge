@@ -1,5 +1,6 @@
 package forge.token;
 
+import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -30,7 +31,7 @@ public class TokenDb implements ITokenDatabase {
     // The image names should be the same as the script name + _set
     // If that isn't found, consider falling back to the original token
     private final Multimap<String, PaperToken> allTokenByName = HashMultimap.create();
-    private final Map<String, PaperToken> extraTokensByName = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    private final Map<String, PaperToken> extraTokensByName = Maps.newTreeMap(CaseInsensitiveOrder.INSTANCE);
 
     private final CardEdition.Collection editions;
     private final Map<String, CardRules> rulesByName;

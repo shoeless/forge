@@ -1,5 +1,6 @@
 package forge.item;
 
+import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.Lists;
 
 import forge.StaticData;
@@ -200,7 +201,7 @@ public abstract class PaperCardPredicates {
         }
 
         private PredicateSets(final List<String> wantSets, final boolean shouldContain) {
-            this.sets = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+            this.sets = new TreeSet<>(CaseInsensitiveOrder.INSTANCE);
             this.sets.addAll(wantSets);
             this.mustContain = shouldContain;
         }

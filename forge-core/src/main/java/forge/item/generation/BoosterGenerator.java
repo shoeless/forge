@@ -17,6 +17,7 @@
  */
 package forge.item.generation;
 
+import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import forge.StaticData;
@@ -49,7 +50,7 @@ import java.util.stream.Stream;
  */
 public class BoosterGenerator {
     private final static Map<String, String> staticSheetsCorrespondance = new HashMap<>();
-    private final static Map<String, PrintSheet> cachedSheets = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    private final static Map<String, PrintSheet> cachedSheets = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
     private static synchronized PrintSheet getPrintSheet(String key) {
         if (!cachedSheets.containsKey(key))
             cachedSheets.put(key, makeSheet(key, StaticData.instance().getCommonCards().getAllCards()));
