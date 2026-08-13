@@ -284,9 +284,11 @@ public class Forge implements ApplicationListener {
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingFonts"));
                 FSkinFont.preloadAll(locale);
+                timingLog("fonts preloaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingCardTranslations"));
                 CardTranslation.preloadTranslation(locale, ForgeConstants.LANG_DIR);
+                timingLog("translations preloaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblPrepareDatabase"));
                 Gdx.app.postRunnable(this::afterDbLoaded);
@@ -466,9 +468,11 @@ public class Forge implements ApplicationListener {
         FThreads.invokeInBackgroundThread(() -> FThreads.invokeInEdtLater(() -> {
             //load skin full
             FSkin.loadFull(splashScreen);
+            timingLog("skin loaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
             FThreads.invokeInBackgroundThread(() -> {
                 //load Drafts
                 preloadBoosterDrafts();
+                timingLog("drafts preloaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
                 FThreads.invokeInEdtLater(() -> {
                     if (selector.equals("Adventure")) {
                         //preload adventure resources to speedup startup if selector is adventure. Needs in edt when setting up worldstage

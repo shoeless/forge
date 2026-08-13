@@ -71,6 +71,10 @@ public class StaticData {
     public StaticData(CardStorageReader cardReader, CardStorageReader tokenReader, CardStorageReader customCardReader, CardStorageReader customTokenReader, String editionFolder, String customEditionsFolder, String blockDataFolder, String setLookupFolder, String cardArtPreference, boolean enableUnknownCards, boolean loadNonLegalCards, boolean allowCustomCardsInDecksConformance, boolean enableSmartCardArtSelection) {
         this.cardReader = cardReader;
         this.tokenReader = tokenReader;
+        // Pause the collector from the editions load through the cache read below (the finally
+        // around loadRules re-enables; a throw in between aborts the boot anyway). Both phases
+        // build permanent graphs whose growth otherwise fires a collection every few MB.
+        bootGc(false);
         this.editions = new CardEdition.Collection(new CardEdition.Reader(new File(editionFolder)));
         this.blockDataFolder = blockDataFolder;
         this.allowCustomCardsInDecksConformance = allowCustomCardsInDecksConformance;
@@ -107,11 +111,9 @@ public class StaticData {
             // ones (getPreInitName()==getName() and isVariant() agree once faces are populated).
             // See forge.card.CardRulesCache. Disabled (no-op) until setCacheDir() is called.
             final String cardCacheVersion = CardRulesCache.computeCacheVersion(editions, cardReader.getCardSourceTimestamp());
-            // Pause the collector across the cache read (forge.bootGcDefer; iOS >=3GB devices):
-            // deserializing the permanent 33k-CardRules graph otherwise fires a collection every
-            // few MB of growth (device-measured 24s -> 6s). Deferring any longer is a net loss -
-            // bdwgc's expand-instead-of-collect allocation path slows the non-GC-bound phases.
-            bootGc(false);
+            // GC re-enabled after the cache read: deferring across the CardDb build below is a
+            // measured net loss (bdwgc's expand-instead-of-collect allocation path is slower for
+            // the non-GC-bound phases).
             final Map<String, CardRules> cachedRules;
             try {
                 cachedRules = CardRulesCache.loadRules(cardCacheVersion, cardReader.getProgressObserver());
