@@ -445,7 +445,9 @@ public class Forge implements ApplicationListener {
             getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblFinishingStartup"));
         //override transition & title bg
         try {
+            long tAdv = System.currentTimeMillis();
             FileHandle transitionFile = Config.instance().getFile("ui/transition.png");
+            timingLog("adventure Config.instance +" + (System.currentTimeMillis() - tAdv) + "ms");
             FileHandle titleBGFile = isLandscapeMode() ? Config.instance().getFile("ui/title_bg.png") : Config.instance().getFile("ui/title_bg_portrait.png");
             FileHandle vsIcon = Config.instance().getFile("ui/vs.png");
             if (vsIcon.exists())
@@ -454,7 +456,9 @@ public class Forge implements ApplicationListener {
                 getAssets().fallback_skins().put("transition", new Texture(transitionFile));
             if (titleBGFile.exists())
                 getAssets().fallback_skins().put("title", new Texture(titleBGFile));
+            tAdv = System.currentTimeMillis();
             AdventureScreen.preload();
+            timingLog("AdventureScreen.preload +" + (System.currentTimeMillis() - tAdv) + "ms");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -467,6 +471,7 @@ public class Forge implements ApplicationListener {
 
         FThreads.invokeInBackgroundThread(() -> FThreads.invokeInEdtLater(() -> {
             //load skin full
+            timingLog("loadFull start (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
             FSkin.loadFull(splashScreen);
             timingLog("skin loaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
             FThreads.invokeInBackgroundThread(() -> {
