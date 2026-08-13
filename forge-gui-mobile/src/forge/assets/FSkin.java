@@ -165,6 +165,13 @@ public class FSkin {
         if(preferredDir == null)
         {
             if (!dir.exists() || !dir.isDirectory()) {
+                // Nothing else creates the user skins cache dir (it isn't in PROFILE_DIRS), so on a
+                // fresh install it is missing and the fallback below would degrade the WHOLE session
+                // to fallback_skin - which lacks bg_match.jpg and sprite_icons.png, so sprites render
+                // blank. Create it and use the bundled default skin instead.
+                dir.mkdirs();
+            }
+            if (!dir.exists() || !dir.isDirectory()) {
                 //if skins directory doesn't exist, point to internal assets/skin directory instead for the sake of the splash screen
                 useFallbackDir();
             } else {

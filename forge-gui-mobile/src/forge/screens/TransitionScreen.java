@@ -9,6 +9,7 @@ import com.badlogic.gdx.utils.Timer;
 import forge.Forge;
 import forge.Graphics;
 import forge.adventure.scene.ArenaScene;
+import forge.adventure.world.World;
 import forge.adventure.util.Config;
 import forge.adventure.util.Controls;
 import forge.adventure.util.Current;
@@ -153,13 +154,15 @@ public class TransitionScreen extends FContainer {
                     ymod = Forge.getScreenHeight() / 2f + (FSkinImage.LOGO.getHeight() * xmod) / 1.5f;
                     g.drawImage(FSkinImage.LOGO, Forge.getScreenWidth() / 2f - (FSkinImage.LOGO.getWidth() * xmod) / 2, Forge.getScreenHeight() / 2f - (FSkinImage.LOGO.getHeight() * xmod) / 1.5f, FSkinImage.LOGO.getWidth() * xmod, FSkinImage.LOGO.getHeight() * xmod);
                 }
-                //loading progressbar - todo make this accurate when generating world
+                //loading progressbar - tracks real world-generation progress when one is running
                 if (Forge.isMobileAdventureMode) {
                     float w = Forge.isLandscapeMode() ? Forge.getScreenWidth() / 2f : Forge.getScreenHeight() / 2f;
                     float h = 57f / 450f * (w / 2);
                     float x = (Forge.getScreenWidth() - w) / 2;
                     float y = ymod + 10;
-                    int multi = ((int) (percentage * 100)) < 97 ? (int) (percentage * 100) : 100;
+                    float genProgress = World.getGenerationProgress();
+                    int multi = genProgress >= 0f ? (int) (genProgress * 100)
+                            : ((int) (percentage * 100)) < 97 ? (int) (percentage * 100) : 100;
                     progressBar.setBounds(x, Forge.getScreenHeight() - h * 2f, w, h);
                     progressBar.setValue(multi);
                     if (multi == 100 && !message.isEmpty()) {

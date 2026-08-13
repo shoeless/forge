@@ -285,7 +285,26 @@ public class World implements Disposable, SaveFileContent {
     private long measureGenerationTime(String msg, long lastTime) {
         long currentTime = System.currentTimeMillis();
         System.out.println(msg + " :\t\t" + ((currentTime - lastTime) / 1000f) + " s");
+        genStep();
         return currentTime;
+    }
+
+    // Real generation progress for the loading bar (TransitionScreen), which otherwise just
+    // tracks its own fade animation and sits at 100% for the minutes world gen actually takes.
+    private static volatile int genSteps = 0;
+    private static volatile int genTotal = 0;
+
+    /** 0..1 while a world is generating, -1 when idle. */
+    public static float getGenerationProgress() {
+        int total = genTotal;
+        if (total <= 0) {
+            return -1f;
+        }
+        return Math.min(1f, (float) genSteps / total);
+    }
+
+    private static void genStep() {
+        genSteps++;
     }
 
     public boolean generateNew(long seed) {
@@ -322,6 +341,16 @@ public class World implements Disposable, SaveFileContent {
             }
 
             final int[] biomeIndex = {-1};
+            // Progress steps: this one, each wavefunction-collapse structure, then biomes, poi,
+            // roads, mini map and sprites (the six other measureGenerationTime checkpoints).
+            int structureCount = 0;
+            for (BiomeData biome : data.GetBiomes()) {
+                if (biome.structures != null) {
+                    structureCount += biome.structures.length;
+                }
+            }
+            genSteps = 0;
+            genTotal = structureCount + 6;
             currentTime[0] = measureGenerationTime("loading data", currentTime[0]);
             Map<BiomeStructureData, BiomeStructure> structureDataMap = new ConcurrentHashMap<>();
 
@@ -810,8 +839,10 @@ public class World implements Disposable, SaveFileContent {
                 GuiBase.getInterface().preventSystemSleep(false);
         } catch (Exception e) {
             e.printStackTrace();
+            genTotal = 0;
             return false;
         }
+        genTotal = 0;
         return true;
     }
 
