@@ -48,6 +48,15 @@ public enum DeckType {
     public static DeckType[] CommanderOptions;
 
     static {
+        refreshOptions();
+    }
+
+    /**
+     * (Re)builds the option arrays from the current deck-gen matrix state. Called again by
+     * the background matrix loader when it completes, so a class-load that raced the loader
+     * does not latch the no-cardgen variant for the whole session.
+     */
+    public static synchronized void refreshOptions() {
         if (FModel.isdeckGenMatrixLoaded()) {
             ConstructedOptions = new DeckType[]{
                     DeckType.CUSTOM_DECK,
@@ -100,8 +109,6 @@ public enum DeckType {
                     DeckType.PROVIDED_DECK_URL
             };
         }
-    }
-    static {
         if (FModel.isdeckGenMatrixLoaded()) {
             CommanderOptions = new DeckType[]{
                     DeckType.COMMANDER_DECK,

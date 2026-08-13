@@ -27,6 +27,7 @@ import forge.card.CardRulesPredicates;
 import forge.card.CardType;
 import forge.deck.CardArchetypeLDAGenerator;
 import forge.deck.CardRelationMatrixGenerator;
+import forge.deck.DeckType;
 import forge.deck.io.DeckPreferences;
 import forge.error.ExceptionHandler;
 import forge.game.GameFormat;
@@ -312,6 +313,7 @@ public final class FModel {
                 deckGenMatrixLoaded = CardArchetypeLDAGenerator.initialize() && commanderDeckGenMatrixLoaded;
             } finally {
                 latch.countDown();
+                DeckType.refreshOptions();
                 timingPhase("deck-gen matrix (background)", tGen);
             }
         }, "DeckGenMatrixLoader");
@@ -323,7 +325,17 @@ public final class FModel {
     private static volatile boolean deckGenMatrixStarted = false;
     private static volatile CountDownLatch deckGenMatrixLatch = null;
 
+    /**
+     * Non-blocking: false while the background matrix load is still running, so early UI
+     * (deck choosers) simply omits the cardgen options instead of freezing the EDT for the
+     * load's duration. DeckType.refreshOptions() re-adds them once the load completes.
+     */
     public static boolean isdeckGenMatrixLoaded(){
+        return deckGenMatrixLoaded;
+    }
+
+    /** Blocks until the background matrix load completes - for consumers that would NPE. */
+    public static boolean waitForDeckGenMatrix(){
         final CountDownLatch latch = deckGenMatrixLatch;
         if (latch != null) {
             try {
