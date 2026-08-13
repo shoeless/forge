@@ -20,6 +20,11 @@ public class GifAnimation extends ForgeAnimation {
         animation = GifDecoder.loadGIFAnimation(mode, Gdx.files.absolute(filename).read());
     }
 
+    /** GL thread only: builds from an atlas decoded on a background thread. */
+    public GifAnimation(GifDecoder.PixmapAtlas atlas, PlayMode mode) {
+        animation = GifDecoder.buildAnimation(atlas, mode);
+    }
+
     @Override
     public void start() {
         currentFrame = animation.getKeyFrame(0);

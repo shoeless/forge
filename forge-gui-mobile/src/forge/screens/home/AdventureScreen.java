@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import forge.Forge;
 import forge.animation.GifAnimation;
+import forge.animation.GifDecoder;
 import forge.assets.FSkinFont;
 import forge.localinstance.properties.ForgeConstants;
 import forge.screens.LaunchScreen;
@@ -63,8 +64,21 @@ public class AdventureScreen extends LaunchScreen {
     public static void preload() {
         //keep low frame and under 1mb for performance
         String demo = ForgeConstants.EFFECTS_DIR+"demo.gif";
-        if (Gdx.files.absolute(demo).exists())
-            animation = new GifAnimation(demo, Animation.PlayMode.LOOP);
+        if (!Gdx.files.absolute(demo).exists())
+            return;
+        // Decoding the GIF frames takes several seconds on older iPads, so it runs on a
+        // background thread (called after the home screen is visible); only the atlas
+        // texture upload needs the GL thread. onActivate is null-safe until it lands.
+        Thread decoder = new Thread(() -> {
+            try {
+                GifDecoder.PixmapAtlas atlas = GifDecoder.decodeGIFAtlas(Gdx.files.absolute(demo).read());
+                Gdx.app.postRunnable(() -> animation = new GifAnimation(atlas, Animation.PlayMode.LOOP));
+            } catch (Throwable ignored) {
+                // adventure screen renders without its demo animation
+            }
+        }, "AdventureDemoDecode");
+        decoder.setDaemon(true);
+        decoder.start();
     }
     public static void dispose() {
         if (animation != null) {

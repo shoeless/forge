@@ -687,7 +687,28 @@ public class GifDecoder {
         } while ((blockSize > 0) && !err());
     }
 
-    private Animation<TextureRegion> getAnimation(PlayMode playType) {
+    /**
+     * GL-free product of the CPU-heavy decode phase (GIF parse + frame atlas assembly) -
+     * safe to build on a background thread. {@link #buildAnimation} uploads it on the GL
+     * thread; the Pixmap is disposed there.
+     */
+    public static class PixmapAtlas {
+        final Pixmap pixmap;
+        final int width, height, nrFrames, hzones, vzones;
+        final float frameDuration;
+
+        PixmapAtlas(Pixmap pixmap, int width, int height, int nrFrames, int hzones, int vzones, float frameDuration) {
+            this.pixmap = pixmap;
+            this.width = width;
+            this.height = height;
+            this.nrFrames = nrFrames;
+            this.hzones = hzones;
+            this.vzones = vzones;
+            this.frameDuration = frameDuration;
+        }
+    }
+
+    private PixmapAtlas getPixmapAtlas() {
         int nrFrames = getFrameCount();
         Pixmap frame = getFrame(0);
         int width = frame.getWidth();
@@ -711,28 +732,40 @@ public class GifDecoder {
             }
         }
 
-        Texture texture = new Texture(target);
-        target.dispose();
+        float frameDuration = (float)getDelay(0);
+        frameDuration /= 1000; // convert milliseconds into seconds
+
+        return new PixmapAtlas(target, width, height, nrFrames, hzones, vzones, frameDuration);
+    }
+
+    /** GL thread only: uploads the atlas texture and slices the frame regions. */
+    public static Animation<TextureRegion> buildAnimation(PixmapAtlas atlas, PlayMode playType) {
+        Texture texture = new Texture(atlas.pixmap);
+        atlas.pixmap.dispose();
         Array<TextureRegion> texReg = new Array<>();
 
-        for(h = 0; h < hzones; h++) {
-            for(v = 0; v < vzones; v++) {
-                int frameID = v + h * vzones;
-                if(frameID < nrFrames) {
-                    TextureRegion tr = new TextureRegion(texture, h * width, v * height, width, height);
+        for(int h = 0; h < atlas.hzones; h++) {
+            for(int v = 0; v < atlas.vzones; v++) {
+                int frameID = v + h * atlas.vzones;
+                if(frameID < atlas.nrFrames) {
+                    TextureRegion tr = new TextureRegion(texture, h * atlas.width, v * atlas.height, atlas.width, atlas.height);
                     texReg.add(tr);
                 }
             }
         }
-        float frameDuration = (float)getDelay(0);
-        frameDuration /= 1000; // convert milliseconds into seconds
+        return new Animation<>(atlas.frameDuration, texReg, playType);
+    }
 
-        return new Animation<>(frameDuration, texReg, playType);
+    /** Background-safe: the CPU-heavy phase only, no GL calls. */
+    public static PixmapAtlas decodeGIFAtlas(InputStream is) {
+        GifDecoder gdec = new GifDecoder();
+        gdec.read(is);
+        return gdec.getPixmapAtlas();
     }
 
     public static Animation<TextureRegion> loadGIFAnimation(PlayMode playType, InputStream is) {
         GifDecoder gdec = new GifDecoder();
         gdec.read(is);
-        return gdec.getAnimation(playType);
+        return buildAnimation(gdec.getPixmapAtlas(), playType);
     }
 }
