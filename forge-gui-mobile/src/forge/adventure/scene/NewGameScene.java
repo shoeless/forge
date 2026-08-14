@@ -14,7 +14,6 @@ import com.github.tommyettinger.textra.TextraLabel;
 import forge.Forge;
 import forge.adventure.data.DialogData;
 import forge.adventure.data.DifficultyData;
-import forge.adventure.util.Paths;
 import forge.gui.FThreads;
 import forge.adventure.data.HeroListData;
 import forge.adventure.player.AdventurePlayer;
@@ -350,8 +349,7 @@ public class NewGameScene extends MenuScene {
             // loadWorldData builds the biome textures (BiomeTexture marshals to the render thread,
             // which only runs inline while we are still on it), and the marker atlas is loaded by
             // the POI pass.
-            WorldSave.getCurrentSave().getWorld().loadWorldData();
-            Config.instance().getAtlas(Paths.MAP_MARKER);
+            WorldSave.getCurrentSave().getWorld().prepareGenerationAssets();
             FThreads.invokeInBackgroundThread(() -> {
                 WorldSave.generateNewWorld(worldName, isMale, raceIndex, avatar, startingColor,
                         difficultyData, selectedMode, colorIdIndex, edition, 0);

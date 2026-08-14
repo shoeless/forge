@@ -302,6 +302,20 @@ public class World implements Disposable, SaveFileContent {
      * Claims the loading bar before {@link #generateNew} starts, so it reads 0% from the moment
      * the transition appears instead of running its fade sweep to 100% and then restarting.
      */
+    /**
+     * Loads everything {@link #generateNew} pulls through the asset manager, which asserts it is
+     * on the render thread. Must be called there before generation is dispatched elsewhere.
+     */
+    public void prepareGenerationAssets() {
+        loadWorldData();
+        Config.instance().getAtlas(Paths.MAP_MARKER);
+        for (BiomeData biome : data.GetBiomes()) {
+            for (PointOfInterestData poi : biome.getPointsOfInterest()) {
+                Config.instance().getPOISprites(poi);
+            }
+        }
+    }
+
     public static void markGenerationPending() {
         genSteps.set(0);
         genStructuresDone.set(0);
