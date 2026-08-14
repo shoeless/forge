@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.badlogic.gdx.utils.ObjectMap;
 import forge.CardStorageReader;
+import forge.gui.FThreads;
 import forge.Forge;
 import forge.ImageKeys;
 import forge.adventure.data.*;
@@ -316,11 +317,16 @@ public class Config {
     }
 
     public TextureAtlas getAtlas(String spriteAtlas) {
-        String fileName = getFile(spriteAtlas).path();
+        final String fileName = getFile(spriteAtlas).path();
         TextureAtlas atlas = Forge.getAssets().manager().get(fileName, TextureAtlas.class, false);
         if (atlas == null) {
-            Forge.getAssets().manager().load(fileName, TextureAtlas.class);
-            Forge.getAssets().manager().finishLoadingAsset(fileName);
+            // Loading uploads textures, so it must happen on the render thread. World generation
+            // runs off it and pulls atlases in as it places points of interest and characters,
+            // so marshal the load across rather than asserting.
+            FThreads.invokeInEdtAndWait(() -> {
+                Forge.getAssets().manager().load(fileName, TextureAtlas.class);
+                Forge.getAssets().manager().finishLoadingAsset(fileName);
+            });
             atlas = Forge.getAssets().manager().get(fileName, TextureAtlas.class, false);
         }
         return atlas;
