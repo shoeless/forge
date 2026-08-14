@@ -31,7 +31,7 @@ public class TransitionScreen extends FContainer {
     TextureRegion textureRegion, screenUIBackground, playerAvatar;
     Texture vsTexture;
     String enemyAtlasPath, playerAvatarName, enemyAvatarName;
-    private String message = "", playerRecord = "", enemyRecord = "";
+    private String message = "", playerRecord = "", enemyRecord = "", progressDescription = "";
     boolean matchTransition, isloading, isIntro, isFadeMusic, isArenaScene, isAlternate;
     GlyphLayout layout;
 
@@ -161,8 +161,18 @@ public class TransitionScreen extends FContainer {
                     float x = (Forge.getScreenWidth() - w) / 2;
                     float y = ymod + 10;
                     float genProgress = World.getGenerationProgress();
-                    int multi = genProgress >= 0f ? (int) (genProgress * 100)
-                            : ((int) (percentage * 100)) < 97 ? (int) (percentage * 100) : 100;
+                    int multi;
+                    if (genProgress >= 0f) {
+                        multi = (int) (genProgress * 100);
+                        String phase = World.getGenerationPhase();
+                        String desc = phase.isEmpty() ? message : message + " " + phase;
+                        if (!desc.equals(progressDescription)) { // only on change; this runs per frame
+                            progressDescription = desc;
+                            progressBar.setDescription(desc);
+                        }
+                    } else {
+                        multi = ((int) (percentage * 100)) < 97 ? (int) (percentage * 100) : 100;
+                    }
                     progressBar.setBounds(x, Forge.getScreenHeight() - h * 2f, w, h);
                     progressBar.setValue(multi);
                     if (multi == 100 && !message.isEmpty()) {

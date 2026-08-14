@@ -285,14 +285,17 @@ public class World implements Disposable, SaveFileContent {
     private long measureGenerationTime(String msg, long lastTime) {
         long currentTime = System.currentTimeMillis();
         System.out.println(msg + " :\t\t" + ((currentTime - lastTime) / 1000f) + " s");
-        genStep();
+        genStep(msg);
         return currentTime;
     }
 
     // Real generation progress for the loading bar (TransitionScreen), which otherwise just
     // tracks its own fade animation and sits at 100% for the minutes world gen actually takes.
-    private static volatile int genSteps = 0;
+    private static final java.util.concurrent.atomic.AtomicInteger genSteps = new java.util.concurrent.atomic.AtomicInteger();
+    private static final java.util.concurrent.atomic.AtomicInteger genStructuresDone = new java.util.concurrent.atomic.AtomicInteger();
     private static volatile int genTotal = 0;
+    private static volatile int genStructureTotal = 0;
+    private static volatile String genPhase = "";
     private static volatile boolean genPending = false;
 
     /**
@@ -300,9 +303,16 @@ public class World implements Disposable, SaveFileContent {
      * the transition appears instead of running its fade sweep to 100% and then restarting.
      */
     public static void markGenerationPending() {
-        genSteps = 0;
+        genSteps.set(0);
+        genStructuresDone.set(0);
         genTotal = 0;
+        genPhase = "";
         genPending = true;
+    }
+
+    /** Name of the phase that just finished, for the loading bar; empty when idle. */
+    public static String getGenerationPhase() {
+        return genPhase;
     }
 
     /** 0..1 while a world is generating or pending, -1 when idle. */
@@ -311,11 +321,24 @@ public class World implements Disposable, SaveFileContent {
         if (total <= 0) {
             return genPending ? 0f : -1f;
         }
-        return Math.min(1f, (float) genSteps / total);
+        return Math.min(1f, (float) genSteps.get() / total);
     }
 
-    private static void genStep() {
-        genSteps++;
+    private static void genStep(String phase) {
+        genSteps.incrementAndGet();
+        // The wavefunction-collapse structures finish on parallel threads, so they are counted
+        // rather than named individually.
+        if (phase.startsWith("wavefunctioncollapse")) {
+            genPhase = "structures " + genStructuresDone.incrementAndGet() + "/" + genStructureTotal;
+        } else if (phase.startsWith("biomes")) {
+            genPhase = "biomes";
+        } else if (phase.startsWith("poi")) {
+            genPhase = "points of interest";
+        } else if (phase.startsWith("mini map")) {
+            genPhase = "map";
+        } else {
+            genPhase = phase;
+        }
     }
 
     public boolean generateNew(long seed) {
@@ -360,7 +383,9 @@ public class World implements Disposable, SaveFileContent {
                     structureCount += biome.structures.length;
                 }
             }
-            genSteps = 0;
+            genSteps.set(0);
+            genStructuresDone.set(0);
+            genStructureTotal = structureCount;
             genTotal = structureCount + 6;
             genPending = false;
             currentTime[0] = measureGenerationTime("loading data", currentTime[0]);
