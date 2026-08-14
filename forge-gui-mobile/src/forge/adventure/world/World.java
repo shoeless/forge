@@ -293,12 +293,23 @@ public class World implements Disposable, SaveFileContent {
     // tracks its own fade animation and sits at 100% for the minutes world gen actually takes.
     private static volatile int genSteps = 0;
     private static volatile int genTotal = 0;
+    private static volatile boolean genPending = false;
 
-    /** 0..1 while a world is generating, -1 when idle. */
+    /**
+     * Claims the loading bar before {@link #generateNew} starts, so it reads 0% from the moment
+     * the transition appears instead of running its fade sweep to 100% and then restarting.
+     */
+    public static void markGenerationPending() {
+        genSteps = 0;
+        genTotal = 0;
+        genPending = true;
+    }
+
+    /** 0..1 while a world is generating or pending, -1 when idle. */
     public static float getGenerationProgress() {
         int total = genTotal;
         if (total <= 0) {
-            return -1f;
+            return genPending ? 0f : -1f;
         }
         return Math.min(1f, (float) genSteps / total);
     }
@@ -351,6 +362,7 @@ public class World implements Disposable, SaveFileContent {
             }
             genSteps = 0;
             genTotal = structureCount + 6;
+            genPending = false;
             currentTime[0] = measureGenerationTime("loading data", currentTime[0]);
             Map<BiomeStructureData, BiomeStructure> structureDataMap = new ConcurrentHashMap<>();
 
@@ -840,9 +852,11 @@ public class World implements Disposable, SaveFileContent {
         } catch (Exception e) {
             e.printStackTrace();
             genTotal = 0;
+            genPending = false;
             return false;
         }
         genTotal = 0;
+        genPending = false;
         return true;
     }
 

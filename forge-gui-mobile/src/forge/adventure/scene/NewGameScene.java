@@ -20,6 +20,7 @@ import forge.adventure.data.HeroListData;
 import forge.adventure.player.AdventurePlayer;
 import forge.adventure.stage.WorldStage;
 import forge.adventure.util.*;
+import forge.adventure.world.World;
 import forge.adventure.world.WorldSave;
 import forge.card.CardEdition;
 import forge.card.ColorSet;
@@ -366,6 +367,7 @@ public class NewGameScene extends MenuScene {
                 });
             });
         };
+        World.markGenerationPending(); // one continuous bar: no fade sweep before real progress
         Forge.setTransitionScreen(new TransitionScreen(runnable, null, false, true, Forge.getLocalizer().getMessage("lblGeneratingWorld")));
         return true;
     }

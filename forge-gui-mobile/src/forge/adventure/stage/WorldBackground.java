@@ -170,6 +170,11 @@ public class WorldBackground extends Actor {
     }
 
     GridPoint2 translateFromWorldToChunk(float x, float y) {
+        if (chunks == null || chunkSize == 0) {
+            // WorldStage.enter() asks for a chunk before the first draw() initializes us, which
+            // divides by a zero chunkSize on a world entered without a prior draw pass.
+            initialize();
+        }
         float worldWidthTiles = x / tileSize;
         float worldHeightTiles = y / tileSize;
         return new GridPoint2((int) worldWidthTiles / chunkSize, (int) worldHeightTiles / chunkSize);
