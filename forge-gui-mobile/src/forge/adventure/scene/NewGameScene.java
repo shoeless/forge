@@ -14,6 +14,8 @@ import com.github.tommyettinger.textra.TextraLabel;
 import forge.Forge;
 import forge.adventure.data.DialogData;
 import forge.adventure.data.DifficultyData;
+import forge.adventure.util.Paths;
+import forge.gui.FThreads;
 import forge.adventure.data.HeroListData;
 import forge.adventure.player.AdventurePlayer;
 import forge.adventure.stage.WorldStage;
@@ -330,24 +332,39 @@ public class NewGameScene extends MenuScene {
         if (selectedName.getText().isEmpty()) {
             generateName();
         }
+        final String worldName = selectedName.getText();
+        final boolean isMale = gender.getCurrentIndex() == 0;
+        final int raceIndex = race.getCurrentIndex();
+        final int avatar = avatarIndex;
+        final ColorSet startingColor = getStartingColor();
+        final DifficultyData difficultyData = Config.instance().getConfigData().difficulties[difficulty.getCurrentIndex()];
+        final AdventureModes selectedMode = modes.get(mode.getCurrentIndex());
+        final int colorIdIndex = colorId.getCurrentIndex();
+        final CardEdition edition = getStartingEdition();
         Runnable runnable = () -> {
-            started = false;
             //FModel.getPreferences().setPref(ForgePreferences.FPref.UI_ENABLE_MUSIC, false);
-            WorldSave.generateNewWorld(selectedName.getText(),
-                    gender.getCurrentIndex() == 0,
-                    race.getCurrentIndex(),
-                    avatarIndex,
-                    getStartingColor(),
-                    Config.instance().getConfigData().difficulties[difficulty.getCurrentIndex()],
-                    modes.get(mode.getCurrentIndex()), colorId.getCurrentIndex(),
-                    getStartingEdition(), 0);
-            GamePlayerUtil.getGuiPlayer().setName(selectedName.getText());
-            SoundSystem.instance.changeBackgroundTrack();
-            WorldStage.getInstance().enterSpawnPOI();
-            if (AdventurePlayer.current().getQuests().stream().noneMatch(q -> q.getID() == 28)) {
-                AdventurePlayer.current().addQuest("28", true); //Temporary link to Shandalar main questline
-            }
-            Forge.switchScene(GameScene.instance());
+            // Generation takes minutes on older devices, so run it off the render thread - the
+            // transition can't repaint (and its progress bar can't move) while the render thread
+            // is inside it. Everything the generator needs from GL is prepared here first:
+            // loadWorldData builds the biome textures (BiomeTexture marshals to the render thread,
+            // which only runs inline while we are still on it), and the marker atlas is loaded by
+            // the POI pass.
+            WorldSave.getCurrentSave().getWorld().loadWorldData();
+            Config.instance().getAtlas(Paths.MAP_MARKER);
+            FThreads.invokeInBackgroundThread(() -> {
+                WorldSave.generateNewWorld(worldName, isMale, raceIndex, avatar, startingColor,
+                        difficultyData, selectedMode, colorIdIndex, edition, 0);
+                FThreads.invokeInEdtLater(() -> {
+                    started = false;
+                    GamePlayerUtil.getGuiPlayer().setName(worldName);
+                    SoundSystem.instance.changeBackgroundTrack();
+                    WorldStage.getInstance().enterSpawnPOI();
+                    if (AdventurePlayer.current().getQuests().stream().noneMatch(q -> q.getID() == 28)) {
+                        AdventurePlayer.current().addQuest("28", true); //Temporary link to Shandalar main questline
+                    }
+                    Forge.switchScene(GameScene.instance());
+                });
+            });
         };
         Forge.setTransitionScreen(new TransitionScreen(runnable, null, false, true, Forge.getLocalizer().getMessage("lblGeneratingWorld")));
         return true;

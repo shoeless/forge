@@ -20,7 +20,6 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntSet;
 import forge.Forge;
 import forge.gui.FThreads;
-import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeConstants;
 import forge.util.FileUtil;
 import forge.util.Lang;
@@ -484,13 +483,10 @@ public class FSkinFont {
                             getTextureData().consumePixmap().dispose();
                         }
                     };
-                    if (GuiBase.isIOS()) {
-                        // Linear filtering renders smoother text on Retina displays; other
-                        // platforms keep the original crisp Nearest filtering.
-                        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-                    } else {
-                        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-                    }
+                    // Nearest filtering on the glyph atlas: the pages are packed without padding,
+                    // so linear sampling bleeds neighbouring glyph edges into each character
+                    // (visible as thin vertical lines between letters on a Retina iPad).
+                    texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
                     textureRegions.addAll(new TextureRegion(texture));
                 }
 
