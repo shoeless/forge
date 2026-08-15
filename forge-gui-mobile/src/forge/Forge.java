@@ -186,6 +186,16 @@ public class Forge implements ApplicationListener {
     public void create() {
         splashStartMs = System.currentTimeMillis();
         timingLog("create() start");
+        if (FORGE_TIMING) {
+            // GPU/driver identity and the NPOT-relevant limits, for chasing device-specific
+            // texture sampling artifacts.
+            java.nio.IntBuffer maxTex = com.badlogic.gdx.utils.BufferUtils.newIntBuffer(16);
+            Gdx.gl.glGetIntegerv(GL20.GL_MAX_TEXTURE_SIZE, maxTex);
+            timingLog("GL renderer=" + Gdx.gl.glGetString(GL20.GL_RENDERER)
+                    + " version=" + Gdx.gl.glGetString(GL20.GL_VERSION)
+                    + " maxTexture=" + maxTex.get(0)
+                    + " npot=" + Gdx.graphics.supportsExtension("GL_OES_texture_npot"));
+        }
         //install our error handler
         ExceptionHandler.registerErrorHandling();
         //log version and system info
