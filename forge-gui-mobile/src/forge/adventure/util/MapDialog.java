@@ -124,23 +124,26 @@ public class MapDialog {
 
     void disposeAudio(boolean fadeout) {
         if (fadeout) {
-            final float[] v = {1f};
-            for (int i = 10; i > 1; i--) {
-                float delay = i * 0.1f;
-                float j = i;
+            // Ramp the voice down over ~1s, then unload. Each step both lowers the volume and is
+            // ordered by its own delay; applying the volume on a single step (and unloading on the
+            // earliest one) cut the clip off instead of fading it.
+            final int steps = 10;
+            for (int i = 1; i <= steps; i++) {
+                final float volume = Math.max(0f, 1f - (float) i / steps);
+                final boolean last = i == steps;
                 Timer.schedule(new Timer.Task() {
                     @Override
                     public void run() {
-                        v[0] -= 0.1f;
-                        if (v[0] < 0.1f)
-                            v[0] = 0.1f;
-                        if (audio != null && j == 2) {
+                        if (audio == null) {
+                            return;
+                        }
+                        if (last) {
                             unload();
-                        } else if (audio != null && j == 10) {
-                            audio.getRight().setVolume(v[0]);
+                        } else {
+                            audio.getRight().setVolume(volume);
                         }
                     }
-                }, delay);
+                }, i * 0.1f);
             }
         } else {
             unload();
