@@ -1,680 +1,680 @@
 avatar.png
-size: 160,368
+size: 512,512
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none       
-Kor_m 
-  xy: 0, 0
-  size: 16, 16         
-Kor_m 
-  xy: 16, 0
-  size: 16, 16        
-Kor_m 
-  xy: 32, 0
-  size: 16, 16        
-Kor_m 
-  xy: 48, 0
-  size: 16, 16        
-Kor_m 
-  xy: 64, 0
-  size: 16, 16        
-Kor_m 
-  xy: 80, 0
-  size: 16, 16        
-Kor_m 
-  xy: 96, 0
-  size: 16, 16        
-Kor_m 
-  xy: 112, 0
-  size: 16, 16        
-Kor_m 
-  xy: 128, 0
-  size: 16, 16        
-Kor_m 
-  xy: 144, 0
-  size: 16, 16        
+Kor_m
+  xy: 1, 1
+  size: 16, 16
+Kor_m
+  xy: 19, 1
+  size: 16, 16
+Kor_m
+  xy: 37, 1
+  size: 16, 16
+Kor_m
+  xy: 55, 1
+  size: 16, 16
+Kor_m
+  xy: 73, 1
+  size: 16, 16
+Kor_m
+  xy: 91, 1
+  size: 16, 16
+Kor_m
+  xy: 109, 1
+  size: 16, 16
+Kor_m
+  xy: 127, 1
+  size: 16, 16
+Kor_m
+  xy: 145, 1
+  size: 16, 16
+Kor_m
+  xy: 163, 1
+  size: 16, 16
 Kor_f
-  xy: 0, 16
-  size: 16, 16         
-Kor_f 
-  xy: 16, 16
-  size: 16, 16        
-Kor_f 
-  xy: 32, 16
-  size: 16, 16        
-Kor_f 
-  xy: 48, 16
-  size: 16, 16        
-Kor_f 
-  xy: 64, 16
-  size: 16, 16        
-Kor_f 
-  xy: 80, 16
-  size: 16, 16        
-Kor_f 
-  xy: 96, 16
-  size: 16, 16        
-Kor_f 
-  xy: 112, 16
-  size: 16, 16        
-Kor_f 
-  xy: 128, 16
-  size: 16, 16        
-Kor_f 
-  xy: 144, 16
-  size: 16, 16        
+  xy: 181, 1
+  size: 16, 16
+Kor_f
+  xy: 199, 1
+  size: 16, 16
+Kor_f
+  xy: 217, 1
+  size: 16, 16
+Kor_f
+  xy: 235, 1
+  size: 16, 16
+Kor_f
+  xy: 253, 1
+  size: 16, 16
+Kor_f
+  xy: 1, 19
+  size: 16, 16
+Kor_f
+  xy: 19, 19
+  size: 16, 16
+Kor_f
+  xy: 37, 19
+  size: 16, 16
+Kor_f
+  xy: 55, 19
+  size: 16, 16
+Kor_f
+  xy: 73, 19
+  size: 16, 16
 Devil_m
-  xy: 0, 32
-  size: 16, 16         
-Devil_m 
-  xy: 16, 32
-  size: 16, 16        
-Devil_m 
-  xy: 32, 32
-  size: 16, 16        
-Devil_m 
-  xy: 48, 32
-  size: 16, 16        
-Devil_m 
-  xy: 64, 32
-  size: 16, 16        
-Devil_m 
-  xy: 80, 32
-  size: 16, 16        
-Devil_m 
-  xy: 96, 32
-  size: 16, 16        
-Devil_m 
-  xy: 112, 32
-  size: 16, 16        
-Devil_m 
-  xy: 128, 32
-  size: 16, 16        
-Devil_m 
-  xy: 144, 32
-  size: 16, 16        
+  xy: 91, 19
+  size: 16, 16
+Devil_m
+  xy: 109, 19
+  size: 16, 16
+Devil_m
+  xy: 127, 19
+  size: 16, 16
+Devil_m
+  xy: 145, 19
+  size: 16, 16
+Devil_m
+  xy: 163, 19
+  size: 16, 16
+Devil_m
+  xy: 181, 19
+  size: 16, 16
+Devil_m
+  xy: 199, 19
+  size: 16, 16
+Devil_m
+  xy: 217, 19
+  size: 16, 16
+Devil_m
+  xy: 235, 19
+  size: 16, 16
+Devil_m
+  xy: 253, 19
+  size: 16, 16
 Devil_f
-  xy: 0, 48
-  size: 16, 16         
+  xy: 1, 37
+  size: 16, 16
 Devil_f
-  xy: 16, 48
-  size: 16, 16        
+  xy: 19, 37
+  size: 16, 16
 Devil_f
-  xy: 32, 48
-  size: 16, 16        
+  xy: 37, 37
+  size: 16, 16
 Devil_f
-  xy: 48, 48
-  size: 16, 16        
+  xy: 55, 37
+  size: 16, 16
 Devil_f
-  xy: 64, 48
-  size: 16, 16        
+  xy: 73, 37
+  size: 16, 16
 Devil_f
-  xy: 80, 48
-  size: 16, 16        
+  xy: 91, 37
+  size: 16, 16
 Devil_f
-  xy: 96, 48
-  size: 16, 16        
+  xy: 109, 37
+  size: 16, 16
 Devil_f
-  xy: 112, 48
-  size: 16, 16        
+  xy: 127, 37
+  size: 16, 16
 Devil_f
-  xy: 128, 48
-  size: 16, 16        
+  xy: 145, 37
+  size: 16, 16
 Devil_f
-  xy: 144, 48
-  size: 16, 16        
+  xy: 163, 37
+  size: 16, 16
 Human_m
-  xy: 0, 64
-  size: 16, 16         
+  xy: 181, 37
+  size: 16, 16
 Human_m
-  xy: 16, 64
-  size: 16, 16        
+  xy: 199, 37
+  size: 16, 16
 Human_m
-  xy: 32, 64
-  size: 16, 16        
+  xy: 217, 37
+  size: 16, 16
 Human_m
-  xy: 48, 64
-  size: 16, 16        
+  xy: 235, 37
+  size: 16, 16
 Human_m
-  xy: 64, 64
-  size: 16, 16        
+  xy: 253, 37
+  size: 16, 16
 Human_m
-  xy: 80, 64
-  size: 16, 16        
+  xy: 1, 55
+  size: 16, 16
 Human_m
-  xy: 96, 64
-  size: 16, 16        
+  xy: 19, 55
+  size: 16, 16
 Human_m
-  xy: 112, 64
-  size: 16, 16        
+  xy: 37, 55
+  size: 16, 16
 Human_m
-  xy: 128, 64
-  size: 16, 16        
+  xy: 55, 55
+  size: 16, 16
 Human_m
-  xy: 144, 64
-  size: 16, 16        
+  xy: 73, 55
+  size: 16, 16
 Human_f
-  xy: 0, 80
-  size: 16, 16         
+  xy: 91, 55
+  size: 16, 16
 Human_f
-  xy: 16, 80
-  size: 16, 16        
+  xy: 109, 55
+  size: 16, 16
 Human_f
-  xy: 32, 80
-  size: 16, 16        
+  xy: 127, 55
+  size: 16, 16
 Human_f
-  xy: 48, 80
-  size: 16, 16        
+  xy: 145, 55
+  size: 16, 16
 Human_f
-  xy: 64, 80
-  size: 16, 16        
+  xy: 163, 55
+  size: 16, 16
 Human_f
-  xy: 80, 80
-  size: 16, 16        
+  xy: 181, 55
+  size: 16, 16
 Human_f
-  xy: 96, 80
-  size: 16, 16        
+  xy: 199, 55
+  size: 16, 16
 Human_f
-  xy: 112, 80
-  size: 16, 16        
+  xy: 217, 55
+  size: 16, 16
 Human_f
-  xy: 128, 80
-  size: 16, 16        
+  xy: 235, 55
+  size: 16, 16
 Human_f
-  xy: 144, 80
-  size: 16, 16        
+  xy: 253, 55
+  size: 16, 16
 Viashino_m
-  xy: 0, 96
-  size: 16, 16         
+  xy: 1, 73
+  size: 16, 16
 Viashino_m
-  xy: 16, 96
-  size: 16, 16        
+  xy: 19, 73
+  size: 16, 16
 Viashino_m
-  xy: 32, 96
-  size: 16, 16        
+  xy: 37, 73
+  size: 16, 16
 Viashino_m
-  xy: 48, 96
-  size: 16, 16        
+  xy: 55, 73
+  size: 16, 16
 Viashino_m
-  xy: 64, 96
-  size: 16, 16        
+  xy: 73, 73
+  size: 16, 16
 Viashino_m
-  xy: 80, 96
-  size: 16, 16        
+  xy: 91, 73
+  size: 16, 16
 Viashino_m
-  xy: 96, 96
-  size: 16, 16        
+  xy: 109, 73
+  size: 16, 16
 Viashino_m
-  xy: 112, 96
-  size: 16, 16        
+  xy: 127, 73
+  size: 16, 16
 Viashino_m
-  xy: 128, 96
-  size: 16, 16        
+  xy: 145, 73
+  size: 16, 16
 Viashino_m
-  xy: 144, 96
-  size: 16, 16        
+  xy: 163, 73
+  size: 16, 16
 Viashino_f
-  xy: 0, 112
-  size: 16, 16         
+  xy: 181, 73
+  size: 16, 16
 Viashino_f
-  xy: 16, 112
-  size: 16, 16        
+  xy: 199, 73
+  size: 16, 16
 Viashino_f
-  xy: 32, 112
-  size: 16, 16        
+  xy: 217, 73
+  size: 16, 16
 Viashino_f
-  xy: 48, 112
-  size: 16, 16        
+  xy: 235, 73
+  size: 16, 16
 Viashino_f
-  xy: 64, 112
-  size: 16, 16        
+  xy: 253, 73
+  size: 16, 16
 Viashino_f
-  xy: 80, 112
-  size: 16, 16        
+  xy: 1, 91
+  size: 16, 16
 Viashino_f
-  xy: 96, 112
-  size: 16, 16        
+  xy: 19, 91
+  size: 16, 16
 Viashino_f
-  xy: 112, 112
-  size: 16, 16        
+  xy: 37, 91
+  size: 16, 16
 Viashino_f
-  xy: 128, 112
-  size: 16, 16        
+  xy: 55, 91
+  size: 16, 16
 Viashino_f
-  xy: 144, 112
-  size: 16, 16        
+  xy: 73, 91
+  size: 16, 16
 Metathran_m
-  xy: 0, 128
-  size: 16, 16         
+  xy: 91, 91
+  size: 16, 16
 Metathran_m
-  xy: 16, 128
-  size: 16, 16        
+  xy: 109, 91
+  size: 16, 16
 Metathran_m
-  xy: 32, 128
-  size: 16, 16        
+  xy: 127, 91
+  size: 16, 16
 Metathran_m
-  xy: 48, 128
-  size: 16, 16        
+  xy: 145, 91
+  size: 16, 16
 Metathran_m
-  xy: 64, 128
-  size: 16, 16        
+  xy: 163, 91
+  size: 16, 16
 Metathran_m
-  xy: 80, 128
-  size: 16, 16        
+  xy: 181, 91
+  size: 16, 16
 Metathran_m
-  xy: 96, 128
-  size: 16, 16        
+  xy: 199, 91
+  size: 16, 16
 Metathran_m
-  xy: 112, 128
-  size: 16, 16        
+  xy: 217, 91
+  size: 16, 16
 Metathran_m
-  xy: 128, 128
-  size: 16, 16        
+  xy: 235, 91
+  size: 16, 16
 Metathran_m
-  xy: 144, 128
-  size: 16, 16        
+  xy: 253, 91
+  size: 16, 16
 Metathran_f
-  xy: 0, 144
-  size: 16, 16         
+  xy: 1, 109
+  size: 16, 16
 Metathran_f
-  xy: 16, 144
-  size: 16, 16        
+  xy: 19, 109
+  size: 16, 16
 Metathran_f
-  xy: 32, 144
-  size: 16, 16        
+  xy: 37, 109
+  size: 16, 16
 Metathran_f
-  xy: 48, 144
-  size: 16, 16        
+  xy: 55, 109
+  size: 16, 16
 Metathran_f
-  xy: 64, 144
-  size: 16, 16        
+  xy: 73, 109
+  size: 16, 16
 Metathran_f
-  xy: 80, 144
-  size: 16, 16        
+  xy: 91, 109
+  size: 16, 16
 Metathran_f
-  xy: 96, 144
-  size: 16, 16        
+  xy: 109, 109
+  size: 16, 16
 Metathran_f
-  xy: 112, 144
-  size: 16, 16        
+  xy: 127, 109
+  size: 16, 16
 Metathran_f
-  xy: 128, 144
-  size: 16, 16        
+  xy: 145, 109
+  size: 16, 16
 Metathran_f
-  xy: 144, 144
-  size: 16, 16        
+  xy: 163, 109
+  size: 16, 16
 Undead_m
-  xy: 0, 160
-  size: 16, 16         
+  xy: 181, 109
+  size: 16, 16
 Undead_m
-  xy: 16, 160
-  size: 16, 16        
+  xy: 199, 109
+  size: 16, 16
 Undead_m
-  xy: 32, 160
-  size: 16, 16        
+  xy: 217, 109
+  size: 16, 16
 Undead_m
-  xy: 48, 160
-  size: 16, 16        
+  xy: 235, 109
+  size: 16, 16
 Undead_m
-  xy: 64, 160
-  size: 16, 16        
+  xy: 253, 109
+  size: 16, 16
 Undead_m
-  xy: 80, 160
-  size: 16, 16        
+  xy: 1, 127
+  size: 16, 16
 Undead_m
-  xy: 96, 160
-  size: 16, 16        
+  xy: 19, 127
+  size: 16, 16
 Undead_m
-  xy: 112, 160
-  size: 16, 16        
+  xy: 37, 127
+  size: 16, 16
 Undead_m
-  xy: 128, 160
-  size: 16, 16        
+  xy: 55, 127
+  size: 16, 16
 Undead_m
-  xy: 144, 160
-  size: 16, 16        
+  xy: 73, 127
+  size: 16, 16
 Undead_f
-  xy: 0, 176
-  size: 16, 16         
+  xy: 91, 127
+  size: 16, 16
 Undead_f
-  xy: 16, 176
-  size: 16, 16        
+  xy: 109, 127
+  size: 16, 16
 Undead_f
-  xy: 32, 176
-  size: 16, 16        
+  xy: 127, 127
+  size: 16, 16
 Undead_f
-  xy: 48, 176
-  size: 16, 16        
+  xy: 145, 127
+  size: 16, 16
 Undead_f
-  xy: 64, 176
-  size: 16, 16        
+  xy: 163, 127
+  size: 16, 16
 Undead_f
-  xy: 80, 176
-  size: 16, 16        
+  xy: 181, 127
+  size: 16, 16
 Undead_f
-  xy: 96, 176
-  size: 16, 16        
+  xy: 199, 127
+  size: 16, 16
 Undead_f
-  xy: 112, 176
-  size: 16, 16        
+  xy: 217, 127
+  size: 16, 16
 Undead_f
-  xy: 128, 176
-  size: 16, 16        
+  xy: 235, 127
+  size: 16, 16
 Undead_f
-  xy: 144, 176
-  size: 16, 16         
+  xy: 253, 127
+  size: 16, 16
 Elf_m
-  xy: 0, 192
-  size: 16, 16         
+  xy: 1, 145
+  size: 16, 16
 Elf_m
-  xy: 16, 192
-  size: 16, 16        
+  xy: 19, 145
+  size: 16, 16
 Elf_m
-  xy: 32, 192
-  size: 16, 16        
+  xy: 37, 145
+  size: 16, 16
 Elf_m
-  xy: 48, 192
-  size: 16, 16        
+  xy: 55, 145
+  size: 16, 16
 Elf_m
-  xy: 64, 192
-  size: 16, 16        
+  xy: 73, 145
+  size: 16, 16
 Elf_m
-  xy: 80, 192
-  size: 16, 16        
+  xy: 91, 145
+  size: 16, 16
 Elf_m
-  xy: 96, 192
-  size: 16, 16        
+  xy: 109, 145
+  size: 16, 16
 Elf_m
-  xy: 112, 192
-  size: 16, 16        
+  xy: 127, 145
+  size: 16, 16
 Elf_m
-  xy: 128, 192
-  size: 16, 16        
+  xy: 145, 145
+  size: 16, 16
 Elf_m
-  xy: 144, 192
-  size: 16, 16        
+  xy: 163, 145
+  size: 16, 16
 Elf_f
-  xy: 0, 208
-  size: 16, 16         
+  xy: 181, 145
+  size: 16, 16
 Elf_f
-  xy: 16, 208
-  size: 16, 16        
+  xy: 199, 145
+  size: 16, 16
 Elf_f
-  xy: 32, 208
-  size: 16, 16        
+  xy: 217, 145
+  size: 16, 16
 Elf_f
-  xy: 48, 208
-  size: 16, 16        
+  xy: 235, 145
+  size: 16, 16
 Elf_f
-  xy: 64, 208
-  size: 16, 16        
+  xy: 253, 145
+  size: 16, 16
 Elf_f
-  xy: 80, 208
-  size: 16, 16        
+  xy: 1, 163
+  size: 16, 16
 Elf_f
-  xy: 96, 208
-  size: 16, 16        
+  xy: 19, 163
+  size: 16, 16
 Elf_f
-  xy: 112, 208
-  size: 16, 16        
+  xy: 37, 163
+  size: 16, 16
 Elf_f
-  xy: 128, 208
-  size: 16, 16        
+  xy: 55, 163
+  size: 16, 16
 Elf_f
-  xy: 144, 208
-  size: 16, 16        
+  xy: 73, 163
+  size: 16, 16
 Dwarf_m
-  xy: 0, 224
-  size: 16, 16         
+  xy: 91, 163
+  size: 16, 16
 Dwarf_m
-  xy: 16, 224
-  size: 16, 16        
+  xy: 109, 163
+  size: 16, 16
 Dwarf_m
-  xy: 32, 224
-  size: 16, 16        
+  xy: 127, 163
+  size: 16, 16
 Dwarf_m
-  xy: 48, 224
-  size: 16, 16        
+  xy: 145, 163
+  size: 16, 16
 Dwarf_m
-  xy: 64, 224
-  size: 16, 16        
+  xy: 163, 163
+  size: 16, 16
 Dwarf_m
-  xy: 80, 224
-  size: 16, 16        
+  xy: 181, 163
+  size: 16, 16
 Dwarf_m
-  xy: 96, 224
-  size: 16, 16        
+  xy: 199, 163
+  size: 16, 16
 Dwarf_m
-  xy: 112, 224
-  size: 16, 16        
+  xy: 217, 163
+  size: 16, 16
 Dwarf_m
-  xy: 128, 224
-  size: 16, 16        
+  xy: 235, 163
+  size: 16, 16
 Dwarf_m
-  xy: 144, 224
-  size: 16, 16        
+  xy: 253, 163
+  size: 16, 16
 Dwarf_f
-  xy: 0, 240
-  size: 16, 16         
+  xy: 1, 181
+  size: 16, 16
 Dwarf_f
-  xy: 16, 240
-  size: 16, 16        
+  xy: 19, 181
+  size: 16, 16
 Dwarf_f
-  xy: 32, 240
-  size: 16, 16        
+  xy: 37, 181
+  size: 16, 16
 Dwarf_f
-  xy: 48, 240
-  size: 16, 16        
+  xy: 55, 181
+  size: 16, 16
 Dwarf_f
-  xy: 64, 240
-  size: 16, 16        
+  xy: 73, 181
+  size: 16, 16
 Dwarf_f
-  xy: 80, 240
-  size: 16, 16        
+  xy: 91, 181
+  size: 16, 16
 Dwarf_f
-  xy: 96, 240
-  size: 16, 16        
+  xy: 109, 181
+  size: 16, 16
 Dwarf_f
-  xy: 112, 240
-  size: 16, 16        
+  xy: 127, 181
+  size: 16, 16
 Dwarf_f
-  xy: 128, 240
-  size: 16, 16        
+  xy: 145, 181
+  size: 16, 16
 Dwarf_f
-  xy: 144, 240
-  size: 16, 16        
+  xy: 163, 181
+  size: 16, 16
 Phyrexian_m
-  xy: 0, 256
-  size: 16, 16         
+  xy: 181, 181
+  size: 16, 16
 Phyrexian_m
-  xy: 16, 256
-  size: 16, 16        
+  xy: 199, 181
+  size: 16, 16
 Phyrexian_m
-  xy: 32, 256
-  size: 16, 16        
+  xy: 217, 181
+  size: 16, 16
 Phyrexian_m
-  xy: 48, 256
-  size: 16, 16        
+  xy: 235, 181
+  size: 16, 16
 Phyrexian_m
-  xy: 64, 256
-  size: 16, 16        
+  xy: 253, 181
+  size: 16, 16
 Phyrexian_m
-  xy: 80, 256
-  size: 16, 16        
+  xy: 1, 199
+  size: 16, 16
 Phyrexian_m
-  xy: 96, 256
-  size: 16, 16        
+  xy: 19, 199
+  size: 16, 16
 Phyrexian_m
-  xy: 112, 256
-  size: 16, 16        
+  xy: 37, 199
+  size: 16, 16
 Phyrexian_m
-  xy: 128, 256
-  size: 16, 16        
+  xy: 55, 199
+  size: 16, 16
 Phyrexian_m
-  xy: 144, 256
-  size: 16, 16        
+  xy: 73, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 0, 272
-  size: 16, 16         
+  xy: 91, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 16, 272
-  size: 16, 16        
+  xy: 109, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 32, 272
-  size: 16, 16        
+  xy: 127, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 48, 272
-  size: 16, 16        
+  xy: 145, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 64, 272
-  size: 16, 16        
+  xy: 163, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 80, 272
-  size: 16, 16        
+  xy: 181, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 96, 272
-  size: 16, 16        
+  xy: 199, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 112, 272
-  size: 16, 16        
+  xy: 217, 199
+  size: 16, 16
 Phyrexian_f
-  xy: 128, 272
-  size: 16, 16        
+  xy: 235, 199
+  size: 16, 16
 Phyrexian_f
-  size: 16, 16        
-  xy: 144, 272
+  xy: 253, 199
+  size: 16, 16
 Werewolf_m
-  xy: 0, 288
-  size: 16, 16         
+  xy: 1, 217
+  size: 16, 16
 Werewolf_m
-  xy: 16, 288
-  size: 16, 16        
+  xy: 19, 217
+  size: 16, 16
 Werewolf_m
-  xy: 32, 288
-  size: 16, 16        
+  xy: 37, 217
+  size: 16, 16
 Werewolf_m
-  xy: 48, 288
-  size: 16, 16        
+  xy: 55, 217
+  size: 16, 16
 Werewolf_m
-  xy: 64, 288
-  size: 16, 16        
+  xy: 73, 217
+  size: 16, 16
 Werewolf_m
-  xy: 80, 288
-  size: 16, 16        
+  xy: 91, 217
+  size: 16, 16
 Werewolf_m
-  xy: 96, 288
-  size: 16, 16        
+  xy: 109, 217
+  size: 16, 16
 Werewolf_m
-  xy: 112, 288
-  size: 16, 16        
+  xy: 127, 217
+  size: 16, 16
 Werewolf_m
-  xy: 128, 288
-  size: 16, 16        
+  xy: 145, 217
+  size: 16, 16
 Werewolf_m
-  xy: 144, 288
-  size: 16, 16        
+  xy: 163, 217
+  size: 16, 16
 Werewolf_f
-  xy: 0, 304
-  size: 16, 16         
+  xy: 181, 217
+  size: 16, 16
 Werewolf_f
-  xy: 16, 304
-  size: 16, 16        
+  xy: 199, 217
+  size: 16, 16
 Werewolf_f
-  xy: 32, 304
-  size: 16, 16        
+  xy: 217, 217
+  size: 16, 16
 Werewolf_f
-  xy: 48, 304
-  size: 16, 16        
+  xy: 235, 217
+  size: 16, 16
 Werewolf_f
-  xy: 64, 304
-  size: 16, 16        
+  xy: 253, 217
+  size: 16, 16
 Werewolf_f
-  xy: 80, 304
-  size: 16, 16        
+  xy: 1, 235
+  size: 16, 16
 Werewolf_f
-  xy: 96, 304
-  size: 16, 16        
+  xy: 19, 235
+  size: 16, 16
 Werewolf_f
-  xy: 112, 304
-  size: 16, 16        
+  xy: 37, 235
+  size: 16, 16
 Werewolf_f
-  xy: 128, 304
-  size: 16, 16        
+  xy: 55, 235
+  size: 16, 16
 Werewolf_f
-  size: 16, 16        
-  xy: 144, 304  
+  xy: 73, 235
+  size: 16, 16
 Leonin_m
-  xy: 0, 320
-  size: 16, 16         
+  xy: 91, 235
+  size: 16, 16
 Leonin_m
-  xy: 16, 320
-  size: 16, 16        
+  xy: 109, 235
+  size: 16, 16
 Leonin_m
-  xy: 32, 320
-  size: 16, 16        
+  xy: 127, 235
+  size: 16, 16
 Leonin_m
-  xy: 48, 320
-  size: 16, 16        
+  xy: 145, 235
+  size: 16, 16
 Leonin_m
-  xy: 64, 320
-  size: 16, 16        
+  xy: 163, 235
+  size: 16, 16
 Leonin_m
-  xy: 80, 320
-  size: 16, 16        
+  xy: 181, 235
+  size: 16, 16
 Leonin_m
-  xy: 96, 320
-  size: 16, 16        
+  xy: 199, 235
+  size: 16, 16
 Leonin_m
-  xy: 112, 320
-  size: 16, 16        
+  xy: 217, 235
+  size: 16, 16
 Leonin_m
-  xy: 128, 320
-  size: 16, 16        
+  xy: 235, 235
+  size: 16, 16
 Leonin_m
-  xy: 144, 320
-  size: 16, 16        
+  xy: 253, 235
+  size: 16, 16
 Leonin_f
-  xy: 0, 336
-  size: 16, 16         
+  xy: 1, 253
+  size: 16, 16
 Leonin_f
-  xy: 16, 336
-  size: 16, 16        
+  xy: 19, 253
+  size: 16, 16
 Leonin_f
-  xy: 32, 336
-  size: 16, 16        
+  xy: 37, 253
+  size: 16, 16
 Leonin_f
-  xy: 48, 336
-  size: 16, 16        
+  xy: 55, 253
+  size: 16, 16
 Leonin_f
-  xy: 64, 336
-  size: 16, 16        
+  xy: 73, 253
+  size: 16, 16
 Leonin_f
-  xy: 80, 336
-  size: 16, 16        
+  xy: 91, 253
+  size: 16, 16
 Leonin_f
-  xy: 96, 336
-  size: 16, 16        
+  xy: 109, 253
+  size: 16, 16
 Leonin_f
-  xy: 112, 336
-  size: 16, 16        
+  xy: 127, 253
+  size: 16, 16
 Leonin_f
-  xy: 128, 336
-  size: 16, 16        
+  xy: 145, 253
+  size: 16, 16
 Leonin_f
-  size: 16, 16        
-  xy: 144, 336
+  xy: 163, 253
+  size: 16, 16
 Dragon_r
-  xy: 48, 352
-  size: 16, 16       
+  xy: 181, 253
+  size: 16, 16
 Dragon_w
-  xy: 0, 352
-  size: 16, 16        
+  xy: 199, 253
+  size: 16, 16
 Dragon_g
-  xy: 64, 352
-  size: 16, 16    
+  xy: 217, 253
+  size: 16, 16
 Dragon_b
-  xy: 32, 352
-  size: 16, 16            
+  xy: 235, 253
+  size: 16, 16
 Dragon_u
-  xy: 16, 352
-  size: 16, 16       
+  xy: 253, 253
+  size: 16, 16
