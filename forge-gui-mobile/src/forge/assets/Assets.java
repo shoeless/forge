@@ -423,11 +423,9 @@ public class Assets implements Disposable {
             //problematic atlas since some buttons are small, and this is too big for some buttons, need a way to enable
             //this via property
             //font.addAtlas(pixelmana_atlas, -90f, 20f, 0f);
-            // The adventure UI renders to a virtual resolution and is scaled to the screen by a
-            // fractional factor, so nearest sampling drops or doubles glyph columns (clipped
-            // letters on a 12.9" iPad). Linear filtering resamples them intact.
-            font.setTextureFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            font.integerPosition = false;
+            // Pixel-art bitmap font: at fractional positions the glyph quads sample across texel
+            // boundaries, which shows as thin vertical seams between characters (Retina iPad).
+            font.integerPosition = true;
             textrafonts.put("textrafont", font);
         }
         return textrafonts.get("textrafont");
@@ -439,8 +437,7 @@ public class Assets implements Disposable {
         if (!textrafonts.containsKey("keysfont")) {
             Font font = new Font(bitmapFont);
             font.addAtlas(keys_atlas, 0f, 6f, 0f);
-            font.setTextureFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            font.integerPosition = false;
+            font.integerPosition = true;
             textrafonts.put("keysfont", font);
         }
         return textrafonts.get("keysfont");
@@ -452,8 +449,7 @@ public class Assets implements Disposable {
         if (!textrafonts.containsKey(name)) {
             Font font = new Font(bitmapFont, 0f, 2f, 0f, 1f);
             font.addAtlas(items_atlas, 0f, 6f, 0f);
-            font.setTextureFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            font.integerPosition = false;
+            font.integerPosition = true;
             textrafonts.put(name, font);
         }
         return textrafonts.get(name);
@@ -464,8 +460,7 @@ public class Assets implements Disposable {
             textrafonts = new ObjectMap<>();
         if (!textrafonts.containsKey("GenericHeaderFont")) {
             Font font = new Font(bitmapFont, 0f, -0.5f, 0f, -2.5f);
-            font.setTextureFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            font.integerPosition = false;
+            font.integerPosition = true;
             textrafonts.put("GenericHeaderFont", font);
         }
         return textrafonts.get("GenericHeaderFont");
