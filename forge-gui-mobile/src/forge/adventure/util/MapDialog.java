@@ -111,11 +111,16 @@ public class MapDialog {
 
     void unload() {
         if (audio != null) {
-            audio.getRight().setOnCompletionListener(null);
-            audio.getRight().stop();
-            Forge.getAssets().manager().unload(audio.getLeft().path());
+            Pair<FileHandle, Music> current = audio;
             audio = null;
+            unload(current);
         }
+    }
+
+    private void unload(Pair<FileHandle, Music> clip) {
+        clip.getRight().setOnCompletionListener(null);
+        clip.getRight().stop();
+        Forge.getAssets().manager().unload(clip.getLeft().path());
     }
 
     void disposeAudio() {
@@ -123,10 +128,12 @@ public class MapDialog {
     }
 
     void disposeAudio(boolean fadeout) {
-        if (fadeout) {
-            // Ramp the voice down over ~1s, then unload. Each step both lowers the volume and is
-            // ordered by its own delay; applying the volume on a single step (and unloading on the
-            // earliest one) cut the clip off instead of fading it.
+        if (fadeout && audio != null) {
+            // Ramp this clip down over ~1s, then unload it. The fade owns the clip outright: the
+            // next dialogue page loads into a fresh `audio`, so these timers can never turn down
+            // or unload a newly started voice (which silenced the page that followed a fade).
+            final Pair<FileHandle, Music> fading = audio;
+            audio = null;
             final int steps = 10;
             for (int i = 1; i <= steps; i++) {
                 final float volume = Math.max(0f, 1f - (float) i / steps);
@@ -134,13 +141,10 @@ public class MapDialog {
                 Timer.schedule(new Timer.Task() {
                     @Override
                     public void run() {
-                        if (audio == null) {
-                            return;
-                        }
                         if (last) {
-                            unload();
+                            unload(fading);
                         } else {
-                            audio.getRight().setVolume(volume);
+                            fading.getRight().setVolume(volume);
                         }
                     }
                 }, i * 0.1f);
