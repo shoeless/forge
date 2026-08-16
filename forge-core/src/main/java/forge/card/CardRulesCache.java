@@ -39,7 +39,7 @@ import forge.util.Localizer;
  */
 public class CardRulesCache {
     private static final int RULES_MAGIC = 0x46524743; // "FRGC"
-    private static final int FORMAT_VERSION = 7;
+    private static final int FORMAT_VERSION = 8;
 
     private static String cacheDir;
     private static String appVersion = "";
@@ -57,7 +57,7 @@ public class CardRulesCache {
      * @return map of name -> CardRules (case-insensitive TreeMap), or null if cache is invalid/missing
      */
     public static Map<String, CardRules> loadRules(String expectedVersion, CardStorageReader.ProgressObserver observer) {
-        if (cacheDir == null) return null;
+        if (cacheDir == null || expectedVersion == null) return null;
         File cacheFile = new File(cacheDir, "cardcache.bin");
         if (!cacheFile.exists()) return null;
         if (observer == null) observer = CardStorageReader.ProgressObserver.emptyObserver;
@@ -102,14 +102,19 @@ public class CardRulesCache {
      * @param version version string for cache invalidation
      */
     public static void saveRules(Map<String, CardRules> allRules, String version) {
-        if (cacheDir == null) return;
+        // Never persist an empty set: lazy card loading parses nothing, and a version-valid
+        // empty cache would permanently bypass the parser on later boots.
+        if (cacheDir == null || version == null || allRules.isEmpty()) return;
         File dir = new File(cacheDir);
         if (!dir.exists()) dir.mkdirs();
         File cacheFile = new File(cacheDir, "cardcache.bin");
+        // Write to a temp file and rename, so a mid-write kill can't leave a header-valid
+        // truncated cache behind.
+        File tmpFile = new File(cacheDir, "cardcache.bin.tmp");
 
         DataOutputStream out = null;
         try {
-            out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(cacheFile), 1024 * 1024));
+            out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tmpFile), 1024 * 1024));
             out.writeInt(RULES_MAGIC);
             out.writeInt(FORMAT_VERSION);
             out.writeUTF(version);
@@ -129,10 +134,18 @@ public class CardRulesCache {
             for (CardRules rules : uniqueRules) {
                 writeCardRules(out, rules);
             }
+            out.close();
+            out = null;
+            if (cacheFile.exists() && !cacheFile.delete()) {
+                throw new IOException("could not replace " + cacheFile);
+            }
+            if (!tmpFile.renameTo(cacheFile)) {
+                throw new IOException("could not rename " + tmpFile + " to " + cacheFile);
+            }
         } catch (Exception e) {
             System.err.println("FORGE: Failed to write card rules cache: " + e.getMessage());
             e.printStackTrace();
-            cacheFile.delete();
+            tmpFile.delete();
         } finally {
             closeQuietly(out);
         }
@@ -146,6 +159,8 @@ public class CardRulesCache {
         out.writeUTF(rules.getMeldWith());
         out.writeUTF(rules.getPartnerWith());
         out.writeUTF(rules.getPartnerType());
+        // Script path: CardDb.initialize files "upcoming/" scripts into the upcoming set by path.
+        writeNullableUTF(out, rules.getPath());
         out.writeBoolean(rules.getAddsWildCardColor());
         out.writeInt(rules.getSetColorID());
         out.writeInt(rules.getHand());
@@ -213,6 +228,7 @@ public class CardRulesCache {
         String meldWith = in.readUTF();
         String partnerWith = in.readUTF();
         String partnerType = in.readUTF();
+        String path = readNullableUTF(in);
         // addsWildCardColor is recomputed from oracle text; read and discard to keep stream position
         in.readBoolean();
         int setColorID = in.readInt();
@@ -286,6 +302,7 @@ public class CardRulesCache {
         result.meldWith = meldWith;
         result.partnerWith = partnerWith;
         result.partnerType = partnerType;
+        result.setPath(path);
         result.setColorID = setColorID;
         if (!tokens.isEmpty()) {
             result.tokens = tokens;
@@ -505,6 +522,15 @@ public class CardRulesCache {
             target.setDefense(source.getDefense());
         }
         if (source.getNonAbilityText() != null) target.setNonAbilityText(source.getNonAbilityText());
+        Set<Integer> lights = source.getAttractionLights();
+        if (lights != null && !lights.isEmpty()) {
+            StringBuilder lightStr = new StringBuilder();
+            for (Integer light : lights) {
+                if (lightStr.length() > 0) lightStr.append(' ');
+                lightStr.append(light);
+            }
+            target.setAttractionLights(lightStr.toString());
+        }
         if (source.getKeywords() != null) {
             for (String kw : source.getKeywords()) target.addKeyword(kw);
         }
@@ -705,6 +731,9 @@ public class CardRulesCache {
      * or when the card count within editions changes, invalidating a stale cache.
      */
     public static String computeCacheVersion(CardEdition.Collection editions, long cardSourceTimestamp) {
+        if (cardSourceTimestamp <= 0) {
+            return null; //no card-source freshness signal (loose scripts): disable the cache
+        }
         int editionCount = 0;
         int totalCards = 0;
         for (CardEdition e : editions) {

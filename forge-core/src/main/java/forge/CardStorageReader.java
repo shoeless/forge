@@ -118,7 +118,10 @@ public class CardStorageReader {
         if (zipFile.exists()) {
             return zipFile.lastModified();
         }
-        return cardsfolder.lastModified();
+        // Loose-script install (dev checkout): a directory's mtime doesn't change when a nested
+        // script is edited in place, so there is no cheap freshness signal - report none and let
+        // the caller disable the cache rather than serve stale rules after a script edit.
+        return -1;
     }
 
     private List<CardRules> loadCardsInRange(final List<File> files, final int from, final int to) {
