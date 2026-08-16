@@ -15,6 +15,7 @@ import forge.adventure.util.SignalList;
 import forge.card.CardEdition;
 import forge.card.ColorSet;
 import forge.deck.Deck;
+import forge.gui.FThreads;
 import forge.localinstance.properties.ForgeConstants;
 import forge.player.GamePlayerUtil;
 
@@ -138,7 +139,9 @@ public class WorldSave {
 
         currentSave.player.setWorldPosY((int) (currentSave.world.getData().playerStartPosY * currentSave.world.getData().height * currentSave.world.getTileSize()));
         currentSave.player.setWorldPosX((int) (currentSave.world.getData().playerStartPosX * currentSave.world.getData().width * currentSave.world.getTileSize()));
-        currentSave.onLoadList.emit();
+        // The load signal drives UI listeners (GameHUD rebuilds its minimap textures), so it
+        // must fire on the render thread; generation runs off it.
+        FThreads.invokeInEdtAndWait(currentSave.onLoadList::emit);
         return currentSave;
     }
 
