@@ -169,34 +169,8 @@ public class Forge implements ApplicationListener {
             localizer = Localizer.getInstance();
         return localizer;
     }
-    // FORGE-TIMING: splash-to-home startup instrumentation. Off by default; enable with
-    // -Dforge.timing (or System.setProperty("forge.timing","true") in the iOS Main before create()).
-    // Logs deltas at the FModel.initialize boundary (the card-DB load the CardRules cache
-    // accelerates) and at home-visible. splashStartMs is always stamped (cheap) so the deltas are
-    // correct whenever logging is on.
-    static final boolean FORGE_TIMING = Boolean.getBoolean("forge.timing");
-    private static long splashStartMs;
-
-    static void timingLog(final String msg) {
-        if (FORGE_TIMING) {
-            System.out.println("[FORGE-TIMING] " + msg);
-        }
-    }
-
     @Override
     public void create() {
-        splashStartMs = System.currentTimeMillis();
-        timingLog("create() start");
-        if (FORGE_TIMING) {
-            // GPU/driver identity and the NPOT-relevant limits, for chasing device-specific
-            // texture sampling artifacts.
-            java.nio.IntBuffer maxTex = com.badlogic.gdx.utils.BufferUtils.newIntBuffer(16);
-            Gdx.gl.glGetIntegerv(GL20.GL_MAX_TEXTURE_SIZE, maxTex);
-            timingLog("GL renderer=" + Gdx.gl.glGetString(GL20.GL_RENDERER)
-                    + " version=" + Gdx.gl.glGetString(GL20.GL_VERSION)
-                    + " maxTexture=" + maxTex.get(0)
-                    + " npot=" + Gdx.graphics.supportsExtension("GL_OES_texture_npot"));
-        }
         //install our error handler
         ExceptionHandler.registerErrorHandling();
         //log version and system info
@@ -288,18 +262,13 @@ public class Forge implements ApplicationListener {
             Runnable runnable = () -> {
                 safeToClose = false;
                 ImageKeys.setIsLibGDXPort(GuiBase.getInterface().isLibgdxPort());
-                long dbStart = System.currentTimeMillis();
-                timingLog("FModel.initialize start (create+" + (dbStart - splashStartMs) + "ms)");
                 FModel.initialize(getSplashScreen().getProgressBar(), null);
-                timingLog("FModel.initialize done, took " + (System.currentTimeMillis() - dbStart) + "ms (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingFonts"));
                 FSkinFont.preloadAll(locale);
-                timingLog("fonts preloaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblLoadingCardTranslations"));
                 CardTranslation.preloadTranslation(locale, ForgeConstants.LANG_DIR);
-                timingLog("translations preloaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
 
                 getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblPrepareDatabase"));
                 Gdx.app.postRunnable(this::afterDbLoaded);
@@ -456,9 +425,7 @@ public class Forge implements ApplicationListener {
             getSplashScreen().getProgressBar().setDescription(getLocalizer().getMessage("lblFinishingStartup"));
         //override transition & title bg
         try {
-            long tAdv = System.currentTimeMillis();
             FileHandle transitionFile = Config.instance().getFile("ui/transition.png");
-            timingLog("adventure Config.instance +" + (System.currentTimeMillis() - tAdv) + "ms");
             FileHandle titleBGFile = isLandscapeMode() ? Config.instance().getFile("ui/title_bg.png") : Config.instance().getFile("ui/title_bg_portrait.png");
             FileHandle vsIcon = Config.instance().getFile("ui/vs.png");
             if (vsIcon.exists())
@@ -467,9 +434,7 @@ public class Forge implements ApplicationListener {
                 getAssets().fallback_skins().put("transition", new Texture(transitionFile));
             if (titleBGFile.exists())
                 getAssets().fallback_skins().put("title", new Texture(titleBGFile));
-            tAdv = System.currentTimeMillis();
             AdventureScreen.preload();
-            timingLog("AdventureScreen.preload +" + (System.currentTimeMillis() - tAdv) + "ms");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -482,13 +447,10 @@ public class Forge implements ApplicationListener {
 
         FThreads.invokeInBackgroundThread(() -> FThreads.invokeInEdtLater(() -> {
             //load skin full
-            timingLog("loadFull start (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
             FSkin.loadFull(splashScreen);
-            timingLog("skin loaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
             FThreads.invokeInBackgroundThread(() -> {
                 //load Drafts
                 preloadBoosterDrafts();
-                timingLog("drafts preloaded (create+" + (System.currentTimeMillis() - splashStartMs) + "ms)");
                 FThreads.invokeInEdtLater(() -> {
                     if (selector.equals("Adventure")) {
                         //preload adventure resources to speedup startup if selector is adventure. Needs in edt when setting up worldstage
@@ -515,7 +477,6 @@ public class Forge implements ApplicationListener {
                             }
                         }
                         safeToClose = true;
-                        timingLog("home visible, splash-to-home=" + (System.currentTimeMillis() - splashStartMs) + "ms");
                         clearTransitionScreen();
                         // Load the deferred skin sheets (foils, avatars, sleeves, deckboxes,
                         // cracks) on the next frame - after the home screen is visible - so
@@ -532,7 +493,6 @@ public class Forge implements ApplicationListener {
                             // unreachable garbage is affected.
                             System.gc();
                             System.gc();
-                            MemProbe.tick();
                             // Deferred from FModel.initialize - see startDeckGenMatrixLoad.
                             FModel.startDeckGenMatrixLoad();
                         });
@@ -974,7 +934,6 @@ public class Forge implements ApplicationListener {
 
     @Override
     public void render() {
-        MemProbe.tick(); //gated memory probe (throttled; no-op unless -Dforge.memLog)
         if (showFPS)
             frameRate.update(ImageCache.getInstance().counter, getAssets().manager().getMemoryInMegabytes());
 

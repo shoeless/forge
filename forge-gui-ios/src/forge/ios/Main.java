@@ -201,10 +201,6 @@ public class Main extends IOSApplication.Delegate {
             // timeouts) and the jetsam memory ceiling. Set here, before any game/CardState class loads.
             System.setProperty("forge.staticMemo", "on");
 
-            // Startup [FORGE-TIMING] diagnostics (splash-to-home breakdown via os_log). A few
-            // printlns on the boot path; kept on for device benchmarking.
-            System.setProperty("forge.timing", "true");
-
             // Let bdwgc grow the heap further between collections (divisor 3 -> 2): fewer
             // stop-the-world pauses in-game. DEVICE-VERIFIED sizing: peak heap +27 MB against a
             // ~2.7-3 GB jetsam ceiling. (Boot-time GC counts proved insensitive to the divisor -
@@ -213,25 +209,6 @@ public class Main extends IOSApplication.Delegate {
                 org.robovm.rt.GC.setFreeSpaceDivisor(2);
             } catch (Throwable ignored) {
                 // never let a GC-tuning call block startup
-            }
-
-            // One-shot comparator microbenchmark (temporary boot diagnostic): times 100k
-            // case-insensitive compares of case-differing strings, JDK vs forge fast path.
-            {
-                String a = "lightning bolt of the sword";
-                String b = "LIGHTNING BOLT OF THE SWORe";
-                long t0 = System.nanoTime();
-                int acc = 0;
-                for (int i = 0; i < 100000; i++) {
-                    acc += String.CASE_INSENSITIVE_ORDER.compare(a, b);
-                }
-                long jdkMs = (System.nanoTime() - t0) / 1000000L;
-                t0 = System.nanoTime();
-                for (int i = 0; i < 100000; i++) {
-                    acc += forge.util.CaseInsensitiveOrder.INSTANCE.compare(a, b);
-                }
-                long fastMs = (System.nanoTime() - t0) / 1000000L;
-                System.out.println("[FORGE-TIMING] CI-compare 100k: jdk=" + jdkMs + "ms fast=" + fastMs + "ms (" + acc + ")");
             }
 
             final IOSApplicationConfiguration config = new IOSApplicationConfiguration();

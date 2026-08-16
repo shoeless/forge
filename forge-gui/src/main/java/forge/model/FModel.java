@@ -146,17 +146,7 @@ public final class FModel {
     private static final Supplier<ItemPool<PaperCard>> attractionPool = Suppliers.memoize(() -> ItemPool.createFrom(getMagicDb().getVariantCards().getAllCards(PaperCardPredicates.fromRules(CardRulesPredicates.IS_ATTRACTION)), PaperCard.class));
     private static final Supplier<ItemPool<PaperCard>> contraptionPool = Suppliers.memoize(() -> ItemPool.createFrom(getMagicDb().getVariantCards().getAllCards(PaperCardPredicates.fromRules(CardRulesPredicates.IS_CONTRAPTION)), PaperCard.class));
 
-    // FORGE-TIMING phase deltas within initialize(); enabled with -Dforge.timing.
-    private static long timingPhase(final String name, final long since) {
-        final long now = System.currentTimeMillis();
-        if (Boolean.getBoolean("forge.timing")) {
-            System.out.println("[FORGE-TIMING] " + name + " +" + (now - since) + "ms");
-        }
-        return now;
-    }
-
     public static void initialize(final IProgressBar progressBar, Function<ForgePreferences, Void> adjustPrefs) {
-        long tPhase = System.currentTimeMillis();
         ImageKeys.initializeDirs(
             ForgeConstants.CACHE_CARD_PICS_DIR, ForgeConstants.CACHE_CARD_PICS_SUBDIR,
             ForgeConstants.CACHE_TOKEN_PICS_DIR, ForgeConstants.CACHE_ICON_PICS_DIR,
@@ -201,12 +191,9 @@ public final class FModel {
             }
         };
 
-        tPhase = timingPhase("prefs+localizer", tPhase);
-
         // if (new AutoUpdater(true).attemptToUpdate()) {}
         // Load types before loading cards
         loadDynamicGamedata();
-        tPhase = timingPhase("dynamic gamedata", tPhase);
 
         // Load card database
         // Lazy loading currently disabled
@@ -229,7 +216,6 @@ public final class FModel {
 
         // Do this first so PaperCards see the real preference
         CardTranslation.preloadTranslation(getPreferences().getPref(FPref.UI_LANGUAGE), ForgeConstants.LANG_DIR);
-        tPhase = timingPhase("translations", tPhase);
 
         // Create profile dirs if they don't already exist
         for (final String dname : ForgeConstants.PROFILE_DIRS) {
@@ -251,9 +237,7 @@ public final class FModel {
         forge.card.CardRulesCache.setCacheDir(ForgeConstants.DB_DIR, GuiBase.getInterface().getCurrentVersion());
 
         getMagicDb(); // first call builds StaticData (card + token DB)
-        tPhase = timingPhase("StaticData (card+token DB)", tPhase);
         getFormats();
-        tPhase = timingPhase("formats load", tPhase);
 
         getMagicDb().setStandardPredicate(getFormats().getStandard().getFilterRules());
         getMagicDb().setPioneerPredicate(getFormats().getPioneer().getFilterRules());
@@ -261,7 +245,6 @@ public final class FModel {
         getMagicDb().setCommanderPredicate(getFormats().get("Commander").getFilterRules());
         getMagicDb().setOathbreakerPredicate(getFormats().get("Oathbreaker").getFilterRules());
         getMagicDb().setBrawlPredicate(getFormats().get("Brawl").getFilterRules());
-        tPhase = timingPhase("format predicates", tPhase);
 
         getMagicDb().setFilteredHandsEnabled(getPreferences().getPrefBoolean(FPref.FILTERED_HANDS));
         try {
@@ -279,12 +262,10 @@ public final class FModel {
         CardPreferences.load();
         DeckPreferences.load();
         ItemManagerConfig.load();
-        tPhase = timingPhase("card/deck/item prefs", tPhase);
 
         // Preload AI profiles
         AiProfileUtil.loadAllProfiles(ForgeConstants.AI_PROFILE_DIR);
         AiProfileUtil.setAiSideboardingMode(AiProfileUtil.AISideboardingMode.normalizedValueOf(getPreferences().getPref(FPref.MATCH_AI_SIDEBOARDING_MODE)));
-        tPhase = timingPhase("AI profiles", tPhase);
 
         // The deck-gen matrix only serves the cardgen deck options yet took ~27s of the boot
         // path on older iPads. Load it on a background thread instead; isdeckGenMatrixLoaded()
@@ -307,14 +288,12 @@ public final class FModel {
         }
         deckGenMatrixStarted = true;
         final Thread loader = new Thread(() -> {
-            final long tGen = System.currentTimeMillis();
             try {
                 boolean commanderDeckGenMatrixLoaded = CardRelationMatrixGenerator.initialize();
                 deckGenMatrixLoaded = CardArchetypeLDAGenerator.initialize() && commanderDeckGenMatrixLoaded;
             } finally {
                 latch.countDown();
                 DeckType.refreshOptions();
-                timingPhase("deck-gen matrix (background)", tGen);
             }
         }, "DeckGenMatrixLoader");
         loader.setDaemon(true);

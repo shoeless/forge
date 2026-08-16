@@ -463,31 +463,12 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
         }
     }
 
-    // Cumulative bdwgc collection count + allocated MB (iOS only; -1 elsewhere) - attributes
-    // slow boot phases to GC churn vs plain CPU when read alongside the [FORGE-TIMING] deltas.
-    private static String gcStats() {
-        try {
-            Class<?> c = Class.forName("org.robovm.rt.GC");
-            long count = ((Number) c.getMethod("getCount").invoke(null)).longValue();
-            long totalMB = ((Number) c.getMethod("getTotalBytes").invoke(null)).longValue() / (1024L * 1024L);
-            return "gcCount=" + count + " allocTotalMB=" + totalMB;
-        } catch (Throwable t) {
-            return "gcCount=-1";
-        }
-    }
-
     public void initialize(boolean logMissingPerEdition, boolean logMissingSummary, boolean enableUnknownCards) {
-        final boolean timing = Boolean.getBoolean("forge.timing");
-        long tPhase = System.currentTimeMillis();
-        if (timing) {
-            System.out.println("[FORGE-TIMING]   initialize: start " + gcStats());
-        }
         Set<String> allMissingCards = new LinkedHashSet<>();
         List<String> missingCards = new ArrayList<>();
         CardEdition upcomingSet = null;
         Date today = new Date();
 
-        long tAllCards = 0, tLookup = 0, tAdd = 0;
         for (CardEdition e : editions.getOrderedEditions()) {
             boolean coreOrExpSet = e.getType() == CardEdition.Type.CORE || e.getType() == CardEdition.Type.EXPANSION;
             boolean isCoreExpSet = coreOrExpSet || e.getType() == CardEdition.Type.REPRINT;
@@ -498,19 +479,10 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
                 upcomingSet = e;
             }
 
-            long t0 = timing ? System.nanoTime() : 0;
-            List<CardEdition.EditionEntry> cardsInSet = e.getAllCardsInSet();
-            if (timing) {
-                tAllCards += System.nanoTime() - t0;
-            }
-            for (CardEdition.EditionEntry cis : cardsInSet) {
-                t0 = timing ? System.nanoTime() : 0;
+            for (CardEdition.EditionEntry cis : e.getAllCardsInSet()) {
                 CardRules cr = rulesByPrimaryName.get(cis.name());
                 if (cr == null)
                     cr = rulesByAltName.get(cis.name()); //Entry written using a flavor name
-                if (timing) {
-                    tLookup += System.nanoTime() - t0;
-                }
                 if (cr == null) {
                     missingCards.add(cis.name());
                     continue;
@@ -524,11 +496,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
                         continue;
                     }
                 }
-                t0 = timing ? System.nanoTime() : 0;
                 addSetCard(e, cis, cr);
-                if (timing) {
-                    tAdd += System.nanoTime() - t0;
-                }
             }
             if (isCoreExpSet && logMissingPerEdition) {
                 if (missingCards.isEmpty()) {
@@ -543,13 +511,6 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             }
             missingCards.clear();
             artIds.clear();
-        }
-
-        if (timing) {
-            System.out.println("[FORGE-TIMING]   initialize: edition loop +" + (System.currentTimeMillis() - tPhase) + "ms " + gcStats()
-                    + " [getAllCardsInSet=" + (tAllCards / 1000000L) + "ms lookup=" + (tLookup / 1000000L)
-                    + "ms addSetCard=" + (tAdd / 1000000L) + "ms]");
-            tPhase = System.currentTimeMillis();
         }
 
         if (logMissingSummary) {
@@ -576,16 +537,7 @@ public final class CardDb implements ICardDatabase, IDeckGenPool {
             }
         }
 
-        if (timing) {
-            System.out.println("[FORGE-TIMING]   initialize: unassigned sweep +" + (System.currentTimeMillis() - tPhase) + "ms");
-            tPhase = System.currentTimeMillis();
-        }
-
         reIndex();
-
-        if (timing) {
-            System.out.println("[FORGE-TIMING]   initialize: reIndex +" + (System.currentTimeMillis() - tPhase) + "ms");
-        }
     }
 
     public void addCard(PaperCard paperCard) {

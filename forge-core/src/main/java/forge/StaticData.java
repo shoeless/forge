@@ -159,23 +159,13 @@ public class StaticData {
                 }
             }
 
-            // Startup diagnostic for the CardRules cache (off by default; -Dforge.timing): card
-            // counts are identical between a cache-miss (parse) and cache-hit run (verified
-            // move-for-move via seeded sim).
-            if (Boolean.getBoolean("forge.timing")) {
-                System.out.println("[FORGE-TIMING] cardDB built: cacheHit=" + (cachedRules != null)
-                        + " regular=" + regularCards.size() + " variant=" + variantsCards.size());
-            }
-
             // The CardDb build below is the longest silent stretch of boot (~55s on older
             // iPads) - name it on the splash so the bar isn't stuck at the previous phase's 100%.
             cardReader.getProgressObserver().setOperationName(forge.util.Localizer.getInstance()
                     .getMessageorUseDefault("lblPrepareDatabase", "Preparing database..."), false);
 
-            long tPhase = System.currentTimeMillis();
             commonCards = new CardDb(regularCards, editions, filtered);
             variantCards = new CardDb(variantsCards, editions, filtered);
-            tPhase = timingPhase("CardDb ctors", tPhase);
 
             commonCards.setCardArtPreference(cardArtPreference);
             variantCards.setCardArtPreference(cardArtPreference);
@@ -183,7 +173,6 @@ public class StaticData {
             //must initialize after establish field values for the sake of card image logic
             commonCards.initialize(false, false, enableUnknownCards);
             variantCards.initialize(false, false, enableUnknownCards);
-            tPhase = timingPhase("CardDb initialize", tPhase);
 
             // Persist the parsed built-in rules to the Tier-1 startup cache now that the CardDb
             // constructors have run supplyPlaceholderFaces (all faces resolved; mainPart non-null).
@@ -194,11 +183,9 @@ public class StaticData {
                     toCache.put(c.getName(), c);
                 }
                 CardRulesCache.saveRules(toCache, cardCacheVersion);
-                timingPhase("cache write", tPhase);
             }
         }
 
-        final long tokenStartMs = System.currentTimeMillis();
         if (this.tokenReader != null) {
             final Map<String, CardRules> tokens = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
 
@@ -214,7 +201,6 @@ public class StaticData {
                 }
             }
             allTokens = new TokenDb(tokens, editions);
-            timingPhase("token DB", tokenStartMs);
         } else {
             allTokens = null;
         }
@@ -238,15 +224,6 @@ public class StaticData {
             c.getMethod(enabled ? "enable" : "disable").invoke(null);
         } catch (Throwable ignored) {
         }
-    }
-
-    // FORGE-TIMING phase deltas within the constructor; enabled with -Dforge.timing.
-    private static long timingPhase(final String name, final long since) {
-        final long now = System.currentTimeMillis();
-        if (Boolean.getBoolean("forge.timing")) {
-            System.out.println("[FORGE-TIMING] " + name + " +" + (now - since) + "ms");
-        }
-        return now;
     }
 
     public static StaticData instance() {

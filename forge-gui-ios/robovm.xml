@@ -82,7 +82,7 @@
     <!-- os_log wrapper for iOS 26+ logging -->
     <pattern>forge.ios.ForgeOSLog</pattern>
     <pattern>forge.ios.OSLogPrintStream</pattern>
-    <!-- reflectively accessed by MemProbe for on-device RSS/heap measurement -->
+    <!-- reflectively accessed by StaticData.bootGc to pause collection during boot -->
     <pattern>org.robovm.rt.GC</pattern>
     <!-- ==== MobiVM modern-Java pipeline (tmp/jvmdg) ====
          streamsupport backports (bridged java.util.function/stream/Optional

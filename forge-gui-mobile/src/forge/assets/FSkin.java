@@ -442,15 +442,7 @@ public class FSkin {
         loaded = true;
 
         if (splashScreen != null) {
-            final boolean timing = Boolean.getBoolean("forge.timing");
-            long tSymbols = System.currentTimeMillis();
-            if (timing) {
-                System.out.println("[FORGE-TIMING]   loadFull: sheets done, CardFaceSymbols next");
-            }
             CardFaceSymbols.loadImages();
-            if (timing) {
-                System.out.println("[FORGE-TIMING]   loadFull: CardFaceSymbols +" + (System.currentTimeMillis() - tSymbols) + "ms");
-            }
         }
     }
 
