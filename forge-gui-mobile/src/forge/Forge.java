@@ -482,10 +482,14 @@ public class Forge implements ApplicationListener {
                         Gdx.app.postRunnable(() -> {
                             FSkin.loadDeferred();
                             // Boot leaves a large transient allocation spike held in the GC heap;
-                            // two full GCs return it to the OS - the collector needs the second
-                            // pass to unmap the pages the first one freed.
-                            System.gc();
-                            System.gc();
+                            // two full GCs return it to the OS - bdwgc needs the second pass to
+                            // unmap the pages the first one freed. iOS-gated: the double collect
+                            // is bdwgc's unmap dance, and other platforms don't sit against a
+                            // per-process memory ceiling.
+                            if (GuiBase.isIOS()) {
+                                System.gc();
+                                System.gc();
+                            }
                             // Deferred from FModel.initialize - see startDeckGenMatrixLoad.
                             FModel.startDeckGenMatrixLoad();
                         });
