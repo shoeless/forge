@@ -122,13 +122,23 @@ public abstract class FScreen extends FContainer {
         return HomeScreen.instance; //use home screen as backdrop when in landscape mode by default
     }
 
+    //screenResizeVersion when doLandscapeLayout last ran, so a backdrop laid out
+    //before a rotation is healed instead of drawn with its old-orientation layout
+    private int landscapeLayoutVersion = -1;
+
+    private float layoutBackdrop(FScreen backdrop, float width, float height) {
+        float hostedWidth = backdrop.doLandscapeLayout(width, height);
+        backdrop.landscapeLayoutVersion = Forge.getScreenResizeVersion();
+        return hostedWidth;
+    }
+
     @Override
     public void setSize(float width, float height) {
         if (Forge.isLandscapeMode()) {
             //adjust size if in landscape mode and has a backdrop
             FScreen backdrop = getLandscapeBackdropScreen();
             if (backdrop != null) {
-                width = backdrop.doLandscapeLayout(width, height);
+                width = layoutBackdrop(backdrop, width, height);
             }
         }
         if (getWidth() == width && getHeight() == height) {
@@ -158,6 +168,10 @@ public abstract class FScreen extends FContainer {
             //draw landscape backdrop first if needed
             FScreen backdrop = getLandscapeBackdropScreen();
             if (backdrop != null) {
+                if (backdrop.landscapeLayoutVersion != Forge.getScreenResizeVersion()) {
+                    //a rotation since the backdrop's last layout left it stale
+                    layoutBackdrop(backdrop, Forge.getScreenWidth(), Forge.getScreenHeight());
+                }
                 g.draw(backdrop);
                 //temporarily shift into position for drawing in front of backdrop
                 setLeft(Forge.getScreenWidth() - getWidth());

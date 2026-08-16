@@ -921,6 +921,7 @@ public class Forge implements ApplicationListener {
             }
         } catch (Exception ex) {
             graphics.end();
+            ex.printStackTrace(); //sentry is a no-op on iOS; never swallow silently
             //check if sentry is enabled, if not it will call the gui interface but here we end the graphics so we only send it via sentry..
             if (BugReporter.isSentryEnabled())
                 BugReporter.reportException(ex);
@@ -1042,6 +1043,7 @@ public class Forge implements ApplicationListener {
             graphics.end();
         } catch (Exception ex) {
             graphics.end();
+            ex.printStackTrace(); //sentry is a no-op on iOS; never swallow silently
             //check if sentry is enabled, if not it will call the gui interface but here we end the graphics so we only send it via sentry..
             if (BugReporter.isSentryEnabled())
                 BugReporter.reportException(ex);
@@ -1104,6 +1106,7 @@ public class Forge implements ApplicationListener {
             Gdx.graphics.requestRendering();
         } catch (Exception ex) {
             //graphics.end();
+            ex.printStackTrace(); //sentry is a no-op on iOS; never swallow silently
             //check if sentry is enabled, if not it will call the gui interface but here we end the graphics so we only send it via sentry..
             if (BugReporter.isSentryEnabled())
                 BugReporter.reportException(ex);
