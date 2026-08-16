@@ -271,7 +271,11 @@ public final class FModel {
         if(getPreferences().getPrefBoolean(FPref.DECKGEN_CARDBASED)) {
             deckGenMatrixLatch = new CountDownLatch(1);
             if (!GuiBase.getInterface().isLibgdxPort()) {
+                // Desktop keeps the base's synchronous load: DecksComboBox snapshots the
+                // DeckType option arrays at construction and would miss the cardgen entries
+                // if a chooser opened during a background load.
                 startDeckGenMatrixLoad();
+                waitForDeckGenMatrix();
             }
         }
     }

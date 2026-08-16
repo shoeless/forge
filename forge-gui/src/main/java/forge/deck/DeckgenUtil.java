@@ -213,6 +213,7 @@ public class DeckgenUtil {
     }
 
     public static Deck buildLDACArchetypeDeck(GameFormat format, boolean isForAI){
+        FModel.waitForDeckGenMatrix(); //loads in the background since the startup deferral; the map read NPEs before it finishes
         List<Archetype> keys = new ArrayList<>(CardArchetypeLDAGenerator.ldaArchetypes.get(format.getName()));
         Archetype randomKey = Aggregates.random(keys);
         return buildLDACArchetypeDeck(randomKey,format,isForAI);

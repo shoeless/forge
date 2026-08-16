@@ -53,6 +53,9 @@ public class SwingImageFetcher extends ImageFetcher {
             final URLConnection connection = url.openConnection();
             connection.setRequestProperty("Accept", "*/*");
             connection.setRequestProperty("User-Agent", BuildInfo.getUserAgent());
+            // don't let a stalled connection hang the download thread forever
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
             if (connection instanceof HttpURLConnection httpConnection) {
                 final int responseCode = httpConnection.getResponseCode();
                 if (responseCode != HttpURLConnection.HTTP_OK) {

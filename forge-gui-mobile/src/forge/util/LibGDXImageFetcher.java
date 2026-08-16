@@ -66,6 +66,7 @@ public class LibGDXImageFetcher extends ImageFetcher {
                 newdespath = newdespath.replace(".jpg", ".fullborder.jpg"); //fix planes/phenomenon for round border options
             URL url = new URL(urlToDownload);
             System.out.println("Attempting to fetch: " + url);
+            paceScryfall(urlToDownload);
             HttpURLConnection c = (HttpURLConnection) url.openConnection();
             c.setRequestProperty("Accept", "*/*");
             c.setRequestProperty("User-Agent", BuildInfo.getUserAgent());

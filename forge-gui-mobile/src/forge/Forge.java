@@ -250,9 +250,11 @@ public class Forge implements ApplicationListener {
             if (totalDeviceRAM > 5000) //devices with more than 10GB RAM will have 600 Cache size, 400 Cache size for morethan 5GB RAM
                 cacheSize = totalDeviceRAM > 10000 ? 600 : 400;
         }
-        // Cap the card-texture cache on RAM-constrained devices (<=~4GB): long games otherwise
-        // ratchet toward the memory ceiling. Runs after the auto-cache bump so it only lowers.
-        if (totalDeviceRAM > 0 && totalDeviceRAM <= 4500 && cacheSize > 200) {
+        // Cap the card-texture cache on RAM-constrained iPads (<=~4GB): long games otherwise
+        // ratchet toward the per-process jetsam ceiling. iOS-gated - Android has no such
+        // ceiling and has shipped with the larger cache for years. Runs after the auto-cache
+        // bump so it only lowers.
+        if (GuiBase.isIOS() && totalDeviceRAM > 0 && totalDeviceRAM <= 4500 && cacheSize > 200) {
             cacheSize = 200;
         }
         if (!initialized) {
@@ -486,12 +488,17 @@ public class Forge implements ApplicationListener {
                             // unmap the pages the first one freed. iOS-gated: the double collect
                             // is bdwgc's unmap dance, and other platforms don't sit against a
                             // per-process memory ceiling.
-                            if (GuiBase.isIOS()) {
-                                System.gc();
-                                System.gc();
-                            }
-                            // Deferred from FModel.initialize - see startDeckGenMatrixLoad.
-                            FModel.startDeckGenMatrixLoad();
+                            // Off the render thread: the collections don't need GL, and the
+                            // matrix load spawns its own thread (kept after the GCs so the
+                            // reclaim runs before the matrix allocates).
+                            FThreads.invokeInBackgroundThread(() -> {
+                                if (GuiBase.isIOS()) {
+                                    System.gc();
+                                    System.gc();
+                                }
+                                // Deferred from FModel.initialize - see startDeckGenMatrixLoad.
+                                FModel.startDeckGenMatrixLoad();
+                            });
                         });
                     }, takeScreenshot(), false, false, true, false));
                 });
@@ -1056,6 +1063,9 @@ public class Forge implements ApplicationListener {
     @Override
     public void resize(int width, int height) {
         try {
+            if (width == 0 || height == 0) {
+                return; //minimizing delivers (0,0) (see FContainer.setSize); keep the last real size
+            }
             // Device rotation / window resize: update the cached size + orientation and refresh
             // the projection matrix, GL viewport and every element's screenPos. Android manages
             // orientation via its manifest / setLandscapeMode, so leave its portrait flag alone.

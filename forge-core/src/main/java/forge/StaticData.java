@@ -218,7 +218,8 @@ public class StaticData {
         try {
             Class<?> c = Class.forName("org.robovm.rt.GC");
             c.getMethod(enabled ? "enable" : "disable").invoke(null);
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            System.err.println("bootGc: " + t); //opted in via forge.bootGcDefer but not applied
         }
     }
 

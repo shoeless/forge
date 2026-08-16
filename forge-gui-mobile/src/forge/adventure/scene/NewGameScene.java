@@ -347,8 +347,18 @@ public class NewGameScene extends MenuScene {
             // progress bar; GL-backed assets must be prepared first, while still on that thread.
             WorldSave.getCurrentSave().getWorld().prepareGenerationAssets();
             FThreads.invokeInBackgroundThread(() -> {
-                WorldSave.generateNewWorld(worldName, isMale, raceIndex, avatar, startingColor,
-                        difficultyData, selectedMode, colorIdIndex, edition, 0);
+                try {
+                    WorldSave.generateNewWorld(worldName, isMale, raceIndex, avatar, startingColor,
+                            difficultyData, selectedMode, colorIdIndex, edition, 0);
+                } catch (Throwable t) {
+                    // A failed generation must not latch started or strand the transition screen.
+                    t.printStackTrace();
+                    FThreads.invokeInEdtLater(() -> {
+                        started = false;
+                        Forge.clearTransitionScreen();
+                    });
+                    return;
+                }
                 FThreads.invokeInEdtLater(() -> {
                     started = false;
                     GamePlayerUtil.getGuiPlayer().setName(worldName);
