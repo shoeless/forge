@@ -38,8 +38,7 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
  * @version $Id: CardRules.java 9708 2011-08-09 19:34:12Z jendave $
  */
 public final class CardRules implements ICardCharacteristics {
-    // Package-private (not private) so CardRulesCache can populate them when
-    // reconstructing rules from the binary startup cache. See CardRulesCache.
+    // Package-private so CardRulesCache can repopulate these from the binary startup cache.
     String normalizedName;
     private CardSplitType splitType;
     private ICardFace mainPart;

@@ -165,10 +165,8 @@ public class FSkin {
         if(preferredDir == null)
         {
             if (!dir.exists() || !dir.isDirectory()) {
-                // Nothing else creates the user skins cache dir (it isn't in PROFILE_DIRS), so on a
-                // fresh install it is missing and the fallback below would degrade the WHOLE session
-                // to fallback_skin - which lacks bg_match.jpg and sprite_icons.png, so sprites render
-                // blank. Create it and use the bundled default skin instead.
+                //create the skins cache dir (nothing else does - it isn't in PROFILE_DIRS); without it a
+                //fresh install falls back to fallback_skin for the whole session, which lacks the match sprites
                 dir.mkdirs();
             }
             if (!dir.exists() || !dir.isDirectory()) {
@@ -447,9 +445,8 @@ public class FSkin {
     }
 
     /**
-     * Loads the non-essential skin sheets (foils, avatars, sleeves, deckboxes, cracks).
-     * Nothing on the splash/home path needs these, so they are deferred until after the
-     * home screen is visible to shorten splash-to-home time. Must run on the GL thread.
+     * Loads the non-essential skin sheets (foils, avatars, sleeves, deckboxes, cracks), deferred
+     * until after the home screen is visible to shorten startup. Must run on the GL thread.
      */
     public static void loadDeferred() {
         final FileHandle f3 = getDefaultSkinFile(ForgeConstants.SPRITE_FOILS_FILE);

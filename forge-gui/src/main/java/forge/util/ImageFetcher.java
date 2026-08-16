@@ -21,7 +21,7 @@ public abstract class ImageFetcher {
     // https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
     private static final HashMap<String, String> langCodeMap = new HashMap<>();
     protected static final boolean disableHostedDownload = true;
-    protected static volatile Date scryfallCooldownTime = null;
+    private static volatile Date scryfallCooldownTime = null;
     private static final HashSet<String> fetching = new HashSet<>();
 
     /** Minimum gap between Scryfall requests, matching what GuiDownloadService already keeps. */
@@ -47,10 +47,7 @@ public abstract class ImageFetcher {
         return false;
     }
 
-    /**
-     * Whether this particular download should be skipped because we are backing off Scryfall, so
-     * callers can simply skip the fetch while this returns true.
-     */
+    /** Whether this download should be skipped because we are backing off Scryfall. */
     protected static boolean inScryfallCooldown(final String url) {
         if (!isScryfall(url) || !scryfallCoolingDown()) {
             return false;

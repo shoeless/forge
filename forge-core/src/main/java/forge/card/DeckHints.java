@@ -81,8 +81,7 @@ public class DeckHints {
 
     /**
      * Serialize back to the raw SVar-style string that {@link #DeckHints(String)} parses,
-     * so CardRulesCache can round-trip a DeckHints through the binary startup cache without
-     * re-parsing card scripts. Round-trips {@code new DeckHints(h.toRawString())} == h.
+     * so CardRulesCache can round-trip hints through the binary startup cache.
      */
     String toRawString() {
         StringBuilder sb = new StringBuilder();

@@ -25,24 +25,17 @@ import forge.card.mana.ManaCost;
 import forge.util.Localizer;
 
 /**
- * Tier-1 binary cache for parsed {@link CardRules}.
+ * Binary cache for parsed {@link CardRules} ({@code cardcache.bin}), skipping the re-parse of
+ * ~32k card scripts that dominates startup time.
  *
- * <p>Parsing the ~32k card scripts into CardRules is the single dominant startup cost on iOS
- * (~70% of splash-to-home; ~15s on an M3 simulator, more on device). This cache serializes the
- * parsed CardRules into a compact binary file ({@code cardcache.bin}); on the next launch the
- * rules are read back directly instead of re-parsing the scripts.
+ * The format is a hand-written {@link DataInputStream}/{@link DataOutputStream} layout, not
+ * Java {@code Serializable}, so it is independent of class layout and {@code serialVersionUID}
+ * (bytecode transforms can't invalidate it). {@link #FORMAT_VERSION} plus a caller-supplied
+ * version string ({@link #computeCacheVersion}) guard against stale caches; any read error
+ * falls back to a full parse and rewrites the cache.
  *
- * <p>The format is a hand-written {@link DataInputStream}/{@link DataOutputStream} layout — NOT
- * Java {@code Serializable}. That is deliberate: it makes the cache independent of class layout
- * and {@code serialVersionUID}, so the RoboVM/jvmdg bytecode transform used for the iOS build
- * cannot invalidate it. A {@link #FORMAT_VERSION} magic plus a caller-supplied version string
- * ({@link #computeCacheVersion}) guard against stale caches; any read error falls back to a full
- * parse and rewrites the cache.
- *
- * <p>Only Tier-1 (CardRules) is cached here. The PaperCard/CardDb "Tier-2" of the original iOS
- * work is intentionally omitted: it required swapping the card-DB {@code TreeMap} for a hash map,
- * which changes deck-generation iteration order. Keeping the TreeMap sidesteps that determinism
- * risk while still capturing the bulk of the parse cost.
+ * Only CardRules are cached, not PaperCard/CardDb: that would require swapping the card-DB
+ * {@code TreeMap} for a hash map, changing deck-generation iteration order.
  */
 public class CardRulesCache {
     private static final int RULES_MAGIC = 0x46524743; // "FRGC"
@@ -56,7 +49,7 @@ public class CardRulesCache {
         appVersion = appVersion0 != null ? appVersion0 : "";
     }
 
-    // ========== Tier 1: CardRules Cache ==========
+    // ========== CardRules Cache ==========
 
     /**
      * Load CardRules from the binary cache.
@@ -87,9 +80,7 @@ public class CardRulesCache {
             Map<String, CardRules> result = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
             for (int i = 0; i < count; i++) {
                 CardRules rules = readCardRules(in);
-                if (rules != null) {
-                    result.put(rules.getName(), rules);
-                }
+                result.put(rules.getName(), rules);
                 if ((i & 511) == 511) {
                     observer.report(i + 1, count);
                 }
@@ -222,8 +213,7 @@ public class CardRulesCache {
         String meldWith = in.readUTF();
         String partnerWith = in.readUTF();
         String partnerType = in.readUTF();
-        // getAddsWildCardColor() is computed from oracle text on this codebase, so there is no
-        // field to restore — read the boolean to keep the stream position and discard it.
+        // addsWildCardColor is recomputed from oracle text; read and discard to keep stream position
         in.readBoolean();
         int setColorID = in.readInt();
         int deltaHand = in.readInt();
@@ -466,12 +456,12 @@ public class CardRulesCache {
         if (nonAbilityText != null) face.setNonAbilityText(nonAbilityText);
 
         // String lists
-        readStringList(in, new StringAdder() { public void add(String s) { face.addKeyword(s); } });
-        readStringList(in, new StringAdder() { public void add(String s) { face.addAbility(s); } });
-        readStringList(in, new StringAdder() { public void add(String s) { face.addStaticAbility(s); } });
-        readStringList(in, new StringAdder() { public void add(String s) { face.addTrigger(s); } });
-        readStringList(in, new StringAdder() { public void add(String s) { face.addDraftAction(s); } });
-        readStringList(in, new StringAdder() { public void add(String s) { face.addReplacementEffect(s); } });
+        readStringList(in, face::addKeyword);
+        readStringList(in, face::addAbility);
+        readStringList(in, face::addStaticAbility);
+        readStringList(in, face::addTrigger);
+        readStringList(in, face::addDraftAction);
+        readStringList(in, face::addReplacementEffect);
 
         // Variables (SVars)
         int varCount = in.readInt();
@@ -492,7 +482,6 @@ public class CardRulesCache {
                 String variantName = in.readUTF();
                 CardFace variantFace = readCardFace(in);
                 CardFace existing = (CardFace) face.getOrCreateFunctionalVariant(variantName);
-                // Copy all fields from the read variant into the created one.
                 copyFaceFields(variantFace, existing);
             }
         }
@@ -545,15 +534,6 @@ public class CardRulesCache {
     // ========== CardType Serialization ==========
 
     private static void writeCardType(DataOutputStream out, CardType type) throws IOException {
-        if (type == null) {
-            out.writeShort(0);
-            out.writeByte(0);
-            out.writeInt(0);
-            out.writeBoolean(false);
-            out.writeInt(0);
-            return;
-        }
-
         // Core types as bitmask (fits in short)
         short coreMask = 0;
         for (CoreType ct : type.getCoreTypes()) {
@@ -653,8 +633,7 @@ public class CardRulesCache {
     }
 
     private static DeckHints readDeckHints(DataInputStream in) throws IOException {
-        boolean present = in.readBoolean();
-        if (!present) return null;
+        if (!in.readBoolean()) return null;
         String raw = in.readUTF();
         if (raw.isEmpty()) return null;
         return new DeckHints(raw);
@@ -672,9 +651,7 @@ public class CardRulesCache {
     }
 
     private static String readNullableUTF(DataInputStream in) throws IOException {
-        boolean present = in.readBoolean();
-        if (!present) return null;
-        return in.readUTF();
+        return in.readBoolean() ? in.readUTF() : null;
     }
 
     private static void writeNullableCardFace(DataOutputStream out, ICardFace face) throws IOException {
@@ -687,9 +664,7 @@ public class CardRulesCache {
     }
 
     private static CardFace readNullableCardFace(DataInputStream in) throws IOException {
-        boolean present = in.readBoolean();
-        if (!present) return null;
-        return readCardFace(in);
+        return in.readBoolean() ? readCardFace(in) : null;
     }
 
     private static void writeStringIterable(DataOutputStream out, Iterable<String> items) throws IOException {
@@ -736,9 +711,8 @@ public class CardRulesCache {
             editionCount++;
             totalCards += e.getAllCardsInSet().size();
         }
-        // cardSourceTimestamp (cardsfolder.zip mtime) invalidates the cache when a card body is
-        // edited without changing the edition/card counts — otherwise the stale parse is served.
-        // appVersion: a new app build invalidates the cache even when the card data is unchanged
+        // cardSourceTimestamp catches card edits that don't change edition/card counts;
+        // appVersion invalidates on a new app build even with unchanged card data
         return FORMAT_VERSION + ":" + appVersion + ":" + editionCount + ":" + totalCards + ":" + cardSourceTimestamp;
     }
 }

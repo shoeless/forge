@@ -63,9 +63,8 @@ public class SplashScreen extends FContainer {
 
     @Override
     protected void doLayout(float width, float height) {
-        // Reposition the mode-selection buttons on a size change (e.g. an orientation rotation while
-        // the selector is showing). The button bounds are otherwise set once in showSelector(); this
-        // recomputes them from the same background-fit math so they track the new dimensions.
+        //reposition the mode-selection buttons on resize (e.g. rotation while the selector is showing);
+        //showSelector() only sets their bounds once at init, using this same background-fit math
         if (btnHome != null && btnAdventure != null && splashTexture != null) {
             float x, y, w, h;
             float backgroundRatio = (float) splashTexture.getRegionWidth() / splashTexture.getRegionHeight();

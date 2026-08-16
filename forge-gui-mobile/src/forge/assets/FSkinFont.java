@@ -483,9 +483,8 @@ public class FSkinFont {
                             getTextureData().consumePixmap().dispose();
                         }
                     };
-                    // Nearest filtering on the glyph atlas: the pages are packed without padding,
-                    // so linear sampling bleeds neighbouring glyph edges into each character
-                    // (visible as thin vertical lines between letters on a Retina iPad).
+                    //use Nearest filtering: the atlas pages are packed without padding, so linear
+                    //sampling bleeds neighbouring glyph edges into each character
                     texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
                     textureRegions.addAll(new TextureRegion(texture));
                 }

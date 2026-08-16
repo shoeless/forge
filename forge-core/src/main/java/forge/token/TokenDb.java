@@ -1,6 +1,5 @@
 package forge.token;
 
-import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -12,6 +11,7 @@ import forge.card.CardRules;
 import forge.item.IPaperCard;
 import forge.item.PaperToken;
 import forge.util.Aggregates;
+import forge.util.CaseInsensitiveOrder;
 
 import java.util.*;
 import java.util.function.Predicate;

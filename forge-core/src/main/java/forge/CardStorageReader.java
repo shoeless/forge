@@ -17,10 +17,10 @@
  */
 package forge;
 
-import forge.util.CaseInsensitiveOrder;
 import com.google.common.io.Files;
 import forge.card.CardRules;
 import forge.util.BuildInfo;
+import forge.util.CaseInsensitiveOrder;
 import forge.util.FileUtil;
 import forge.util.Localizer;
 import forge.util.ThreadUtil;
@@ -110,9 +110,8 @@ public class CardStorageReader {
 
     /**
      * Timestamp of the card-script source (cardsfolder.zip mtime, or the folder's if loose files),
-     * folded into {@link forge.card.CardRulesCache#computeCacheVersion} so the binary card cache is
-     * invalidated when a card body changes without the edition/card counts changing (e.g. editing an
-     * AI hint, trigger, or P/T). Without this, an edited script silently served its stale parse.
+     * folded into {@link forge.card.CardRulesCache#computeCacheVersion} so the binary card cache
+     * invalidates when a script body changes without the edition/card counts changing.
      */
     public long getCardSourceTimestamp() {
         final File zipFile = new File(cardsfolder, "cardsfolder.zip");

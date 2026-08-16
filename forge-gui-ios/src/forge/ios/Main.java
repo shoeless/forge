@@ -202,9 +202,7 @@ public class Main extends IOSApplication.Delegate {
             System.setProperty("forge.staticMemo", "on");
 
             // Let bdwgc grow the heap further between collections (divisor 3 -> 2): fewer
-            // stop-the-world pauses in-game. DEVICE-VERIFIED sizing: peak heap +27 MB against a
-            // ~2.7-3 GB jetsam ceiling. (Boot-time GC counts proved insensitive to the divisor -
-            // divisor=1 fired the same ~85 collections - so no special boot value is used.)
+            // stop-the-world pauses in-game for a small peak-heap increase.
             try {
                 org.robovm.rt.GC.setFreeSpaceDivisor(2);
             } catch (Throwable ignored) {
@@ -245,10 +243,8 @@ public class Main extends IOSApplication.Delegate {
                 long deviceRamMB = NSProcessInfo.getSharedProcessInfo().getPhysicalMemory() / (1024L * 1024L);
                 log("Physical device RAM: " + deviceRamMB + " MB");
                 if (deviceRamMB >= 3000) {
-                    // Defer bdwgc across the card-DB build (FModel.initialize): ~85 collections
-                    // otherwise fire during it. Bounded by measurement: the build allocates well
-                    // under 1GB, so the ungated heap peak stays ~2GB clear of the jetsam ceiling
-                    // on >=3GB devices.
+                    // Defer bdwgc across the card-DB build (FModel.initialize). The build allocates
+                    // well under 1GB, so the ungated peak stays clear of the jetsam ceiling on >=3GB devices.
                     System.setProperty("forge.bootGcDefer", "true");
                 }
             } catch (Throwable t) {

@@ -66,9 +66,8 @@ public class AdventureScreen extends LaunchScreen {
         String demo = ForgeConstants.EFFECTS_DIR+"demo.gif";
         if (!Gdx.files.absolute(demo).exists())
             return;
-        // Decoding the GIF frames takes several seconds on older iPads, so it runs on a
-        // background thread (called after the home screen is visible); only the atlas
-        // texture upload needs the GL thread. onActivate is null-safe until it lands.
+        // Decoding is slow, so do it on a background thread; only the texture upload needs
+        // the GL thread. onActivate is null-safe until the animation lands.
         Thread decoder = new Thread(() -> {
             try {
                 GifDecoder.PixmapAtlas atlas = GifDecoder.decodeGIFAtlas(Gdx.files.absolute(demo).read());

@@ -70,12 +70,11 @@ public class Graphics {
     }
 
     /**
-     * Rebuilds the orthographic projection matrix for new screen dimensions. Must be called when the
-     * screen size changes (e.g. an iOS device orientation rotation); without it the batch/shape
-     * renderer keep the launch dimensions and everything draws stretched/distorted after a rotation.
+     * Rebuilds the projection matrix for new screen dimensions. Must be called on screen size
+     * changes (e.g. rotation); otherwise the batch/shapeRenderer keep the launch projection
+     * and draw distorted.
      */
     public void resize(int width, int height) {
-        // libGDX uses a y-up coordinate system with origin at bottom-left.
         projectionMatrix.setToOrtho2D(0, 0, width, height);
         batch.setProjectionMatrix(projectionMatrix);
         shapeRenderer.setProjectionMatrix(projectionMatrix);
@@ -223,7 +222,7 @@ public class Graphics {
         } else {
             displayObj.screenPos.set(bounds);
         }
-        displayObj.markScreenPosUpdated(); //stamp with the current resize version so touch dispatch treats it as fresh
+        displayObj.markScreenPosUpdated();
 
         Rectangle intersection = Utils.getIntersection(bounds, visibleBounds);
         if (intersection != null) { //avoid drawing object if it's not within visible region

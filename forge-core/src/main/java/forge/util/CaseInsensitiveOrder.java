@@ -4,12 +4,10 @@ import java.io.Serializable;
 import java.util.Comparator;
 
 /**
- * Drop-in replacement for {@link String#CASE_INSENSITIVE_ORDER} with an ASCII fast path.
- *
- * <p>Produces the identical ordering for every input pair: ASCII characters short-circuit the
- * per-character {@code Character.toUpperCase}/{@code toLowerCase} calls (which are not
- * intrinsified on the iOS AOT runtime and dominate card-DB TreeMap lookups at startup);
- * non-ASCII characters fall back to the exact JDK comparison sequence.
+ * Drop-in replacement for {@link String#CASE_INSENSITIVE_ORDER} with an ASCII fast path:
+ * identical ordering for every input pair, but ASCII characters skip the per-character
+ * {@code Character.toUpperCase}/{@code toLowerCase} calls; non-ASCII falls back to the
+ * exact JDK comparison sequence.
  */
 public final class CaseInsensitiveOrder implements Comparator<String>, Serializable {
     private static final long serialVersionUID = 1L;

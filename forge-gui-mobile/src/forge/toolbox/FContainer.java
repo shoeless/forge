@@ -116,10 +116,9 @@ public abstract class FContainer extends FDisplayObject {
 
     protected abstract void doLayout(float width, float height);
 
-    /** Eagerly recomputes screenPos for this container and all visible descendants after a resize, so
-     *  touch dispatch has correct positions immediately (before the next render pass) — closing the
-     *  post-rotation race where a touch would otherwise hit a stale, pre-rotation position. Mirrors
-     *  how {@link forge.Graphics} computes screenPos during drawing. */
+    /** Eagerly recomputes screenPos for this container and all visible descendants (mirroring how
+     *  {@link forge.Graphics} computes it while drawing), so touch dispatch is correct immediately
+     *  after a resize instead of waiting for the next render pass. */
     public void updateScreenPositions(float parentX, float parentY) {
         float myScreenX = parentX + getLeft();
         float myScreenY = parentY + getTop();

@@ -340,9 +340,8 @@ public class TextUtil {
     public static String toSortableName(String printedName) {
         if (printedName.startsWith("\"")) printedName = printedName.substring(1);
         String s = moveArticleToEnd(printedName).toLowerCase();
-        // Same character class as the old replaceAll("[^\\s'0-9a-z]", "") in a plain loop:
-        // String.replaceAll recompiles its pattern per call, and this runs once per PaperCard
-        // (~103k at startup) - the compile dominated the card-DB build on the iOS AOT runtime.
+        // Same character class as replaceAll("[^\\s'0-9a-z]", ""), inlined because replaceAll
+        // recompiles its pattern on every call and this runs once per PaperCard at startup.
         StringBuilder sb = new StringBuilder(s.length());
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);

@@ -20,15 +20,13 @@ public abstract class FDisplayObject {
     public final Rectangle screenPos = new Rectangle();
     private int lastScreenPosVersion = -1; //resize version when screenPos was last updated (-1 = never)
 
-    /** Stamps screenPos with the current resize version. Called after screenPos is (re)computed, both
-     *  during rendering and by the eager post-rotation {@code updateScreenPositions} pass. */
+    /** Stamps screenPos with the current resize version; call whenever screenPos is (re)computed. */
     public void markScreenPosUpdated() {
         lastScreenPosVersion = Forge.getScreenResizeVersion();
     }
 
-    /** True when screenPos is safe to hit-test: either never rendered yet (-1, allow initial touches)
-     *  or refreshed since the last resize. Guards against touches landing on stale positions in the
-     *  window between an orientation change and the next render/layout pass. */
+    /** True when screenPos is safe to hit-test: refreshed since the last resize, or never rendered
+     *  yet (-1, so initial touches still work). Guards against touches hitting stale pre-rotation positions. */
     public boolean isScreenPosValid() {
         return lastScreenPosVersion == -1 || lastScreenPosVersion == Forge.getScreenResizeVersion();
     }
@@ -142,8 +140,6 @@ public abstract class FDisplayObject {
 
     public abstract void draw(Graphics g);
     public void buildTouchListeners(float screenX, float screenY, List<FDisplayObject> listeners) {
-        // Skip elements whose screenPos is stale from a pre-rotation layout: a safety net for the
-        // race where a touch arrives after an orientation change but before the next render/layout.
         if (!isScreenPosValid()) {
             return;
         }

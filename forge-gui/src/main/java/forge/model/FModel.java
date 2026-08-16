@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 import forge.*;
 import forge.CardStorageReader.ProgressObserver;
 import forge.ai.AiProfileUtil;
+import forge.card.CardRulesCache;
 import forge.card.CardRulesPredicates;
 import forge.card.CardType;
 import forge.deck.CardArchetypeLDAGenerator;
@@ -231,13 +232,9 @@ public final class FModel {
 
         ForgePreferences.DEV_MODE = getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED);
 
-        // Enable the Tier-1 binary CardRules startup cache (skips re-parsing ~32k scripts on
-        // subsequent launches). Must be set before the first getMagicDb() call below, which
-        // builds StaticData and loads the card DB. See forge.card.CardRulesCache.
-        forge.card.CardRulesCache.setCacheDir(ForgeConstants.DB_DIR, GuiBase.getInterface().getCurrentVersion());
-
-        getMagicDb(); // first call builds StaticData (card + token DB)
-        getFormats();
+        // Enable the binary CardRules startup cache (skips re-parsing card scripts on subsequent
+        // launches); must be set before the first getMagicDb() call below builds StaticData.
+        CardRulesCache.setCacheDir(ForgeConstants.DB_DIR, GuiBase.getInterface().getCurrentVersion());
 
         getMagicDb().setStandardPredicate(getFormats().getStandard().getFilterRules());
         getMagicDb().setPioneerPredicate(getFormats().getPioneer().getFilterRules());
@@ -267,12 +264,10 @@ public final class FModel {
         AiProfileUtil.loadAllProfiles(ForgeConstants.AI_PROFILE_DIR);
         AiProfileUtil.setAiSideboardingMode(AiProfileUtil.AISideboardingMode.normalizedValueOf(getPreferences().getPref(FPref.MATCH_AI_SIDEBOARDING_MODE)));
 
-        // The deck-gen matrix only serves the cardgen deck options yet took ~27s of the boot
-        // path on older iPads. Load it on a background thread instead; isdeckGenMatrixLoaded()
-        // blocks until the load completes, so consumers (all reached via deck-chooser UI
-        // navigation) still see the final answer, never a transient false. On libGDX ports the
-        // thread starts from the post-home-screen runnable (Forge.java), not here - started any
-        // earlier it starves the splash critical path on low-core devices.
+        // The deck-gen matrix only serves the cardgen deck options yet dominates the boot path
+        // on slow devices, so load it on a background thread. On libGDX ports the load starts
+        // from the post-home-screen runnable in Forge.java instead - started here it starves
+        // the splash critical path on low-core devices.
         if(getPreferences().getPrefBoolean(FPref.DECKGEN_CARDBASED)) {
             deckGenMatrixLatch = new CountDownLatch(1);
             if (!GuiBase.getInterface().isLibgdxPort()) {

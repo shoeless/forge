@@ -38,10 +38,9 @@ public class AssetsDownloader {
     public static void checkForUpdates(boolean exited, Runnable runnable) {
         if (exited)
             return;
-        // iOS apps are deployed via the App Store / TestFlight, not self-updating.
-        // Skip the update network check, which can block startup for seconds on
-        // slow or absent connections.
-        if (Gdx.app != null && Gdx.app.getType() == com.badlogic.gdx.Application.ApplicationType.iOS) {
+        // iOS builds ship via the App Store / TestFlight, not self-updating; skip the
+        // update check, which can block startup on slow or absent connections.
+        if (GuiBase.isIOS()) {
             run(runnable);
             return;
         }

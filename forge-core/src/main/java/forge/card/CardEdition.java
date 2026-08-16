@@ -17,7 +17,6 @@
  */
 package forge.card;
 
-import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.*;
 
 import forge.StaticData;

@@ -1,7 +1,7 @@
 package forge.card;
 
-import forge.util.CaseInsensitiveOrder;
 import forge.card.mana.ManaCost;
+import forge.util.CaseInsensitiveOrder;
 import forge.util.Lang;
 import org.apache.commons.lang3.StringUtils;
 

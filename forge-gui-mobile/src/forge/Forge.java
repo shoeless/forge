@@ -15,6 +15,7 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Clipboard;
 import forge.adventure.scene.*;
@@ -249,10 +250,8 @@ public class Forge implements ApplicationListener {
             if (totalDeviceRAM > 5000) //devices with more than 10GB RAM will have 600 Cache size, 400 Cache size for morethan 5GB RAM
                 cacheSize = totalDeviceRAM > 10000 ? 600 : 400;
         }
-        // Shrink the card-texture cache on RAM-constrained devices (<=~4GB, e.g. the base iPad)
-        // regardless of the auto-cache pref: 300 full card textures is hundreds of MB of native
-        // memory, and long games ratchet toward the jetsam ceiling. Runs after the auto-cache
-        // bump so it only ever lowers, never raises.
+        // Cap the card-texture cache on RAM-constrained devices (<=~4GB): long games otherwise
+        // ratchet toward the memory ceiling. Runs after the auto-cache bump so it only lowers.
         if (totalDeviceRAM > 0 && totalDeviceRAM <= 4500 && cacheSize > 200) {
             cacheSize = 200;
         }
@@ -478,19 +477,13 @@ public class Forge implements ApplicationListener {
                         }
                         safeToClose = true;
                         clearTransitionScreen();
-                        // Load the deferred skin sheets (foils, avatars, sleeves, deckboxes,
-                        // cracks) on the next frame - after the home screen is visible - so
-                        // they don't sit on the splash-to-home critical path.
+                        // Run deferred startup work on the next frame, after the home screen is
+                        // visible, so it doesn't sit on the splash-to-home critical path.
                         Gdx.app.postRunnable(() -> {
                             FSkin.loadDeferred();
-                            // POST-LOAD memory reclaim. Booting parses ~32k card rules + builds
-                            // ~103k PaperCards + loads skin assets - a large transient allocation
-                            // spike that leaves freed-but-unmapped bytes held in the GC heap
-                            // (~200MB on a 4GB iPad: gcHeap 690 vs live ~480 at idle home). Two
-                            // full GCs at idle home unmap them back to the OS - the collector
-                            // needs the 2nd pass to munmap the pages the 1st freed (same
-                            // mechanism proven at match-end). Zero correctness risk: only
-                            // unreachable garbage is affected.
+                            // Boot leaves a large transient allocation spike held in the GC heap;
+                            // two full GCs return it to the OS - the collector needs the second
+                            // pass to unmap the pages the first one freed.
                             System.gc();
                             System.gc();
                             // Deferred from FModel.initialize - see startDeckGenMatrixLoad.
@@ -593,10 +586,6 @@ public class Forge implements ApplicationListener {
 
     public static IDeviceAdapter getDeviceAdapter() {
         return deviceAdapter;
-    }
-
-    public static int getContinuousRenderingCount() {
-        return continuousRenderingCount;
     }
 
     public static void startContinuousRendering() {
@@ -910,13 +899,11 @@ public class Forge implements ApplicationListener {
             currentScreen = screen0;
             if (currentScreen != null) {
                 currentScreen.setSize(screenWidth, screenHeight);
-                // Force a full layout refresh: a screen that was sitting in the navigation stack (or
-                // shown as a sidebar) during a rotation kept its old-orientation layout; rebuild it
-                // for the current dimensions before it becomes active.
+                // A screen sitting in the navigation stack during a rotation kept its
+                // old-orientation layout; rebuild it before it becomes active.
                 currentScreen.revalidate(true);
                 currentScreen.onActivate();
-                // Refresh screenPos for every element so touches map correctly immediately.
-                currentScreen.updateScreenPositions(0, 0);
+                currentScreen.updateScreenPositions(0, 0); //so touches map correctly immediately
             }
             else if(isMobileAdventureMode) {
                 switchToLast();
@@ -1065,27 +1052,25 @@ public class Forge implements ApplicationListener {
     @Override
     public void resize(int width, int height) {
         try {
-            // Dynamic orientation: an iOS device rotation (or a desktop window resize) delivers the new
-            // dimensions here. Update the cached screen size + orientation and refresh the projection
-            // matrix, GL viewport and every element's screenPos so the UI follows the device instead of
-            // staying stuck in its launch orientation. Android manages orientation via its manifest /
-            // setLandscapeMode, so leave its portrait flag alone.
+            // Device rotation / window resize: update the cached size + orientation and refresh
+            // the projection matrix, GL viewport and every element's screenPos. Android manages
+            // orientation via its manifest / setLandscapeMode, so leave its portrait flag alone.
             screenWidth = width;
             screenHeight = height;
             if (!GuiBase.isAndroid()) {
                 isPortraitMode = height > width;
                 // Force the GL viewport to the new size so touch coordinates map correctly after a
                 // rotation. See https://github.com/libgdx/libgdx/issues/6514
-                com.badlogic.gdx.graphics.glutils.HdpiUtils.glViewport(0, 0, width, height);
+                HdpiUtils.glViewport(0, 0, width, height);
             }
-            screenResizeVersion++; //invalidate stale screenPos values until they're refreshed below
+            screenResizeVersion++;
             if (graphics != null) {
-                graphics.resize(width, height); //rebuild the projection matrix for the new dimensions
+                graphics.resize(width, height);
             }
 
             if (currentScreen != null) {
                 currentScreen.setSize(width, height);
-                currentScreen.updateScreenPositions(0, 0); //refresh screenPos now so touches don't hit stale positions
+                currentScreen.updateScreenPositions(0, 0);
             } else if (splashScreen != null) {
                 splashScreen.setSize(width, height);
                 splashScreen.updateScreenPositions(0, 0);

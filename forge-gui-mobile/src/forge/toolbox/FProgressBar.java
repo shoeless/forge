@@ -87,7 +87,7 @@ public class FProgressBar extends FDisplayObject implements IProgressBar {
 
         if (showETA && value > 0) {
             long elapsed = new Date().getTime() - startTime;
-            float timePerUnit = (float) elapsed / value; // integer division read ~0 for unit counts > elapsed ms
+            float timePerUnit = (float) elapsed / value; // long division truncated to 0 when value > elapsed
             int etaSecs = (int) ((float)(maximum - value) * timePerUnit / 1000f);
             sb.append(", ETA").append(String.format("%02d:%02d:%02d", etaSecs / 3600, (etaSecs % 3600) / 60, etaSecs % 60 + 1));
         }

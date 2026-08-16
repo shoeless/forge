@@ -129,9 +129,8 @@ public class MapDialog {
 
     void disposeAudio(boolean fadeout) {
         if (fadeout && audio != null) {
-            // Ramp this clip down over ~1s, then unload it. The fade owns the clip outright: the
-            // next dialogue page loads into a fresh `audio`, so these timers can never turn down
-            // or unload a newly started voice (which silenced the page that followed a fade).
+            // The fade owns this clip outright: the next dialogue page loads into a fresh
+            // `audio`, so these timers can never touch a newly started voice.
             final Pair<FileHandle, Music> fading = audio;
             audio = null;
             final int steps = 10;

@@ -14,7 +14,6 @@ import com.github.tommyettinger.textra.TextraLabel;
 import forge.Forge;
 import forge.adventure.data.DialogData;
 import forge.adventure.data.DifficultyData;
-import forge.gui.FThreads;
 import forge.adventure.data.HeroListData;
 import forge.adventure.player.AdventurePlayer;
 import forge.adventure.stage.WorldStage;
@@ -24,6 +23,7 @@ import forge.adventure.world.WorldSave;
 import forge.card.CardEdition;
 import forge.card.ColorSet;
 import forge.deck.DeckProxy;
+import forge.gui.FThreads;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
@@ -343,12 +343,8 @@ public class NewGameScene extends MenuScene {
         final CardEdition edition = getStartingEdition();
         Runnable runnable = () -> {
             //FModel.getPreferences().setPref(ForgePreferences.FPref.UI_ENABLE_MUSIC, false);
-            // Generation takes minutes on older devices, so run it off the render thread - the
-            // transition can't repaint (and its progress bar can't move) while the render thread
-            // is inside it. Everything the generator needs from GL is prepared here first:
-            // loadWorldData builds the biome textures (BiomeTexture marshals to the render thread,
-            // which only runs inline while we are still on it), and the marker atlas is loaded by
-            // the POI pass.
+            // Run generation off the render thread so the transition can keep repainting its
+            // progress bar; GL-backed assets must be prepared first, while still on that thread.
             WorldSave.getCurrentSave().getWorld().prepareGenerationAssets();
             FThreads.invokeInBackgroundThread(() -> {
                 WorldSave.generateNewWorld(worldName, isMale, raceIndex, avatar, startingColor,

@@ -17,7 +17,6 @@
  */
 package forge.card;
 
-import forge.util.CaseInsensitiveOrder;
 import com.google.common.collect.*;
 import forge.ImageKeys;
 import forge.StaticData;
@@ -26,6 +25,7 @@ import forge.card.CardEdition.Type;
 import forge.deck.generation.IDeckGenPool;
 import forge.item.IPaperCard;
 import forge.item.PaperCard;
+import forge.util.CaseInsensitiveOrder;
 import forge.util.Lang;
 import forge.util.TextUtil;
 import org.apache.commons.lang3.StringUtils;

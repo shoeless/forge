@@ -28,6 +28,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Class that will create the world from the configuration
@@ -291,17 +292,13 @@ public class World implements Disposable, SaveFileContent {
 
     // Real generation progress for the loading bar (TransitionScreen), which otherwise just
     // tracks its own fade animation and sits at 100% for the minutes world gen actually takes.
-    private static final java.util.concurrent.atomic.AtomicInteger genSteps = new java.util.concurrent.atomic.AtomicInteger();
-    private static final java.util.concurrent.atomic.AtomicInteger genStructuresDone = new java.util.concurrent.atomic.AtomicInteger();
+    private static final AtomicInteger genSteps = new AtomicInteger();
+    private static final AtomicInteger genStructuresDone = new AtomicInteger();
     private static volatile int genTotal = 0;
     private static volatile int genStructureTotal = 0;
     private static volatile String genPhase = "";
     private static volatile boolean genPending = false;
 
-    /**
-     * Claims the loading bar before {@link #generateNew} starts, so it reads 0% from the moment
-     * the transition appears instead of running its fade sweep to 100% and then restarting.
-     */
     /**
      * Loads everything {@link #generateNew} pulls through the asset manager, which asserts it is
      * on the render thread. Must be called there before generation is dispatched elsewhere.
@@ -316,6 +313,10 @@ public class World implements Disposable, SaveFileContent {
         }
     }
 
+    /**
+     * Claims the loading bar before {@link #generateNew} starts, so it reads 0% from the moment
+     * the transition appears instead of running its fade sweep to 100% and then restarting.
+     */
     public static void markGenerationPending() {
         genSteps.set(0);
         genStructuresDone.set(0);

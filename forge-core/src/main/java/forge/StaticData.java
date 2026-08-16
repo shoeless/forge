@@ -1,6 +1,5 @@
 package forge;
 
-import forge.util.CaseInsensitiveOrder;
 import forge.card.CardDb;
 import forge.card.CardEdition;
 import forge.card.CardRules;
@@ -8,8 +7,10 @@ import forge.card.CardRulesCache;
 import forge.card.PrintSheet;
 import forge.item.*;
 import forge.token.TokenDb;
+import forge.util.CaseInsensitiveOrder;
 import forge.util.FileUtil;
 import forge.util.ImageUtil;
+import forge.util.Localizer;
 import forge.util.TextUtil;
 import forge.util.storage.IStorage;
 import forge.util.storage.StorageBase;
@@ -104,16 +105,13 @@ public class StaticData {
                 }
             }
 
-            // Tier-1 startup cache: parsing the ~32k card scripts into CardRules is the dominant
-            // startup cost on iOS. Reuse a binary cache of the parsed rules from a prior launch,
-            // keyed on computeCacheVersion(editions); any miss or read error falls back to a full
-            // parse and rewrites the cache. Cache-loaded rules key/classify identically to parsed
-            // ones (getPreInitName()==getName() and isVariant() agree once faces are populated).
-            // See forge.card.CardRulesCache. Disabled (no-op) until setCacheDir() is called.
+            // Reuse a binary cache of the parsed CardRules from a prior launch — parsing the card
+            // scripts dominates startup cost. Any miss or read error falls back to a full parse and
+            // rewrites the cache; cached rules key/classify identically to freshly parsed ones.
+            // No-op until CardRulesCache.setCacheDir() is called.
             final String cardCacheVersion = CardRulesCache.computeCacheVersion(editions, cardReader.getCardSourceTimestamp());
-            // GC re-enabled after the cache read: deferring across the CardDb build below is a
-            // measured net loss (bdwgc's expand-instead-of-collect allocation path is slower for
-            // the non-GC-bound phases).
+            // Re-enable GC after the cache read: deferring across the CardDb build below is a
+            // net loss (bdwgc expands the heap instead of collecting).
             final Map<String, CardRules> cachedRules;
             try {
                 cachedRules = CardRulesCache.loadRules(cardCacheVersion, cardReader.getProgressObserver());
@@ -159,9 +157,8 @@ public class StaticData {
                 }
             }
 
-            // The CardDb build below is the longest silent stretch of boot (~55s on older
-            // iPads) - name it on the splash so the bar isn't stuck at the previous phase's 100%.
-            cardReader.getProgressObserver().setOperationName(forge.util.Localizer.getInstance()
+            // Name the long CardDb build on the splash so the bar isn't stuck at the previous phase's 100%.
+            cardReader.getProgressObserver().setOperationName(Localizer.getInstance()
                     .getMessageorUseDefault("lblPrepareDatabase", "Preparing database..."), false);
 
             commonCards = new CardDb(regularCards, editions, filtered);
@@ -174,9 +171,8 @@ public class StaticData {
             commonCards.initialize(false, false, enableUnknownCards);
             variantCards.initialize(false, false, enableUnknownCards);
 
-            // Persist the parsed built-in rules to the Tier-1 startup cache now that the CardDb
-            // constructors have run supplyPlaceholderFaces (all faces resolved; mainPart non-null).
-            // These are the same objects collected above, mutated in place during resolution.
+            // The CardDb constructors above resolved placeholder faces in these same objects,
+            // so they are now safe to serialize.
             if (builtinRulesForCache != null) {
                 final Map<String, CardRules> toCache = new TreeMap<>(CaseInsensitiveOrder.INSTANCE);
                 for (CardRules c : builtinRulesForCache) {
