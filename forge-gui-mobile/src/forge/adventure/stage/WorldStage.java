@@ -445,11 +445,15 @@ public class WorldStage extends GameStage implements SaveFileContent {
     }
 
     public void clearCache() {
-        for (Pair<Float, EnemySprite> enemy : enemies)
-            foregroundSprites.removeActor(enemy.getValue());
-        enemies.clear();
-        background.clear();
-        player = null;
+        // Clearing rebuilds the background's GL textures, and world generation calls this
+        // off the render thread — marshal across like the atlas loads.
+        FThreads.invokeInEdtAndWait(() -> {
+            for (Pair<Float, EnemySprite> enemy : enemies)
+                foregroundSprites.removeActor(enemy.getValue());
+            enemies.clear();
+            background.clear();
+            player = null;
+        });
     }
 
     @Override
