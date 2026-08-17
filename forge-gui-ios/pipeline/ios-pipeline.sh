@@ -303,10 +303,18 @@ classpath() {
 
     echo "=== [8/8] linkage audit (this report = your porting workload) ==="
     SCAN=$(ls "$WORK"/out/*.jar | tr '\n' ',' | sed 's/,$//')
+# Gate allowlist: SerializedLambda = serializable-lambda synthetics, never invoked (bridge
+# marker note in jvmdg memory); awt/swing = desktop-only updater paths iOS skips; forge/compat =
+# bridge targets that live in forge-gui-ios (resolved by the module audit, absent at classpath
+# stage); ZipFile charset ctor = tracked latent gap in the net-deck downloader.
+    GATE_ALLOW="java/lang/invoke/SerializedLambda,java/awt/,javax/swing/,forge/compat/,java/util/zip/ZipFile"
     java -cp "$TOOLS_CP" MobiVmLinkAudit \
         --rt "$RT,$ROBOVM_OBJC,$ROBOVM_CT,$GDXB,$SS_JAR,$SSCF_JAR,$WORK/out/jvmdg-java-api-mobivm.jar,$WORK/java-time-supply.jar,$NIO_JAR,$KEEP_CS,$SCAN" \
-        --scan "$SCAN" > "$WORK/audit-report.txt" 2>&1 || true
+        --scan "$SCAN" --gateOrigins forge/ --gateAllow "$GATE_ALLOW" > "$WORK/audit-report.txt" 2>&1 \
+        || { grep -A20 'AUDIT GATE FAILED' "$WORK/audit-report.txt"; \
+             echo "forge-origin refs to MobiVM-missing APIs - fix before building (full: $WORK/audit-report.txt)"; exit 2; }
     head -1 "$WORK/audit-report.txt"
+    grep -m1 'AUDIT GATE' "$WORK/audit-report.txt" || true
     echo "full reports: $WORK/bridge-report.txt  $WORK/audit-report.txt"
 }
 
@@ -335,10 +343,18 @@ build_module() {
     fi
     rm -rf classes && mkdir classes && (cd classes && jar xf ../gui-ios-bridged.jar && rm -rf META-INF)
 
-    echo "=== audit forge-gui-ios classes ==="
+    echo "=== audit forge-gui-ios + forge library classes ==="
+    # Scan the forge library jars too, not just this module: a new upstream class in e.g.
+    # forge-gui using a MobiVM-missing API (SleeveArt/Base64) must fail HERE, not on device.
+    FORGE_SCAN=$(ls "$WORK"/out/forge-*.jar 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+    # Full original classpath in rt so inherited members resolve through keep-jar superclass
+    # chains (textratypist buttons inherit half of scene2d); transformed jars come after and win.
+    ALL_CS=$(tr ':' ',' < "$CP_FILE" | sed 's/,$//')
     java -cp "$TOOLS_CP" MobiVmLinkAudit \
-        --rt "$RT,$ROBOVM_OBJC,$ROBOVM_CT,$GDXB,$SS_JAR,$SSCF_JAR,$WORK/out/jvmdg-java-api-mobivm.jar,$WORK/java-time-supply.jar,$NIO_JAR,$DG_JARS,gui-ios-bridged.jar" \
-        --scan gui-ios-bridged.jar || true
+        --rt "$ALL_CS,$RT,$ROBOVM_OBJC,$ROBOVM_CT,$GDXB,$SS_JAR,$SSCF_JAR,$WORK/out/jvmdg-java-api-mobivm.jar,$WORK/java-time-supply.jar,$NIO_JAR,$DG_JARS,gui-ios-bridged.jar" \
+        --scan "gui-ios-bridged.jar,$FORGE_SCAN" --gateOrigins forge/ \
+        --gateAllow "java/lang/invoke/SerializedLambda,java/awt/,javax/swing/,java/util/zip/ZipFile" \
+        || { echo "AUDIT GATE FAILED - forge-origin refs to MobiVM-missing APIs"; exit 2; }
     cd "$ROOT"
 }
 

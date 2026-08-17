@@ -40,6 +40,7 @@ public class MobiVmLinkAudit {
 
     static final Map<String, ClassInfo> INDEX = new HashMap<>();
     static final Map<String, List<String>> MISSING = new TreeMap<>();
+    static final List<String> GATE_ALLOW = new ArrayList<>();
     static final Set<String> SCANNED_CLASSES = new HashSet<>();
     // jar!entry -> class names referenced (service interface + impl lines)
     static final Map<String, List<String>> SERVICES = new TreeMap<>();
@@ -47,11 +48,16 @@ public class MobiVmLinkAudit {
     public static void main(String[] args) throws Exception {
         List<String> rtJars = new ArrayList<>();
         List<String> scanJars = new ArrayList<>();
+        String gateOrigins = null;
         for (int i = 0; i < args.length; i++) {
             if ("--rt".equals(args[i])) {
                 for (String s : args[++i].split(",")) rtJars.add(s);
             } else if ("--scan".equals(args[i])) {
                 for (String s : args[++i].split(",")) scanJars.add(s);
+            } else if ("--gateOrigins".equals(args[i])) {
+                gateOrigins = args[++i]; //exit 2 only for refs from classes with this prefix
+            } else if ("--gateAllow".equals(args[i])) {
+                for (String s : args[++i].split(",")) GATE_ALLOW.add(s);
             }
         }
         for (String jar : rtJars) index(jar);
@@ -62,10 +68,39 @@ public class MobiVmLinkAudit {
             System.out.println("AUDIT CLEAN: no unresolved java/* references");
             return;
         }
+        // The full listing includes third-party refs that are never reached; the gate fails the
+        // build only for refs originating in our own classes (the SleeveArt/Base64 lesson: a new
+        // upstream forge class using a MobiVM-missing API must not sail through).
+        Map<String, List<String>> gated = new TreeMap<>();
+        if (gateOrigins != null) {
+            entries:
+            for (Map.Entry<String, List<String>> e : MISSING.entrySet()) {
+                String target = e.getKey().substring(e.getKey().indexOf(' ') + 1); //strip KIND
+                for (String allow : GATE_ALLOW) {
+                    if (target.startsWith(allow)) continue entries;
+                }
+                List<String> own = new ArrayList<>();
+                for (String ref : e.getValue()) {
+                    if (ref.startsWith(gateOrigins)) own.add(ref);
+                }
+                if (!own.isEmpty()) gated.put(e.getKey(), own);
+            }
+        }
         System.out.println("AUDIT: " + MISSING.size() + " unresolved java/javax references:");
         for (Map.Entry<String, List<String>> e : MISSING.entrySet()) {
             List<String> refs = e.getValue();
             System.out.println(e.getKey() + "  <- " + refs.size() + " refs, e.g. " + refs.get(0));
+        }
+        if (gateOrigins != null) {
+            if (gated.isEmpty()) {
+                System.out.println("AUDIT GATE CLEAN: no unresolved refs from " + gateOrigins + "*");
+                return;
+            }
+            System.out.println("AUDIT GATE FAILED: " + gated.size() + " unresolved from " + gateOrigins + "*:");
+            for (Map.Entry<String, List<String>> e : gated.entrySet()) {
+                System.out.println("  " + e.getKey() + "  <- " + e.getValue().get(0)
+                        + (e.getValue().size() > 1 ? " (+" + (e.getValue().size() - 1) + " more)" : ""));
+            }
         }
         System.exit(2);
     }

@@ -94,6 +94,8 @@
     <pattern>xyz.wagyourtail.jvmdg.**</pattern>
     <pattern>java.time.**</pattern>
     <pattern>java.nio.file.**</pattern>
+    <pattern>java.util.Base64</pattern>
+    <pattern>java.util.Base64$*</pattern>
     <pattern>java.io.UncheckedIOException</pattern>
     <pattern>forge.compat.**</pattern>
     <!-- image pipeline nested classes (hybrid resolver, LRU caches) -->
