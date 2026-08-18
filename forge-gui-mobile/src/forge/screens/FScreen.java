@@ -15,7 +15,6 @@ import forge.assets.FSkinColor;
 import forge.assets.FSkinColor.Colors;
 import forge.assets.FSkinFont;
 import forge.assets.FSkinTexture;
-import forge.gui.GuiBase;
 import forge.menu.FPopupMenu;
 import forge.screens.home.HomeScreen;
 import forge.screens.settings.SettingsScreen;
@@ -87,7 +86,11 @@ public abstract class FScreen extends FContainer {
 
     @Override
     protected final void doLayout(float width, float height) {
-        if ((GuiBase.isAndroid() && Forge.isLandscapeMode())||(width > height)) {
+        //decide by the device orientation, not this screen's aspect: a screen hosted beside the
+        //landscape home backdrop can be exactly square (iPad: 1366-342 = 1024 = the height), and
+        //the aspect test then picks the portrait body layout while the header independently goes
+        //landscape - hiding the menu button with no sidebar to replace it
+        if (Forge.isLandscapeMode() || width > height) {
             doLandscapeLayout(width, height); //handle landscape layout special
         } else if (header != null) {
             header.setBounds(0, 0, width, header.getPreferredHeight());
