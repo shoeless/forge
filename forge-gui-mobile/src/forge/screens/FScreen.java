@@ -127,6 +127,10 @@ public abstract class FScreen extends FContainer {
     private int landscapeLayoutVersion = -1;
 
     private float layoutBackdrop(FScreen backdrop, float width, float height) {
+        //doLandscapeLayout only lays out children; bounds drive drawBackground's texture size
+        //and hit-testing, and otherwise keep their last-orientation values (the portrait-width
+        //background band) when the backdrop was never current in landscape
+        backdrop.setBounds(0, 0, width, height);
         float hostedWidth = backdrop.doLandscapeLayout(width, height);
         backdrop.landscapeLayoutVersion = Forge.getScreenResizeVersion();
         return hostedWidth;
