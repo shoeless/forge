@@ -13,6 +13,7 @@ public abstract class FPopupMenu extends FDropDownMenu {
     private FDisplayObject owner;
     private float x, y;
     private Vector2 pressPoint, fixedSize;
+    private boolean containerSetBySidebar;
 
     public void show(FDisplayObject owner0, float x0, float y0) {
         owner = owner0;
@@ -33,6 +34,7 @@ public abstract class FPopupMenu extends FDropDownMenu {
         y = screenY;
         fixedSize = new Vector2(fixedWidth, fixedHeight);
         setDropDownContainer(Forge.getCurrentScreen());
+        containerSetBySidebar = true;
 
         show();
     }
@@ -51,6 +53,13 @@ public abstract class FPopupMenu extends FDropDownMenu {
         }
         owner = null;
         fixedSize = null;
+        if (containerSetBySidebar) {
+            //a menu shared across screens (NewGameMenu) that last showed as a landscape sidebar
+            //would otherwise keep that screen as its container and open the hamburger dropdown
+            //inside a screen that is no longer rendered
+            setDropDownContainer(null);
+            containerSetBySidebar = false;
+        }
     }
 
     @Override
