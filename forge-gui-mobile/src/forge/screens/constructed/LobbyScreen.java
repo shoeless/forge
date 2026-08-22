@@ -325,7 +325,17 @@ public abstract class LobbyScreen extends LaunchScreen implements ILobbyView {
     }
 
     @Override
+    protected boolean allowStart() {
+        return lobby == null || !lobby.isAllowNetworking() || lobby.hasControl();
+    }
+
+    @Override
     protected void startMatch() {
+        // Only the host runs game construction; a client pressing Start (or
+        // Enter/Space) would build a local match from its partial lobby view.
+        if (!allowStart()) {
+            return;
+        }
         for (int i = 0; i < getNumPlayers(); i++) {
             if(!lobby.isAllowNetworking()) //on networkplay, update deck will be handled differently
                 updateDeck(i);

@@ -45,6 +45,12 @@ public abstract class LaunchScreen extends FScreen {
     protected abstract void doLayoutAboveBtnStart(float startY, float width, float height);
     protected abstract void startMatch();
 
+    //override to keep the render loop's re-enable from resurrecting the Start
+    //button on screens where this player may not start (network lobby client)
+    protected boolean allowStart() {
+        return true;
+    }
+
     protected class StartButton extends FDisplayObject {
         private boolean pressed;
 
@@ -86,7 +92,7 @@ public abstract class LaunchScreen extends FScreen {
                         isHovered() ? FSkinImage.BTN_START_OVER : FSkinImage.BTN_START_UP, 0, 0, getWidth(), getHeight());
             //its must be enabled or you can't start any game modes
             if (!Forge.isLoadingaMatch()) {
-                if(!btnStart.isEnabled())
+                if(!btnStart.isEnabled() && allowStart())
                     btnStart.setEnabled(true);
             }
         }
