@@ -101,9 +101,10 @@ public class DeltaSyncManager implements IHasForgeLog {
      * New objects are registered with this consumer and sent in full.
      * Existing objects only send properties dirty for THIS consumer.
      *
-     * <p>Must be called on the game thread. All delta collection and checksum
-     * computation runs single-threaded — no locks, snapshots, or volatile
-     * barriers needed.
+     * <p>Callers are serialized by RemoteClientGuiGame's syncLock: flushes run on
+     * the game thread, and the reconnect handshake (reset + full resync) arrives on
+     * the Netty thread. Within the lock everything is single-threaded — no further
+     * snapshots or volatile barriers needed.
      */
     public DeltaPacket collectDeltas(GameView gameView) {
         Map<Integer, Map<TrackableProperty, Object>> objectDeltas = new HashMap<>();

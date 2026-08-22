@@ -72,6 +72,13 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     private GameEventForwarder forwarder;
     private boolean flushing;
 
+    // Serializes every path into syncManager and the sync flags. Flushes run on the
+    // game thread, but the reconnect handshake (resetForReconnect + updateGameView)
+    // arrives on the Netty thread - unguarded, the two race inside collectDeltas
+    // (ConcurrentModificationException walking the registration map). Nothing
+    // blocking runs under the lock: collection, serialization and one-way sends only.
+    private final Object syncLock = new Object();
+
     public RemoteClientGuiGame(final RemoteClient client) {
         this.client = client;
         sender = new GameProtocolSender(client);
@@ -104,10 +111,12 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      * so we must send a full state before resuming delta sync.
      */
     public void resetForReconnect() {
-        initialSyncSent = false;
-        objectsRegistered = false;
-        fallbackLogged = false;
-        syncManager.reset();
+        synchronized (syncLock) {
+            initialSyncSent = false;
+            objectsRegistered = false;
+            fallbackLogged = false;
+            syncManager.reset();
+        }
     }
 
     public void setForwarder(GameEventForwarder forwarder) {
@@ -119,9 +128,11 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     public void shutdownForwarder() {
-        if (forwarder != null) {
-            forwarder.flush();
-            forwarder = null;
+        synchronized (syncLock) {
+            if (forwarder != null) {
+                forwarder.flush();
+                forwarder = null;
+            }
         }
     }
 
@@ -195,6 +206,12 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         updateGameView(true);
     }
     private void updateGameView(boolean flush) {
+        synchronized (syncLock) {
+            updateGameViewLocked(flush);
+        }
+    }
+
+    private void updateGameViewLocked(boolean flush) {
         GameView gameView = getGameView();
         if (gameView == null) {
             return;
@@ -550,6 +567,12 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
 
     @Override
     public void handleGameEvents(List<GameEvent> events) {
+        synchronized (syncLock) {
+            handleGameEventsLocked(events);
+        }
+    }
+
+    private void handleGameEventsLocked(List<GameEvent> events) {
         if (paused) { return; }
         for (GameEvent ev : events) {
             if (ev instanceof GameEventPlayerControl pc) {
