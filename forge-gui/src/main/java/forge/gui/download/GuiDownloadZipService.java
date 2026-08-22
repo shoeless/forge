@@ -171,10 +171,10 @@ public class GuiDownloadZipService extends GuiDownloadService {
                 }
             }
 
-            final Charset charset = Charset.forName("IBM437");
             ZipFile zipFile;
             try {
-                zipFile = new ZipFile(zipFilename, charset);
+                //forName inside the try: iOS lacks the charset overload and may lack the codepage
+                zipFile = new ZipFile(zipFilename, Charset.forName("IBM437"));
             } catch (Throwable e) { //some older Android versions need the old method
                 zipFile = new ZipFile(zipFilename);
             }

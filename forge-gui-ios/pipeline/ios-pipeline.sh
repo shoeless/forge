@@ -306,7 +306,8 @@ classpath() {
 # Gate allowlist: SerializedLambda = serializable-lambda synthetics, never invoked (bridge
 # marker note in jvmdg memory); awt/swing = desktop-only updater paths iOS skips; forge/compat =
 # bridge targets that live in forge-gui-ios (resolved by the module audit, absent at classpath
-# stage); ZipFile charset ctor = tracked latent gap in the net-deck downloader.
+# stage); ZipFile charset ctor = guarded at its one call site (GuiDownloadZipService falls back
+# to the plain ctor via catch Throwable).
     GATE_ALLOW="java/lang/invoke/SerializedLambda,java/awt/,javax/swing/,forge/compat/,java/util/zip/ZipFile"
     java -cp "$TOOLS_CP" MobiVmLinkAudit \
         --rt "$RT,$ROBOVM_OBJC,$ROBOVM_CT,$GDXB,$SS_JAR,$SSCF_JAR,$WORK/out/jvmdg-java-api-mobivm.jar,$WORK/java-time-supply.jar,$NIO_JAR,$KEEP_CS,$SCAN" \
