@@ -69,6 +69,9 @@ public class MobiVmBridge {
     static final List<String[]> TYPE_PREFIXES = new ArrayList<>(); // [from, to], longest-first
     // declaringOwner -> name -> {targetOwner, prependDescOrNull}
     static final Map<String, Map<String, String[]>> MEMBER_RULES = new HashMap<>();
+    // member! rules: redirect even when the member RESOLVES on the runtime — for members whose
+    // implementation is present but behaviorally deficient (Pattern.compile rejects (?<name>).
+    static final Map<String, Map<String, String[]>> FORCE_MEMBER_RULES = new HashMap<>();
 
     static final Map<String, List<String>> UNRESOLVED = new TreeMap<>();
 
@@ -171,10 +174,12 @@ public class MobiVmBridge {
             String[] p = line.split("\\s+");
             if ("type".equals(p[0])) {
                 TYPE_PREFIXES.add(new String[]{p[1], p[2]});
-            } else if ("member".equals(p[0])) {
+            } else if ("member".equals(p[0]) || "member!".equals(p[0])) {
                 String prepend = null;
                 if (p.length >= 6 && "PREPEND".equals(p[4])) prepend = p[5];
-                MEMBER_RULES.computeIfAbsent(p[1], k -> new HashMap<>())
+                Map<String, Map<String, String[]>> target =
+                        "member!".equals(p[0]) ? FORCE_MEMBER_RULES : MEMBER_RULES;
+                target.computeIfAbsent(p[1], k -> new HashMap<>())
                         .put(p[2], new String[]{p[3], prepend});
             } else {
                 throw new IllegalArgumentException("bad rule: " + line);
@@ -415,7 +420,11 @@ public class MobiVmBridge {
                 @Override
                 public void visitMethodInsn(int op, String owner, String name, String desc, boolean itf) {
                     String[] rule = null;
-                    if (INDEX.containsKey(owner)) {
+                    Map<String, String[]> force = FORCE_MEMBER_RULES.get(owner);
+                    if (force != null) {
+                        rule = force.get(name);
+                    }
+                    if (rule == null && INDEX.containsKey(owner)) {
                         // ANY indexed owner (incl. app classes): a call to a member
                         // that no longer resolves is usually a Java 8 default method
                         // inherited from a java.util interface (e.g.
