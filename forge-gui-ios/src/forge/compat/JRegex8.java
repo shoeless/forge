@@ -3,6 +3,7 @@ package forge.compat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Bytecode-rewrite targets for java.util.regex.Matcher's named-group API,
@@ -14,6 +15,63 @@ public final class JRegex8 {
     private JRegex8() { }
 
     private static final Map<String, Map<String, Integer>> CACHE = new HashMap<>();
+
+    /**
+     * Pattern.compile redirect: MobiVM's regex engine rejects the named-group SYNTAX at parse
+     * time, so strip {@code (?<name>} down to a plain capturing {@code (} before compiling and
+     * pre-seed the name map under the stripped source (which is what Matcher.pattern().pattern()
+     * will report to indexOf). Group numbering is unchanged - the group stays capturing.
+     */
+    public static Pattern compile(String regex) {
+        return compile(regex, 0);
+    }
+
+    public static Pattern compile(String regex, int flags) {
+        Map<String, Integer> names = parseGroupNames(regex);
+        if (names.isEmpty()) {
+            return Pattern.compile(regex, flags);
+        }
+        String stripped = stripNamedGroups(regex);
+        synchronized (CACHE) {
+            CACHE.put(stripped, names);
+        }
+        return Pattern.compile(stripped, flags);
+    }
+
+    private static String stripNamedGroups(String regex) {
+        StringBuilder sb = new StringBuilder(regex.length());
+        boolean inClass = false;
+        for (int i = 0; i < regex.length(); i++) {
+            char c = regex.charAt(i);
+            if (c == '\\') {
+                sb.append(c);
+                if (i + 1 < regex.length()) {
+                    sb.append(regex.charAt(++i));
+                }
+            } else if (inClass) {
+                sb.append(c);
+                if (c == ']') {
+                    inClass = false;
+                }
+            } else if (c == '[') {
+                sb.append(c);
+                inClass = true;
+            } else if (c == '(' && i + 3 < regex.length() && regex.charAt(i + 1) == '?'
+                    && regex.charAt(i + 2) == '<'
+                    && regex.charAt(i + 3) != '=' && regex.charAt(i + 3) != '!') {
+                int close = regex.indexOf('>', i + 3);
+                if (close > 0) {
+                    sb.append('(');
+                    i = close; //skip ?<name>
+                } else {
+                    sb.append(c);
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
 
     public static String group(Matcher m, String name) {
         return m.group(indexOf(m, name));
