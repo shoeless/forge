@@ -119,9 +119,20 @@ public class CardRenderer {
         public void onImageFetched() {
             ImageCache.getInstance().clear();
             if (clearcardArtCache) {
-                clearcardArtCache();
+                // Only this card's art entries: a full clear made EVERY card on screen
+                // re-crop per completed download - a rolling refresh of the whole board
+                // while an opponent's uncached deck trickles in over a long match.
+                dropCardArtCache(key);
             }
         }
+    }
+
+    /** Remove one image's art-cache entries (plain and prefixed variants). */
+    public static void dropCardArtCache(String imageKey) {
+        if (imageKey == null || imageKey.isEmpty()) {
+            return;
+        }
+        Forge.getAssets().cardArtCache().keySet().removeIf(k -> k.endsWith(imageKey));
     }
 
     private static float calcSymbolSize(FSkinProp skinProp) {
