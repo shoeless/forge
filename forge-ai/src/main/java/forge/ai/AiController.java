@@ -1400,7 +1400,54 @@ public class AiController {
             }
         }
 
-        return singleSpellAbilityList(getSpellAbilityToPlay());
+        SpellAbility chosen = getSpellAbilityToPlay();
+        if (chosen == null) {
+            // Nothing to cast: bank mana for retention cards (Omnath, Locus of Mana)
+            chosen = chooseFloatManaAbility();
+        }
+        return singleSpellAbilityList(chosen);
+    }
+
+    /**
+     * With a battlefield card hinted AIFloatMana (its color's unspent mana never
+     * empties), tap idle plain sources of that color during our own end step -
+     * the mana persists, growing Omnath-style creatures and banking ramp for the
+     * next turn. One source per priority round; stops when none remain.
+     */
+    private SpellAbility chooseFloatManaAbility() {
+        if (!game.getPhaseHandler().is(PhaseType.END_OF_TURN, player)) {
+            return null;
+        }
+        String wantedColor = null;
+        for (Card c : player.getCardsIn(ZoneType.Battlefield)) {
+            if (c.hasSVar("AIFloatMana")) {
+                wantedColor = c.getSVar("AIFloatMana");
+                break;
+            }
+        }
+        if (wantedColor == null) {
+            return null;
+        }
+        for (Card c : player.getCardsIn(ZoneType.Battlefield)) {
+            // Plain lands only: no activation side effects, no competing uses
+            if (!c.isLand() || c.isCreature() || c.isTapped()) {
+                continue;
+            }
+            for (SpellAbility ma : c.getManaAbilities()) {
+                if (ma.getPayCosts() == null || !ma.getPayCosts().hasTapCost()
+                        || ma.getPayCosts().getCostParts().size() != 1) {
+                    continue; //only pure {T} costs - no life, sacrifice, or counters
+                }
+                if (ma.getManaPart() == null
+                        || !wantedColor.equals(ma.getManaPart().getOrigProduced())) {
+                    continue; //fixed single-color output matching the hint
+                }
+                if (ma.canPlay()) {
+                    return ma;
+                }
+            }
+        }
+        return null;
     }
 
     private boolean isSafeToHoldLandDropForMain2(Card landToPlay) {
