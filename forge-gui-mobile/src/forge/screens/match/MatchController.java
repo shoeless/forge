@@ -789,6 +789,9 @@ public class MatchController extends NetworkGuiGame {
         if (selected.isAI()) {
             return;
         }
+        if (getGameView() == null || getGameView().getGame() == null) {
+            return; //network client: the Game and its controllers live on the server
+        }
         Set<FullControlFlag> controlFlags = getGameView().getGame().getPlayer(selected).getController().getFullControl();
         FPopupMenu menu = new FPopupMenu() {
             @Override
