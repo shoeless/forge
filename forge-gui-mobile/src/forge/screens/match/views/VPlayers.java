@@ -90,7 +90,8 @@ public class VPlayers extends FDropDown {
                 g.drawImage(MatchController.getPlayerAvatar(player), x, y, h, h);
             }
             if (!MatchController.instance.getGameView().isCommander()) {
-                if (!Forge.isMobileAdventureMode)
+                //network clients have no deck (server-side only) - same guard as btnDeck above
+                if (!Forge.isMobileAdventureMode && playerDeck != null)
                     details += playerDeck.getName();
             } else {
                 extra += 2;
