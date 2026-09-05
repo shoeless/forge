@@ -206,6 +206,7 @@ public class ForgePreferences extends AbstractPreferences<ForgePreferences.FPref
         PERFORMANCE_MODE ("false"),
         FILTERED_HANDS ("false"),
         MULLIGAN_RULE(MulliganDefs.getDefaultRule().name()),
+        TWO_PLAYER_LONDON_MULLIGAN ("false"),
 
         UI_ANTE ("false"),
         UI_ANTE_MATCH_RARITY ("false"),

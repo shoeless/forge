@@ -244,6 +244,7 @@ public final class FModel {
         getMagicDb().setBrawlPredicate(getFormats().get("Brawl").getFilterRules());
 
         getMagicDb().setFilteredHandsEnabled(getPreferences().getPrefBoolean(FPref.FILTERED_HANDS));
+        getMagicDb().setTwoPlayerFreeMulligan(getPreferences().getPrefBoolean(FPref.TWO_PLAYER_LONDON_MULLIGAN));
         try {
             getMagicDb().setMulliganRule(MulliganDefs.MulliganRule.valueOf(getPreferences().getPref(FPref.MULLIGAN_RULE)));
         } catch(Exception e) {

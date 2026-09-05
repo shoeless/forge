@@ -46,6 +46,8 @@ public class StaticData {
     private Predicate<PaperCard> oathbreakerPredicate;
 
     private boolean filteredHandsEnabled = false;
+    //house rule: grant the multiplayer free first mulligan in two-player games too
+    private boolean twoPlayerFreeMulligan = false;
 
     private MulliganDefs.MulliganRule mulliganRule = MulliganDefs.getDefaultRule();
 
@@ -774,6 +776,13 @@ public class StaticData {
     }
     public void setFilteredHandsEnabled(boolean filteredHandsEnabled) {
         this.filteredHandsEnabled = filteredHandsEnabled;
+    }
+
+    public boolean isTwoPlayerFreeMulligan() {
+        return twoPlayerFreeMulligan;
+    }
+    public void setTwoPlayerFreeMulligan(boolean twoPlayerFreeMulligan) {
+        this.twoPlayerFreeMulligan = twoPlayerFreeMulligan;
     }
 
     public void setMulliganRule(MulliganDefs.MulliganRule rule) {

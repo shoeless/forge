@@ -187,6 +187,15 @@ public class SettingsPage extends TabPage<SettingsScreen> {
                     StaticData.instance().setMulliganRule(MulliganDefs.GetRuleByName(FModel.getPreferences().getPref(FPref.MULLIGAN_RULE)));
                 }
             }, 1);
+        lstSettings.addItem(new BooleanSetting(FPref.TWO_PLAYER_LONDON_MULLIGAN,
+            Forge.getLocalizer().getMessage("cbTwoPlayerLondonMulligan"),
+            Forge.getLocalizer().getMessage("nlTwoPlayerLondonMulligan")) {
+                @Override
+                public void select() {
+                    super.select();
+                    StaticData.instance().setTwoPlayerFreeMulligan(FModel.getPreferences().getPrefBoolean(FPref.TWO_PLAYER_LONDON_MULLIGAN));
+                }
+            }, 1);
         lstSettings.addItem(new CustomSelectSetting(FPref.UI_CURRENT_AI_PROFILE,
             Forge.getLocalizer().getMessage("cbpAiProfiles"),
             Forge.getLocalizer().getMessage("nlpAiProfiles"),

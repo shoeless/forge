@@ -85,6 +85,7 @@ public enum VSubmenuPreferences implements IVSubmenu<CSubmenuPreferences> {
     private final JCheckBox cbPerformanceMode = new OptionsCheckBox(localizer.getMessage("cbPerformanceMode"));
     private final JCheckBox cbSROptimize = new OptionsCheckBox(localizer.getMessage("cbSROptimize"));
     private final JCheckBox cbFilteredHands = new OptionsCheckBox(localizer.getMessage("cbFilteredHands"));
+    private final JCheckBox cbTwoPlayerLondonMulligan = new OptionsCheckBox(localizer.getMessage("cbTwoPlayerLondonMulligan"));
     private final JCheckBox cbImageFetcher = new OptionsCheckBox(localizer.getMessage("cbImageFetcher"));
     private final JCheckBox cbDisableCardImages = new OptionsCheckBox(localizer.getMessage("lblDisableCardImages"));
     private final JCheckBox cbCloneImgSource = new OptionsCheckBox(localizer.getMessage("cbCloneImgSource"));
@@ -275,6 +276,9 @@ public enum VSubmenuPreferences implements IVSubmenu<CSubmenuPreferences> {
 
         pnlPrefs.add(cbFilteredHands, titleConstraints);
         pnlPrefs.add(new NoteLabel(localizer.getMessage("nlFilteredHands")), descriptionConstraints);
+
+        pnlPrefs.add(cbTwoPlayerLondonMulligan, titleConstraints);
+        pnlPrefs.add(new NoteLabel(localizer.getMessage("nlTwoPlayerLondonMulligan")), descriptionConstraints);
 
         pnlPrefs.add(cbCloneImgSource, titleConstraints);
         pnlPrefs.add(new NoteLabel(localizer.getMessage("nlCloneImgSource")), descriptionConstraints);
@@ -997,6 +1001,10 @@ public enum VSubmenuPreferences implements IVSubmenu<CSubmenuPreferences> {
     }
 
     /** @return {@link javax.swing.JCheckBox} */
+    public JCheckBox getCbTwoPlayerLondonMulligan() {
+        return cbTwoPlayerLondonMulligan;
+    }
+
     public JCheckBox getCbFilteredHands() {
         return cbFilteredHands;
     }
