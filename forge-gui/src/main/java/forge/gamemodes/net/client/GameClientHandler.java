@@ -100,6 +100,11 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
             case openView:
                 gui.setNetGame();
                 final TrackableCollection<PlayerView> myPlayers = (TrackableCollection<PlayerView>) args[0];
+                // MP diagnostic: guest sometimes sees an empty hand on the initial deal
+                for (PlayerView pv : myPlayers) {
+                    System.out.println("[MP-DIAG] openView: player=" + pv.getName()
+                            + " handViews=" + (pv.getHand() == null ? "null" : pv.getHand().size()));
+                }
                 for (PlayerView myPlayer : myPlayers) {
                     if (myPlayer.getTracker() == null) {
                         myPlayer.setTracker(this.tracker);

@@ -87,6 +87,11 @@ public class VAssignCombatDamage extends FDialog {
 
         callback = waitCallback;
         totalDamageToAssign = damage0;
+        // MP diagnostic: guest reported the popup total at 2x the applied damage
+        System.out.println("[MP-DIAG] AssignCombatDamage: attacker=" + attacker.getName()
+                + " power=" + attacker.getCurrentState().getPower()
+                + " damageToAssign=" + damage0 + " blockers=" + (blockers == null ? 0 : blockers.size())
+                + " defender=" + defender0);
         defender = defender0;
         attackerHasDeathtouch = attacker.getCurrentState().hasDeathtouch();
         attackerHasDivideDamage = attacker.getCurrentState().hasDivideDamage();
